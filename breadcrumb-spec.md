@@ -37,9 +37,9 @@ the break. How a repository recovers from one is not yet defined.
  
 ## 2. Vision
  
-The Vision says what we are building and what we are optimizing it for, in one
-or two paragraphs. It lives in `VISION.md` at the root of the repository and is
-accepted by being committed.
+The Vision says what we are building and what we are optimizing it for. It
+lives in `VISION.md` at the root of the repository and is accepted by being
+committed.
  
 The Vision is ground, not a link: no artifact is required to point at it.
  
@@ -47,7 +47,6 @@ Checks:
  
 - The singularity contains `VISION.md`.
 - No commit deletes `VISION.md`.
-- A commit that modifies `VISION.md` leaves it at one or two paragraphs.
 ## 3. Intake
  
 An Intake records a need or an observation, in words the committer stands
@@ -74,6 +73,3 @@ Checks, for every commit after the singularity:
   `<id>` is that Intake's id, and contains no other text of the form
   `INT-YYYY-NNNN`.
 - The commit adds or modifies at least one file outside `intakes/`.
- 
-
-
