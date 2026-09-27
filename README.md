@@ -20,12 +20,18 @@ Nothing is installed in this repository yet, so the method does not govern it. T
 
 ## Releases
 
-Each release publishes four kinds of files, meant to be copied into `.breadcrumb-kit/` of a repository:
+Each release publishes one file, `breadcrumb-kit-<version>.zip`. Extracted at the root of a repository, it installs the kit:
 
-- `breadcrumb-sdd.md`: the specification, under a do-not-edit header that carries the SHA-256 of the source.
-- The tools, unchanged.
-- `VERSION`: the package version.
-- `MANIFEST`: the SHA-256 of each tool and of `VERSION`.
+```
+.breadcrumb-kit/
+  breadcrumb-sdd.md   the specification, under a do-not-edit header that carries the SHA-256 of the source
+  MANIFEST            the SHA-256 of each tool and of tools/VERSION
+  tools/
+    *.sh              the tools, unchanged
+    VERSION           the package version
+```
+
+A release runs when a `v<version>` tag is pushed, or by hand from the Actions tab. A manual run releases the commit it runs on under the tag `v<version>`, with the version read from `tools/VERSION`.
 
 To check an installed kit by hand, from `.breadcrumb-kit/`:
 
@@ -38,27 +44,27 @@ The tools need Bash 3.2 or later.
 
 ## Checking Tasks
 
-These commands assume the kit is installed in `.breadcrumb-kit/`. Run them with `bash`, since files downloaded from a release may not be executable.
+These commands assume the kit is installed in `.breadcrumb-kit/`. Run them with `bash`, since some zip extractors do not keep files executable.
 
 ### With the tools
 
 Check the format of every Task file in the repository, from anywhere inside it:
 
 ```sh
-bash .breadcrumb-kit/tasks.sh      # one line per violation; no output means none
-bash .breadcrumb-kit/tasks.sh -v   # also lists the Task files that pass
+bash .breadcrumb-kit/tools/tasks.sh      # one line per violation; no output means none
+bash .breadcrumb-kit/tools/tasks.sh -v   # also lists the Task files that pass
 ```
 
 Check the format of one Task file:
 
 ```sh
-bash .breadcrumb-kit/task.sh breadcrumbs/TASK-0001.task.md   # "Ok", or one "Error:" line per violation
+bash .breadcrumb-kit/tools/task.sh breadcrumbs/TASK-0001.task.md   # "Ok", or one "Error:" line per violation
 ```
 
 Get the verdict of one Task, from the repository root:
 
 ```sh
-bash .breadcrumb-kit/verdict.sh breadcrumbs/TASK-0001.task.md
+bash .breadcrumb-kit/tools/verdict.sh breadcrumbs/TASK-0001.task.md
 ```
 
 It prints each claim with its value, then `<id>: Confirmed` or `<id>: Refuted` as the last line. Its exit status is:
@@ -75,7 +81,7 @@ Get the verdict of every Task:
 
 ```sh
 find breadcrumbs -name '*.task.md' | sort | while IFS= read -r t; do
-  bash .breadcrumb-kit/verdict.sh "$t" | tail -n 1
+  bash .breadcrumb-kit/tools/verdict.sh "$t" | tail -n 1
 done
 ```
 
@@ -83,7 +89,7 @@ The tools read the files as they are in the working tree. To judge a commit, che
 
 ```sh
 git worktree add --detach /tmp/judge <commit>
-cd /tmp/judge && bash .breadcrumb-kit/verdict.sh breadcrumbs/TASK-0001.task.md
+cd /tmp/judge && bash .breadcrumb-kit/tools/verdict.sh breadcrumbs/TASK-0001.task.md
 ```
 
 ### By hand
