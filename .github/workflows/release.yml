@@ -1,12 +1,17 @@
 name: release
 
-# On a version tag: lint and test the tooling, package the kit with
-# scripts/package.sh, and publish the packaged files as release assets.
+# On a version tag, or when run by hand from the Actions tab: lint and test
+# the tooling, package the kit with scripts/package.sh into
+# breadcrumb-kit-<version>.zip, and publish that zip as the release asset.
 # The packaged kit is published, never committed.
+#
+# A manual run releases the commit it runs on, under the tag v<version> read
+# from tools/VERSION. If that tag exists, it must point to the same commit.
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -62,13 +67,38 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Package the kit
-        run: scripts/package.sh --tag "$GITHUB_REF_NAME" dist
-      - name: Check the package
-        working-directory: dist
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Resolve the tag
         run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            tag="v$(cat tools/VERSION)"
+            if commit=$(git rev-parse -q --verify "refs/tags/$tag^{commit}"); then
+              if [ "$commit" != "$GITHUB_SHA" ]; then
+                echo "::error::tag $tag points to $commit, not to $GITHUB_SHA"
+                exit 1
+              fi
+            fi
+          else
+            tag=$GITHUB_REF_NAME
+          fi
+          echo "TAG=$tag" >>"$GITHUB_ENV"
+      - name: Package the kit
+        run: scripts/package.sh --tag "$TAG" dist
+      - name: Check the package
+        run: |
+          version=$(cat tools/VERSION)
+          [ "$(ls dist)" = "breadcrumb-kit-$version.zip" ] \
+            || { echo "::error::dist does not hold breadcrumb-kit-$version.zip alone"; exit 1; }
+          mkdir unpacked
+          unzip -q "dist/breadcrumb-kit-$version.zip" -d unpacked
+          [ "$(ls -A unpacked)" = .breadcrumb-kit ] \
+            || { echo "::error::the zip does not hold .breadcrumb-kit/ alone"; exit 1; }
+          cd unpacked/.breadcrumb-kit || exit 1
           sha256sum -c MANIFEST
-          if ls | grep -q '_test\.sh$'; then
+          [ "$(tail -n +3 breadcrumb-sdd.md | sha256sum)" = "$(sha256sum <"$GITHUB_WORKSPACE/breadcrumb-sdd.md")" ] \
+            || { echo "::error::the packaged specification differs from its source"; exit 1; }
+          if find . -name '*_test.sh' | grep -q .; then
             echo "::error::a test file was packaged"
             exit 1
           fi
@@ -76,7 +106,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --verify-tag \
-            --title "$GITHUB_REF_NAME" \
+          gh release create "$TAG" dist/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
             --generate-notes

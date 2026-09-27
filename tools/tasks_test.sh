@@ -337,16 +337,17 @@ test_no_breadcrumbs_directory_prints_nothing() {
 # ============================================================================
 
 test_task_sh_is_found_next_to_tasks_sh() {
-  # Installed layout: both tools in .breadcrumb-kit/.
+  # Installed layout: both tools in .breadcrumb-kit/tools/.
   new_repo
-  cp "$TOOL" "$HERE/../tools/task.sh" "$REPO/.breadcrumb-kit/"
+  mkdir "$REPO/.breadcrumb-kit/tools"
+  cp "$TOOL" "$HERE/../tools/task.sh" "$REPO/.breadcrumb-kit/tools/"
   front breadcrumbs/a.task.md <<EOF
 status: IMPLEMENTED
 EOF
-  RUN_TOOL=.breadcrumb-kit/tasks.sh run
+  RUN_TOOL=.breadcrumb-kit/tools/tasks.sh run
   expect_rc 1
   expect_report 'a.task.md|Error|"spec_version is missing"'
-  RUN_DIR=$REPO/breadcrumbs RUN_TOOL=../.breadcrumb-kit/tasks.sh run
+  RUN_DIR=$REPO/breadcrumbs RUN_TOOL=../.breadcrumb-kit/tools/tasks.sh run
   expect_rc 1
   expect_report 'a.task.md|Error|"spec_version is missing"'
 }
@@ -354,28 +355,31 @@ EOF
 test_task_sh_failure_is_an_error() {
   # A task.sh that crashes must not read as "no violation".
   new_repo
-  cp "$TOOL" "$REPO/.breadcrumb-kit/"
-  printf '#!/bin/bash\nexit 2\n' >"$REPO/.breadcrumb-kit/task.sh"
+  mkdir "$REPO/.breadcrumb-kit/tools"
+  cp "$TOOL" "$REPO/.breadcrumb-kit/tools/"
+  printf '#!/bin/bash\nexit 2\n' >"$REPO/.breadcrumb-kit/tools/task.sh"
   printf '%s\n' "$GOOD_CLAIM" | task breadcrumbs/a.task.md
-  RUN_TOOL=.breadcrumb-kit/tasks.sh run -v
+  RUN_TOOL=.breadcrumb-kit/tools/tasks.sh run -v
   expect_rc 2
   expect_err "task.sh failed"
 }
 
 test_unexpected_task_sh_output_is_an_error() {
   new_repo
-  cp "$TOOL" "$REPO/.breadcrumb-kit/"
-  printf '#!/bin/bash\necho Fine\n' >"$REPO/.breadcrumb-kit/task.sh"
+  mkdir "$REPO/.breadcrumb-kit/tools"
+  cp "$TOOL" "$REPO/.breadcrumb-kit/tools/"
+  printf '#!/bin/bash\necho Fine\n' >"$REPO/.breadcrumb-kit/tools/task.sh"
   printf '%s\n' "$GOOD_CLAIM" | task breadcrumbs/a.task.md
-  RUN_TOOL=.breadcrumb-kit/tasks.sh run
+  RUN_TOOL=.breadcrumb-kit/tools/tasks.sh run
   expect_rc 2
   expect_err "unexpected output from task.sh"
 }
 
 test_missing_task_sh_is_an_error() {
   new_repo
-  cp "$TOOL" "$REPO/.breadcrumb-kit/"
-  RUN_TOOL=.breadcrumb-kit/tasks.sh run
+  mkdir "$REPO/.breadcrumb-kit/tools"
+  cp "$TOOL" "$REPO/.breadcrumb-kit/tools/"
+  RUN_TOOL=.breadcrumb-kit/tools/tasks.sh run
   expect_rc 2
   expect_err "task.sh not found"
 }
