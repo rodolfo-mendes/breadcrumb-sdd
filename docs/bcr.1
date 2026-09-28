@@ -8,6 +8,7 @@ bcr \- audit the breadcrumbs of a repository
 .nf
 bcr audit\-report \-\-html [\-o FILE]
 bcr check
+bcr verdict [ID|PATH|\-]...
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -100,6 +101,48 @@ Exit status (RQ\-0021):
 1: a problem was found.
 .IP \(bu 2
 2: \fBbcr\fR was used wrongly, or there is no \fBbreadcrumbs/\fR directory in the current directory.
+.SS "verdict"
+.PP
+.RS 4
+.nf
+bcr verdict [ID|PATH|\-]...
+.fi
+.RE
+.PP
+Prints the verdict of each breadcrumb (RQ\-0024), or of the breadcrumbs it is given (RQ\-0025).
+.PP
+Flags: none.
+.PP
+Operands: with none, every breadcrumb, in order of path. Otherwise the breadcrumbs they name, in the order given. An operand is an id, such as \fBTK\-0001\fR, or a path relative to the repository root, such as \fBbreadcrumbs/TK\-0001.md\fR.
+.PP
+Standard input: read when an operand is \fB\-\fR: one breadcrumb per line, named by the line's first tab\-separated field (RQ\-0012). The output of \fBbcr verdict\fR can feed it.
+.PP
+Output: one line on standard output for each breadcrumb: its id, a tab, and its verdict, \fBConfirmed\fR, \fBRefuted\fR or \fBUndecided\fR:
+.PP
+.RS 4
+.nf
+TK\-0001	Confirmed
+.fi
+.RE
+.PP
+How a verdict is reached: see audit\-report. An operand that names no breadcrumb is written to standard error, and the others are still printed.
+.PP
+Exit status (RQ\-0026):
+.IP \(bu 2
+0: no breadcrumb printed is Refuted. Undecided ones do not change it.
+.IP \(bu 2
+1: a breadcrumb printed is Refuted.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, an operand names no breadcrumb, or there is no \fBbreadcrumbs/\fR directory in the current directory.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+bcr verdict | grep \-w Refuted | cut \-f1
+bcr verdict breadcrumbs/TK\-*.md
+.fi
+.RE
 .SH "EXIT STATUS"
 .PP
 Every command exits with (RQ\-0010):

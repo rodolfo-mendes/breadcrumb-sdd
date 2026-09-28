@@ -4,12 +4,13 @@
 //
 //	bcr audit-report --html [-o FILE]
 //	bcr check
+//	bcr verdict [ID|PATH|-]...
 //
 // Run it from the root of a repository. audit-report audits the
 // breadcrumbs in breadcrumbs/ and writes the report to
 // audit-report.html, to FILE, or to standard output when FILE is -.
-// check prints each problem in the breadcrumbs. Its contract is
-// docs/bcr.md.
+// check prints each problem in the breadcrumbs, and verdict the verdict
+// of each breadcrumb. Its contract is docs/bcr.md.
 //
 // It exits 0 when it finds nothing wrong, 1 when it finds something
 // wrong, and 2 when it is used wrongly or cannot run (RQ-0010).
@@ -31,7 +32,8 @@ import (
 const (
 	auditReportUsage = "usage: bcr audit-report --html [-o FILE]\n"
 	checkUsage       = "usage: bcr check\n"
-	usage            = auditReportUsage + checkUsage
+	verdictUsage     = "usage: bcr verdict [ID|PATH|-]...\n"
+	usage            = auditReportUsage + checkUsage + verdictUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -46,10 +48,10 @@ const (
 )
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
-func run(args []string, stdout, stderr io.Writer) int {
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		return usageError(stderr, usage, "no command")
 	}
@@ -58,6 +60,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runAuditReport(args, stdout, stderr)
 	case "check":
 		return runCheck(args, stdout, stderr)
+	case "verdict":
+		return runVerdict(args, stdin, stdout, stderr)
 	}
 	return usageError(stderr, usage, fmt.Sprintf("unknown command %q", args[0]))
 }
@@ -94,6 +98,55 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return usageError(stderr, checkUsage, fmt.Sprintf("unexpected operand %q", operands[0]))
 	}
 	return check(stdout, stderr)
+}
+
+// runVerdict runs bcr verdict; args starts with the command.
+func runVerdict(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	_, operands, err := cli.Parse(args[1:], nil)
+	if err != nil {
+		return usageError(stderr, verdictUsage, err.Error())
+	}
+	names, err := cli.IDs(operands, stdin)
+	if err != nil {
+		return trouble(stderr, err)
+	}
+	return verdict(names, len(operands) == 0, stdout, stderr)
+}
+
+// verdict prints ID<TAB>VERDICT for each breadcrumb named, or for every
+// breadcrumb when all is set (RQ-0024, RQ-0025). It exits 1 when one it
+// prints is Refuted (RQ-0026), and 2 when a name names no breadcrumb.
+func verdict(names []string, all bool, stdout, stderr io.Writer) int {
+	g, _, err := load()
+	if err != nil {
+		return trouble(stderr, err)
+	}
+	var crumbs []breadcrumb.Breadcrumb
+	unknown := false
+	if all {
+		crumbs = g.Breadcrumbs
+	}
+	for _, n := range names {
+		b, ok := g.Find(n)
+		if !ok {
+			fmt.Fprintf(stderr, "bcr: %s names no breadcrumb\n", n)
+			unknown = true
+			continue
+		}
+		crumbs = append(crumbs, b)
+	}
+	refuted := false
+	for _, b := range crumbs {
+		fmt.Fprintf(stdout, "%s\t%s\n", b.ID, b.Verdict)
+		refuted = refuted || b.Verdict == breadcrumb.Refuted
+	}
+	switch {
+	case unknown:
+		return exitTrouble
+	case refuted:
+		return exitFound
+	}
+	return exitOK
 }
 
 // load reads the breadcrumbs of the repository in the current directory.

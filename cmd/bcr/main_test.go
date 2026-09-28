@@ -27,7 +27,7 @@ func TestAuditReportWritesTheReportInTheRepositoryRoot(t *testing.T) {
 	chdir(t, root)
 
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"audit-report", "--html"}, &stdout, &stderr); code != 0 {
+	if code := run([]string{"audit-report", "--html"}, nil, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	out := filepath.Join(root, reportFile)
@@ -46,7 +46,7 @@ func TestAuditReportWritesTheReportInTheRepositoryRoot(t *testing.T) {
 func TestAuditReportNeedsABreadcrumbsDirectory(t *testing.T) {
 	chdir(t, t.TempDir())
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"audit-report", "--html"}, &stdout, &stderr); code != 2 {
+	if code := run([]string{"audit-report", "--html"}, nil, &stdout, &stderr); code != 2 {
 		t.Errorf("exit %d, want 2", code)
 	}
 	if stdout.Len() > 0 {
@@ -65,7 +65,7 @@ func TestAuditReportExitsOneWhenABreadcrumbIsRefuted(t *testing.T) {
 	chdir(t, root)
 
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"audit-report", "--html"}, &stdout, &stderr); code != 1 {
+	if code := run([]string{"audit-report", "--html"}, nil, &stdout, &stderr); code != 1 {
 		t.Fatalf("exit %d, want 1: %s", code, stderr.String())
 	}
 	if _, err := os.Stat(filepath.Join(root, reportFile)); err != nil {
@@ -87,9 +87,11 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		{[]string{"audit-report", "--html", "extra"}, auditReportUsage},
 		{[]string{"check", "-x"}, checkUsage},
 		{[]string{"check", "breadcrumbs/TD-0001.md"}, checkUsage},
+		{[]string{"verdict", "-x"}, verdictUsage},
+		{[]string{"verdict", "--refuted"}, verdictUsage},
 	} {
 		var stdout, stderr bytes.Buffer
-		if code := run(tc.args, &stdout, &stderr); code != 2 {
+		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {
 			t.Errorf("%q: exit %d, want 2", tc.args, code)
 		}
 		if stdout.Len() > 0 {
@@ -123,7 +125,7 @@ func TestAuditReportWritesTheReportToTheFileOfOutput(t *testing.T) {
 		os.Mkdir(filepath.Join(root, "out"), 0o755)
 
 		var stdout, stderr bytes.Buffer
-		if code := run(args, &stdout, &stderr); code != 0 {
+		if code := run(args, nil, &stdout, &stderr); code != 0 {
 			t.Fatalf("%q: exit %d: %s", args, code, stderr.String())
 		}
 		out := filepath.Join(root, "out", "r.html")
@@ -142,7 +144,7 @@ func TestAuditReportWritesTheReportToTheFileOfOutput(t *testing.T) {
 func TestAuditReportWritesTheReportToStandardOutputForADash(t *testing.T) {
 	root := repo(t)
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"audit-report", "--html", "-o", "-"}, &stdout, &stderr); code != 0 {
+	if code := run([]string{"audit-report", "--html", "-o", "-"}, nil, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	if !strings.HasPrefix(stdout.String(), "<!doctype html>") || !strings.Contains(stdout.String(), "TD-0001") {
@@ -159,7 +161,7 @@ func TestAuditReportWritesTheReportToStandardOutputForADash(t *testing.T) {
 func TestAuditReportCannotWriteToAMissingDirectory(t *testing.T) {
 	repo(t)
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"audit-report", "--html", "-o", "missing/r.html"}, &stdout, &stderr); code != 2 {
+	if code := run([]string{"audit-report", "--html", "-o", "missing/r.html"}, nil, &stdout, &stderr); code != 2 {
 		t.Errorf("exit %d, want 2", code)
 	}
 	if stdout.Len() > 0 || !strings.HasPrefix(stderr.String(), "bcr: ") {
@@ -174,7 +176,7 @@ func TestAuditReportNeedsAFileNameForOutput(t *testing.T) {
 		{"audit-report", "--html", "--output="},
 	} {
 		var stdout, stderr bytes.Buffer
-		if code := run(args, &stdout, &stderr); code != 2 {
+		if code := run(args, nil, &stdout, &stderr); code != 2 {
 			t.Errorf("%q: exit %d, want 2", args, code)
 		}
 	}
@@ -200,7 +202,7 @@ func TestCheckPrintsEachProblemWithItsFileAndLine(t *testing.T) {
 	})
 
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"check"}, &stdout, &stderr); code != 1 {
+	if code := run([]string{"check"}, nil, &stdout, &stderr); code != 1 {
 		t.Fatalf("exit %d, want 1: %s", code, stderr.String())
 	}
 	want := "breadcrumbs/IN-0001.md:1: the first line is not a # title\n" +
@@ -222,7 +224,7 @@ func TestCheckFindsNothingWrongInAClaimThatDoesNotHold(t *testing.T) {
 		"breadcrumbs/TK-0001.md": "# TK-0001: A task\n\nParent: [TD-0001](TD-0001.md)\n\n## Claims\n\n- `go.mod` contains `module`\n",
 	})
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"check"}, &stdout, &stderr); code != 0 {
+	if code := run([]string{"check"}, nil, &stdout, &stderr); code != 0 {
 		t.Errorf("exit %d, want 0: %s", code, stdout.String())
 	}
 	if stdout.Len() > 0 {
@@ -237,7 +239,7 @@ func TestCheckWarnsOfFilesThatAreNotBreadcrumbs(t *testing.T) {
 		"breadcrumbs/old/TD-0002.md": "# TD-0002: Moved\n",
 	})
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"check"}, &stdout, &stderr); code != 0 {
+	if code := run([]string{"check"}, nil, &stdout, &stderr); code != 0 {
 		t.Errorf("exit %d, want 0", code)
 	}
 	if stdout.Len() > 0 {
@@ -253,7 +255,7 @@ func TestCheckWarnsOfFilesThatAreNotBreadcrumbs(t *testing.T) {
 func TestCheckNeedsABreadcrumbsDirectory(t *testing.T) {
 	chdir(t, t.TempDir())
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"check"}, &stdout, &stderr); code != 2 {
+	if code := run([]string{"check"}, nil, &stdout, &stderr); code != 2 {
 		t.Errorf("exit %d, want 2", code)
 	}
 }
@@ -263,10 +265,88 @@ func TestAuditReportExitsOneForALinkToNoBreadcrumb(t *testing.T) {
 	root := repo(t)
 	write(t, root, map[string]string{"breadcrumbs/RQ-0001.md": "# RQ-0001: A requirement\n\nParent: [IN-0009](IN-0009.md)\n"})
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"audit-report", "--html", "-o", "-"}, &stdout, &stderr); code != 1 {
+	if code := run([]string{"audit-report", "--html", "-o", "-"}, nil, &stdout, &stderr); code != 1 {
 		t.Errorf("exit %d, want 1", code)
 	}
 	if !strings.Contains(stdout.String(), "breadcrumbs/RQ-0001.md:3</code>: Parent: links to no breadcrumb") {
 		t.Error("the report does not list the problem")
+	}
+}
+
+// verdicts makes a repository whose TK-0001 is Confirmed, TK-0002 is
+// Refuted and IN-0001 is Undecided.
+func verdicts(t *testing.T) {
+	t.Helper()
+	root := repo(t)
+	write(t, root, map[string]string{
+		"go.mod":                 "module example\n",
+		"breadcrumbs/IN-0001.md": "# IN-0001: An ask\n",
+		"breadcrumbs/TK-0001.md": "# TK-0001: A task\n\nParent: [TD-0001](TD-0001.md)\n\n## Claims\n\n- `go.mod` contains `module`\n",
+		"breadcrumbs/TK-0002.md": "# TK-0002: Another\n\n## Claims\n\n- `go.mod` contains `package`\n",
+	})
+}
+
+func TestVerdictPrintsEveryBreadcrumbInOrderOfPath(t *testing.T) {
+	verdicts(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"verdict"}, nil, &stdout, &stderr); code != 1 {
+		t.Errorf("exit %d, want 1: %s", code, stderr.String())
+	}
+	want := "IN-0001\tUndecided\nTD-0001\tConfirmed\nTK-0001\tConfirmed\nTK-0002\tRefuted\n"
+	if stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestVerdictPrintsTheBreadcrumbsItIsGivenInOrder(t *testing.T) {
+	verdicts(t)
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"verdict", "TK-0001", "breadcrumbs/IN-0001.md", "-", "./breadcrumbs/TD-0001.md"},
+		strings.NewReader("TK-0001\tConfirmed\n\nTD-0001\n"), &stdout, &stderr)
+	if code != 0 {
+		t.Errorf("exit %d, want 0: %s", code, stderr.String())
+	}
+	want := "TK-0001\tConfirmed\nIN-0001\tUndecided\nTK-0001\tConfirmed\nTD-0001\tConfirmed\nTD-0001\tConfirmed\n"
+	if stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestVerdictExitsOneOnlyForARefutedBreadcrumbItPrints(t *testing.T) {
+	verdicts(t)
+	for _, tc := range []struct {
+		args []string
+		code int
+	}{
+		{[]string{"verdict", "TK-0002"}, 1},
+		{[]string{"verdict", "TK-0001", "TK-0002"}, 1},
+		{[]string{"verdict", "TK-0001", "IN-0001"}, 0},
+	} {
+		var stdout, stderr bytes.Buffer
+		if code := run(tc.args, nil, &stdout, &stderr); code != tc.code {
+			t.Errorf("%q: exit %d, want %d", tc.args, code, tc.code)
+		}
+	}
+}
+
+func TestVerdictReportsANameOfNoBreadcrumb(t *testing.T) {
+	verdicts(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"verdict", "TK-0002", "TK-0099", "TK-0001"}, nil, &stdout, &stderr); code != 2 {
+		t.Errorf("exit %d, want 2", code)
+	}
+	if want := "TK-0002\tRefuted\nTK-0001\tConfirmed\n"; stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+	if want := "bcr: TK-0099 names no breadcrumb\n"; stderr.String() != want {
+		t.Errorf("wrote %q to standard error, want %q", stderr.String(), want)
+	}
+}
+
+func TestVerdictOfAnEmptyStandardInputPrintsNothing(t *testing.T) {
+	verdicts(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"verdict", "-"}, strings.NewReader(""), &stdout, &stderr); code != 0 || stdout.Len() > 0 {
+		t.Errorf("exit %d, printed %q", code, stdout.String())
 	}
 }

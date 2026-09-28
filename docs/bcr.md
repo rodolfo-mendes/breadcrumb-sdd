@@ -9,6 +9,7 @@ bcr - audit the breadcrumbs of a repository
 ```
 bcr audit-report --html [-o FILE]
 bcr check
+bcr verdict [ID|PATH|-]...
 ```
 
 ## DESCRIPTION
@@ -149,6 +150,53 @@ Exit status ([RQ-0021](../breadcrumbs/RQ-0021.md)):
 - 1: a problem was found.
 - 2: `bcr` was used wrongly, or there is no `breadcrumbs/` directory
   in the current directory.
+
+### verdict
+
+```
+bcr verdict [ID|PATH|-]...
+```
+
+Prints the verdict of each breadcrumb
+([RQ-0024](../breadcrumbs/RQ-0024.md)), or of the breadcrumbs it is
+given ([RQ-0025](../breadcrumbs/RQ-0025.md)).
+
+Flags: none.
+
+Operands: with none, every breadcrumb, in order of path. Otherwise the
+breadcrumbs they name, in the order given. An operand is an id, such as
+`TK-0001`, or a path relative to the repository root, such as
+`breadcrumbs/TK-0001.md`.
+
+Standard input: read when an operand is `-`: one breadcrumb per line,
+named by the line's first tab-separated field
+([RQ-0012](../breadcrumbs/RQ-0012.md)). The output of `bcr verdict`
+can feed it.
+
+Output: one line on standard output for each breadcrumb: its id, a
+tab, and its verdict, `Confirmed`, `Refuted` or `Undecided`:
+
+```
+TK-0001	Confirmed
+```
+
+How a verdict is reached: see audit-report. An operand that names no
+breadcrumb is written to standard error, and the others are still
+printed.
+
+Exit status ([RQ-0026](../breadcrumbs/RQ-0026.md)):
+
+- 0: no breadcrumb printed is Refuted. Undecided ones do not change it.
+- 1: a breadcrumb printed is Refuted.
+- 2: `bcr` was used wrongly, an operand names no breadcrumb, or there
+  is no `breadcrumbs/` directory in the current directory.
+
+Examples:
+
+```
+bcr verdict | grep -w Refuted | cut -f1
+bcr verdict breadcrumbs/TK-*.md
+```
 
 ## EXIT STATUS
 

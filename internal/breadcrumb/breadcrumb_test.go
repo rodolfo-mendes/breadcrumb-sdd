@@ -328,3 +328,17 @@ func TestALinkToNoBreadcrumbIsAProblem(t *testing.T) {
 		}
 	}
 }
+
+func TestFindTakesAnIDOrAPath(t *testing.T) {
+	g := load(t, fstest.MapFS{"breadcrumbs/TD-0001.md": file("# TD-0001: A decision\n")})
+	for _, name := range []string{"TD-0001", "breadcrumbs/TD-0001.md", "./breadcrumbs/TD-0001.md"} {
+		if b, ok := g.Find(name); !ok || b.ID != "TD-0001" {
+			t.Errorf("%q: found %v %v", name, b.ID, ok)
+		}
+	}
+	for _, name := range []string{"TD-0002", "td-0001", "TD-0001.md", "breadcrumbs/TD-0002.md", ""} {
+		if b, ok := g.Find(name); ok {
+			t.Errorf("%q: found %s", name, b.ID)
+		}
+	}
+}

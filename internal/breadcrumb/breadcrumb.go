@@ -111,6 +111,19 @@ func (g Graph) Lookup(p string) (Breadcrumb, bool) {
 	return Breadcrumb{}, false
 }
 
+// Find returns the breadcrumb named by name: its id, such as TK-0001, or
+// its path relative to the repository root, such as
+// breadcrumbs/TK-0001.md (RQ-0025).
+func (g Graph) Find(name string) (Breadcrumb, bool) {
+	p := path.Clean(name)
+	for _, b := range g.Breadcrumbs {
+		if b.ID == name || b.Path == p {
+			return b, true
+		}
+	}
+	return Breadcrumb{}, false
+}
+
 // fileName is the name of a breadcrumb file: a type prefix and a
 // four-digit number (TD-0001, TD-0003, TD-0004, TD-0011).
 var fileName = regexp.MustCompile(`^(IN|RQ|TD|TK)-[0-9]{4}\.md$`)
