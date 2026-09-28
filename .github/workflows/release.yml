@@ -1,0 +1,63 @@
+# Builds bcr for each supported system and attaches the archives to the
+# GitHub release of a tag (TD-0017).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build, such as v0.2.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        run: |
+          version=${TAG#v}
+          mkdir dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os=${target%/*}
+            arch=${target#*/}
+            name=bcr_${version}_${os}_${arch}
+            exe=bcr
+            if [ "$os" = windows ]; then exe=bcr.exe; fi
+            mkdir "dist/$name"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
+              go build -trimpath -ldflags "-s -w" -o "dist/$name/$exe" ./cmd/bcr
+            cp LICENSE README.md "dist/$name/"
+            if [ "$os" = windows ]; then
+              (cd dist && zip -qr "$name.zip" "$name")
+            else
+              tar -czf "dist/$name.tar.gz" -C dist "$name"
+            fi
+            rm -r "dist/$name"
+          done
+          (cd dist && sha256sum * > "bcr_${version}_checksums.txt")
+
+      - name: Attach to the release
+        run: |
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" dist/* --clobber
