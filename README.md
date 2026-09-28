@@ -48,7 +48,7 @@ written specification; the model in
 1.22 or later:
 
 ```
-go install github.com/rodolfo-mendes/breadcrumb-sdd/cmd/bcr@main
+go install github.com/rodolfo-mendes/breadcrumb-sdd/cmd/bcr@latest
 ```
 
 Then, from the root of a repository that has a `breadcrumbs/`
