@@ -1,0 +1,70 @@
+.TH "BCR" "1" "" "" "Breadcrumb SDD"
+.SH "NAME"
+.PP
+bcr \- audit the breadcrumbs of a repository
+.SH "SYNOPSIS"
+.PP
+.RS 4
+.nf
+bcr audit\-report \-\-html
+.fi
+.RE
+.SH "DESCRIPTION"
+.PP
+\fBbcr\fR is the toolkit of Breadcrumb SDD. It reads the breadcrumbs of a repository, checks the claims of its Tasks against the repository's files, and reports what it finds. Run it from the root of the repository.
+.PP
+This document is the contract of the interface of \fBbcr\fR: its commands, flags, inputs, outputs and exit codes. The rules of the method are in the breadcrumbs of the Breadcrumb SDD repository, and this document points to the one that holds each rule (TD\-0018).
+.PP
+Every command follows the same conventions:
+.IP \(bu 2
+It is run as \fBbcr COMMAND [FLAGS] [OPERANDS]\fR. Flags come before operands; the first operand, or \fB\-\-\fR, ends them (TD\-0020).
+.IP \(bu 2
+Flags are in getopt style: a short flag is one letter, such as \fB\-a\fR, and short flags can be combined, as in \fB\-ab\fR; a long flag is a name, such as \fB\-\-html\fR. A flag's value follows it: \fB\-x VALUE\fR, \fB\-xVALUE\fR, \fB\-\-name=VALUE\fR or \fB\-\-name VALUE\fR (RQ\-0011).
+.IP \(bu 2
+Results go to standard output, and nothing else does. Messages go to standard error and start with \fBbcr: \fR. A usage error is followed by the usage line (RQ\-0009, TD\-0020).
+.IP \(bu 2
+The exit status says whether the command found something wrong (see EXIT STATUS).
+.PP
+Which files are breadcrumbs: TD\-0013. The kinds of breadcrumb: TD\-0001, TD\-0003, TD\-0004 and TD\-0011. How a breadcrumb names its parents: TD\-0005.
+.SH "COMMANDS"
+.SS "audit\-report"
+.PP
+.RS 4
+.nf
+bcr audit\-report \-\-html
+.fi
+.RE
+.PP
+Audits the breadcrumbs and writes the result as an HTML report (RQ\-0001).
+.PP
+Flags:
+.IP \(bu 2
+\fB\-\-html\fR: write the report as HTML. It is required, and HTML is the only format.
+.PP
+Operands: none.
+.PP
+Standard input: not read.
+.PP
+Output: the report is written to \fBaudit\-report.html\fR in the current directory, replacing any file there. Standard output gets one line, the absolute path of the report.
+.PP
+The report draws the breadcrumbs as a graph (RQ\-0002), each with its properties (RQ\-0003) and an arrow to each of its parents (RQ\-0004), colored by its verdict (RQ\-0005). How a verdict is reached: TD\-0012 for a claim, RQ\-0007 for a Task, and RQ\-0006 and RQ\-0008 for the breadcrumbs above it. What makes a breadcrumb have a problem: TD\-0011 and TD\-0013.
+.PP
+Exit status:
+.IP \(bu 2
+0: the report is written, and no breadcrumb is Refuted or has a problem.
+.IP \(bu 2
+1: the report is written, and a breadcrumb is Refuted or has a problem.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, or there is no \fBbreadcrumbs/\fR directory in the current directory, or the report could not be written. No report is written.
+.SH "EXIT STATUS"
+.PP
+Every command exits with (RQ\-0010):
+.IP \(bu 2
+0: it succeeded and found nothing wrong.
+.IP \(bu 2
+1: it ran and found something wrong in the breadcrumbs.
+.IP \(bu 2
+2: it was used wrongly, or could not run.
+.SH "SEE ALSO"
+.PP
+The method: \fBREADME.md\fR. How the repository is developed: \fBCONTRIBUTING.md\fR. The rules: the breadcrumbs in \fBbreadcrumbs/\fR.

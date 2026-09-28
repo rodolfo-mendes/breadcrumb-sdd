@@ -6,3 +6,5 @@ live in `breadcrumbs/`.
 - Before changing the repository, read the breadcrumbs.
 - When a change decides how this repository is built, record it as a
   Technical Decision, following TD-0001.
+- To run `bcr`, follow its contract in `docs/bcr.md`: its commands,
+  flags, outputs and exit codes.

@@ -56,7 +56,10 @@ claim says that a file contains a piece of text (TD-0012):
 2. **Record decisions.** When the change decides how the repository is
    built, write a Technical Decision with `## Decision`, `## Why` and
    `## What it beat` sections. Earlier ones show the form.
-3. **Change the code.**
+3. **Change the code.** When the change touches a command, flag,
+   output or exit code of `bcr`, update its contract in `docs/bcr.md`
+   (TD-0022) and write the man page again with
+   `go test ./internal/manpage -update` (TD-0023).
 4. **Write a Task.** Name the Requirements and Technical Decisions it
    carries out as its parents, and state as claims what the change
    left in the files.

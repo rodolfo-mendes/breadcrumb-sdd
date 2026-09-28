@@ -63,6 +63,11 @@ breadcrumbs, each drawn as a box with its properties and an arrow to
 each of its parents. Open it in a browser. Boxes are green when
 Confirmed, red when Refuted and gray when Undecided.
 
+Every command, flag, output and exit code of `bcr` is documented in
+[`docs/bcr.md`](docs/bcr.md), also shipped as the man page `bcr.1`:
+`man ./bcr.1` in an unpacked release, or `man ./docs/bcr.1` in a
+clone.
+
 To run it from a clone of this repository instead:
 
 ```
