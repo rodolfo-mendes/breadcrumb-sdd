@@ -6,7 +6,7 @@ bcr \- audit the breadcrumbs of a repository
 .PP
 .RS 4
 .nf
-bcr audit\-report \-\-html
+bcr audit\-report \-\-html [\-o FILE]
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -31,7 +31,7 @@ Which files are breadcrumbs: TD\-0013. The kinds of breadcrumb: TD\-0001, TD\-00
 .PP
 .RS 4
 .nf
-bcr audit\-report \-\-html
+bcr audit\-report \-\-html [\-o FILE]
 .fi
 .RE
 .PP
@@ -40,12 +40,14 @@ Audits the breadcrumbs and writes the result as an HTML report (RQ\-0001).
 Flags:
 .IP \(bu 2
 \fB\-\-html\fR: write the report as HTML. It is required, and HTML is the only format.
+.IP \(bu 2
+\fB\-o FILE\fR, \fB\-\-output FILE\fR: write the report to \fBFILE\fR instead of \fBaudit\-report.html\fR, replacing any file there. A relative \fBFILE\fR is taken from the current directory. \fB\-o \-\fR writes the report to standard output (RQ\-0017, RQ\-0018).
 .PP
 Operands: none.
 .PP
 Standard input: not read.
 .PP
-Output: the report is written to \fBaudit\-report.html\fR in the current directory, replacing any file there. Standard output gets one line, the absolute path of the report.
+Output: without \fB\-o\fR, the report is written to \fBaudit\-report.html\fR in the current directory, replacing any file there (RQ\-0019). When the report is written to a file, standard output gets one line, the absolute path of the report. With \fB\-o \-\fR, standard output gets the report, and no file is written.
 .PP
 The report draws the breadcrumbs as a graph (RQ\-0002), each with its properties (RQ\-0003) and an arrow to each of its parents (RQ\-0004), colored by its verdict (RQ\-0005). How a verdict is reached: TD\-0012 for a claim, RQ\-0007 for a Task, and RQ\-0006 and RQ\-0008 for the breadcrumbs above it. What makes a breadcrumb have a problem: TD\-0011 and TD\-0013.
 .PP
@@ -55,7 +57,7 @@ Exit status:
 .IP \(bu 2
 1: the report is written, and a breadcrumb is Refuted or has a problem.
 .IP \(bu 2
-2: \fBbcr\fR was used wrongly, or there is no \fBbreadcrumbs/\fR directory in the current directory, or the report could not be written. No report is written.
+2: \fBbcr\fR was used wrongly, or there is no \fBbreadcrumbs/\fR directory in the current directory, or the report could not be written, such as to a directory that does not exist. No report is written.
 .SH "EXIT STATUS"
 .PP
 Every command exits with (RQ\-0010):

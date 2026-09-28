@@ -95,3 +95,82 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		}
 	}
 }
+
+// repo makes a repository with one breadcrumb and runs from its root.
+func repo(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	os.Mkdir(filepath.Join(root, "breadcrumbs"), 0o755)
+	os.WriteFile(filepath.Join(root, "breadcrumbs", "TD-0001.md"), []byte("# TD-0001: A decision\n"), 0o644)
+	chdir(t, root)
+	return root
+}
+
+func TestAuditReportWritesTheReportToTheFileOfOutput(t *testing.T) {
+	for _, args := range [][]string{
+		{"audit-report", "--html", "-o", "out/r.html"},
+		{"audit-report", "--html", "-oout/r.html"},
+		{"audit-report", "--html", "--output=out/r.html"},
+		{"audit-report", "--html", "--output", "out/r.html"},
+		{"audit-report", "-o", "out/r.html", "--html"},
+	} {
+		root := repo(t)
+		os.Mkdir(filepath.Join(root, "out"), 0o755)
+
+		var stdout, stderr bytes.Buffer
+		if code := run(args, &stdout, &stderr); code != 0 {
+			t.Fatalf("%q: exit %d: %s", args, code, stderr.String())
+		}
+		out := filepath.Join(root, "out", "r.html")
+		if strings.TrimSpace(stdout.String()) != out {
+			t.Errorf("%q: printed %q, want %q", args, stdout.String(), out)
+		}
+		if html, err := os.ReadFile(out); err != nil || !strings.Contains(string(html), "TD-0001") {
+			t.Errorf("%q: the report was not written to %s: %v", args, out, err)
+		}
+		if _, err := os.Stat(filepath.Join(root, reportFile)); err == nil {
+			t.Errorf("%q: %s was written too", args, reportFile)
+		}
+	}
+}
+
+func TestAuditReportWritesTheReportToStandardOutputForADash(t *testing.T) {
+	root := repo(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"audit-report", "--html", "-o", "-"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if !strings.HasPrefix(stdout.String(), "<!doctype html>") || !strings.Contains(stdout.String(), "TD-0001") {
+		t.Errorf("standard output is not the report: %.60q", stdout.String())
+	}
+	if stderr.Len() > 0 {
+		t.Errorf("wrote %q to standard error", stderr.String())
+	}
+	if entries, _ := os.ReadDir(root); len(entries) != 1 {
+		t.Errorf("wrote a file: %v", entries)
+	}
+}
+
+func TestAuditReportCannotWriteToAMissingDirectory(t *testing.T) {
+	repo(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"audit-report", "--html", "-o", "missing/r.html"}, &stdout, &stderr); code != 2 {
+		t.Errorf("exit %d, want 2", code)
+	}
+	if stdout.Len() > 0 || !strings.HasPrefix(stderr.String(), "bcr: ") {
+		t.Errorf("wrote %q to standard output and %q to standard error", stdout.String(), stderr.String())
+	}
+}
+
+func TestAuditReportNeedsAFileNameForOutput(t *testing.T) {
+	repo(t)
+	for _, args := range [][]string{
+		{"audit-report", "--html", "-o"},
+		{"audit-report", "--html", "--output="},
+	} {
+		var stdout, stderr bytes.Buffer
+		if code := run(args, &stdout, &stderr); code != 2 {
+			t.Errorf("%q: exit %d, want 2", args, code)
+		}
+	}
+}

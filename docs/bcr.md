@@ -7,7 +7,7 @@ bcr - audit the breadcrumbs of a repository
 ## SYNOPSIS
 
 ```
-bcr audit-report --html
+bcr audit-report --html [-o FILE]
 ```
 
 ## DESCRIPTION
@@ -53,7 +53,7 @@ parents: [TD-0005](../breadcrumbs/TD-0005.md).
 ### audit-report
 
 ```
-bcr audit-report --html
+bcr audit-report --html [-o FILE]
 ```
 
 Audits the breadcrumbs and writes the result as an HTML report
@@ -63,14 +63,22 @@ Flags:
 
 - `--html`: write the report as HTML. It is required, and HTML is the
   only format.
+- `-o FILE`, `--output FILE`: write the report to `FILE` instead of
+  `audit-report.html`, replacing any file there. A relative `FILE` is
+  taken from the current directory. `-o -` writes the report to
+  standard output ([RQ-0017](../breadcrumbs/RQ-0017.md),
+  [RQ-0018](../breadcrumbs/RQ-0018.md)).
 
 Operands: none.
 
 Standard input: not read.
 
-Output: the report is written to `audit-report.html` in the current
-directory, replacing any file there. Standard output gets one line,
-the absolute path of the report.
+Output: without `-o`, the report is written to `audit-report.html` in
+the current directory, replacing any file there
+([RQ-0019](../breadcrumbs/RQ-0019.md)). When the report is written to
+a file, standard output gets one line, the absolute path of the
+report. With `-o -`, standard output gets the report, and no file is
+written.
 
 The report draws the breadcrumbs as a graph
 ([RQ-0002](../breadcrumbs/RQ-0002.md)), each with its properties
@@ -92,8 +100,8 @@ Exit status:
 - 1: the report is written, and a breadcrumb is Refuted or has a
   problem.
 - 2: `bcr` was used wrongly, or there is no `breadcrumbs/` directory
-  in the current directory, or the report could not be written. No
-  report is written.
+  in the current directory, or the report could not be written, such
+  as to a directory that does not exist. No report is written.
 
 ## EXIT STATUS
 
