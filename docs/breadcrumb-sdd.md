@@ -31,12 +31,12 @@ that audits breadcrumbs follows it.
 
 ## Terms
 
-- The **repository root** is the directory at the top of the
+- The repository root is the directory at the top of the
   repository. `bcr` is run from it.
-- A **path** names a file relative to the repository root. It uses `/`
+- A path names a file relative to the repository root. It uses `/`
   as its separator, does not start or end with `/`, and has no empty,
   `.` or `..` segment.
-- A **line** is the text between two line feeds (U+000A), or before
+- A line is the text between two line feeds (U+000A), or before
   the first or after the last. A carriage return (U+000D) at the end
   of a line is not part of it. Lines are counted from 1.
 - Text is compared as UTF-8 bytes, exactly: no change of case, of
@@ -44,21 +44,20 @@ that audits breadcrumbs follows it.
 
 ## Breadcrumbs
 
-A **breadcrumb** is a Markdown file directly in the `breadcrumbs/`
+A breadcrumb is a Markdown file directly in the `breadcrumbs/`
 directory at the repository root, named by a type prefix, a hyphen,
 four digits and `.md`, such as `TD-0001.md`. A file named otherwise,
 in a subdirectory of `breadcrumbs/`, or with a lower-case prefix is
 not a breadcrumb.
 
-A breadcrumb's **id** is its file name without `.md`, such as
-`TD-0001`. Its **type** is given by its prefix:
+A breadcrumb's id is its file name without `.md`, such as
+`TD-0001`. Its type is given by its prefix:
 
-| Prefix | Type               | Records                                         |
-|--------|--------------------|-------------------------------------------------|
-| `IN`   | Intake             | an ask, in the words of whoever made it         |
-| `RQ`   | Requirement        | one thing the software must do                  |
-| `TD`   | Technical Decision | one decision about how the repository is built  |
-| `TK`   | Task               | one change, as claims about the files it left   |
+- `IN`, an Intake, records an ask, in the words of whoever made it;
+- `RQ`, a Requirement, states one thing the software must do;
+- `TD`, a Technical Decision, records one decision about how the
+  repository is built;
+- `TK`, a Task, records one change, as claims about the files it left.
 
 A repository with no `breadcrumbs/` directory has no breadcrumbs.
 
@@ -70,7 +69,7 @@ Sources: [TD-0001](../breadcrumbs/TD-0001.md),
 
 ### The title
 
-A breadcrumb's first line is its **title**, and starts with `# `. The
+A breadcrumb's first line is its title, and starts with `# `. The
 title is the rest of the line, without a leading `ID: `:
 
 ```markdown
@@ -85,7 +84,7 @@ Sources: [TD-0013](../breadcrumbs/TD-0013.md).
 
 ### Parents
 
-A breadcrumb names each breadcrumb it derives from, its **parent**,
+A breadcrumb names each breadcrumb it derives from, its parent,
 on a `Parent:` line:
 
 ```markdown
@@ -162,7 +161,7 @@ in the repository. It names as parents the Requirements and Technical
 Decisions it carries out. A Task has no status: a committed Task is
 audited.
 
-Its **claims** are the list items under a heading that is exactly
+Its claims are the list items under a heading that is exactly
 `## Claims`, up to the next line that starts with `#`. A Task may have
 more than one such section; the claims of each count.
 
@@ -174,7 +173,7 @@ Sources: [TD-0011](../breadcrumbs/TD-0011.md).
 
 ## Claims
 
-There is one kind of claim, the **contains claim**:
+There is one kind of claim, the contains claim:
 
 ```markdown
 - `cmd/bcr/main.go` contains `func run(`
@@ -185,7 +184,7 @@ code span holding the text, with nothing after it. Neither code span
 is empty or holds a backtick. The text holds no line break, so it
 matches within one line.
 
-The claim **holds** when a file can be read at the path and its bytes
+The claim holds when a file can be read at the path and its bytes
 contain the text's UTF-8 bytes. It does not hold when there is no
 file at the path, the path names a directory, or the file does not
 contain the text.
@@ -198,7 +197,7 @@ Sources: [TD-0012](../breadcrumbs/TD-0012.md),
 
 ## Verdicts
 
-The audit gives every breadcrumb one **verdict**: Confirmed, Refuted
+The audit gives every breadcrumb one verdict: Confirmed, Refuted
 or Undecided.
 
 A Task's verdict from its own claims is:
@@ -208,8 +207,8 @@ A Task's verdict from its own claims is:
 - Confirmed, when it has claims and every one holds;
 - Undecided, when it has no claims.
 
-A breadcrumb's **children** are the breadcrumbs that name it as a
-parent. The verdicts **below** a breadcrumb are the verdict of each
+A breadcrumb's children are the breadcrumbs that name it as a
+parent. The verdicts below a breadcrumb are the verdict of each
 child, and, for a Task, its verdict from its own claims. A
 breadcrumb's verdict is then:
 
@@ -237,7 +236,7 @@ Sources: [RQ-0005](../breadcrumbs/RQ-0005.md),
 
 ## Problems
 
-A **problem** is a breadcrumb, or a line of one, that cannot be read
+A problem is a breadcrumb, or a line of one, that cannot be read
 as this document defines. Each problem has the path of its breadcrumb
 and the line where it is. The problems are:
 

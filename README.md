@@ -41,7 +41,8 @@ breadcrumbs are in [`breadcrumbs/`](breadcrumbs/).
 
 The rules of the method are in its specification,
 [`docs/breadcrumb-sdd.md`](docs/breadcrumb-sdd.md), also printed by
-`bcr spec` and shipped in each release.
+`bcr spec`, shipped in each release, and published for each of its
+versions at <https://rodolfo-mendes.github.io/breadcrumb-sdd/>.
 
 ## Running bcr
 
