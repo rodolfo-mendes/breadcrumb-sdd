@@ -24,6 +24,7 @@ const (
 	margin     = 20
 	wrapAt     = 36 // characters per title line
 	titleLines = 3
+	maxClaims  = 6 // claims listed in a Task's rectangle
 )
 
 // node is a rectangle in the diagram.
@@ -86,7 +87,7 @@ func build(g breadcrumb.Graph) page {
 		n := &node{
 			key:     b.Path,
 			Header:  b.ID,
-			Lines:   append(wrap(b.Title), "type: "+b.Type.String(), "verdict: "+b.Verdict.String()),
+			Lines:   append(append(wrap(b.Title), "type: "+b.Type.String(), "verdict: "+b.Verdict.String()), claimLines(b.Claims)...),
 			Class:   strings.ToLower(b.Verdict.String()),
 			sortKey: "0" + b.ID,
 		}
@@ -203,6 +204,32 @@ func layers(nodes map[string]*node, order []string) [][]*node {
 		rows[d] = append(rows[d], nodes[k])
 	}
 	return rows
+}
+
+// claimLines lists a Task's claims, each marked with whether it holds.
+func claimLines(claims []breadcrumb.Claim) []string {
+	var lines []string
+	for i, c := range claims {
+		if i == maxClaims {
+			lines = append(lines, fmt.Sprintf("… %d more claims", len(claims)-maxClaims))
+			break
+		}
+		mark := "✗"
+		if c.Holds {
+			mark = "✓"
+		}
+		lines = append(lines, truncate(mark+" "+c.Path+": "+c.Text))
+	}
+	return lines
+}
+
+// truncate cuts s to wrapAt characters.
+func truncate(s string) string {
+	r := []rune(s)
+	if len(r) <= wrapAt {
+		return s
+	}
+	return string(r[:wrapAt-1]) + "…"
 }
 
 // wrap breaks a title into lines of at most wrapAt characters, and at

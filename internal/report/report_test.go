@@ -111,3 +111,34 @@ func TestTheReportListsProblemsAndOtherFiles(t *testing.T) {
 		}
 	}
 }
+
+func TestATaskListsItsClaims(t *testing.T) {
+	b := crumb("TK-0001")
+	b.Verdict = breadcrumb.Refuted
+	b.Claims = []breadcrumb.Claim{{Path: "a.go", Text: "func a(", Holds: true}, {Path: "b.go", Text: "func b(", Holds: false}}
+	pg := build(breadcrumb.Graph{Breadcrumbs: []breadcrumb.Breadcrumb{b}})
+	n := find(t, pg, "TK-0001")
+	lines := strings.Join(n.Lines, "\n")
+	for _, want := range []string{"✓ a.go: func a(", "✗ b.go: func b("} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("lines %q do not contain %q", n.Lines, want)
+		}
+	}
+	if n.Class != "refuted" {
+		t.Errorf("got class %q", n.Class)
+	}
+}
+
+func TestManyClaimsAreCut(t *testing.T) {
+	var claims []breadcrumb.Claim
+	for i := 0; i < maxClaims+3; i++ {
+		claims = append(claims, breadcrumb.Claim{Path: "a.go", Text: strings.Repeat("x", 80), Holds: true})
+	}
+	lines := claimLines(claims)
+	if len(lines) != maxClaims+1 || lines[maxClaims] != "… 3 more claims" {
+		t.Errorf("got %q", lines)
+	}
+	if len([]rune(lines[0])) > wrapAt {
+		t.Errorf("line %q is longer than %d", lines[0], wrapAt)
+	}
+}

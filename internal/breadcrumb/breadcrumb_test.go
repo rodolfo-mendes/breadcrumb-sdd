@@ -2,6 +2,7 @@ package breadcrumb
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -30,6 +31,7 @@ func TestBreadcrumbFilesAreNamedByTypeAndNumber(t *testing.T) {
 		"breadcrumbs/IN-0001.md":     file("# IN-0001: An ask\n"),
 		"breadcrumbs/RQ-0001.md":     file("# RQ-0001: A requirement\n"),
 		"breadcrumbs/TD-0001.md":     file("# TD-0001: A decision\n"),
+		"breadcrumbs/TK-0001.md":     file("# TK-0001: A task\n"),
 		"breadcrumbs/td-0002.md":     file("# lower case\n"),
 		"breadcrumbs/TD-2.md":        file("# too few digits\n"),
 		"breadcrumbs/XX-0001.md":     file("# unknown type\n"),
@@ -42,7 +44,7 @@ func TestBreadcrumbFilesAreNamedByTypeAndNumber(t *testing.T) {
 	for _, b := range g.Breadcrumbs {
 		got = append(got, b.ID+" "+b.Type.String())
 	}
-	want := []string{"IN-0001 Intake", "RQ-0001 Requirement", "TD-0001 Technical Decision"}
+	want := []string{"IN-0001 Intake", "RQ-0001 Requirement", "TD-0001 Technical Decision", "TK-0001 Task"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("breadcrumbs: got %q, want %q", got, want)
 	}
@@ -124,7 +126,7 @@ func TestCarriageReturnsBelongToTheLineEnding(t *testing.T) {
 	}
 }
 
-func TestEveryBreadcrumbIsUndecided(t *testing.T) {
+func TestABreadcrumbWithNothingBelowItIsUndecided(t *testing.T) {
 	b := only(t, load(t, fstest.MapFS{"breadcrumbs/TD-0001.md": file("# TD-0001: A decision\n")}))
 	if b.Verdict != Undecided {
 		t.Errorf("got %v", b.Verdict)
@@ -138,5 +140,153 @@ func TestLookupFindsABreadcrumbByPath(t *testing.T) {
 	}
 	if _, ok := g.Lookup("breadcrumbs/TD-0002.md"); ok {
 		t.Error("TD-0002 found")
+	}
+}
+
+func task(claims ...string) string {
+	return "# TK-0001: A task\n\nParent: [TD-0001](TD-0001.md)\n\n## Claims\n\n" + strings.Join(claims, "\n") + "\n\n## Notes\n\n- not a claim, outside the section\n"
+}
+
+func verdicts(g Graph) map[string]string {
+	m := map[string]string{}
+	for _, b := range g.Breadcrumbs {
+		m[b.ID] = b.Verdict.String()
+	}
+	return m
+}
+
+var repo = fstest.MapFS{
+	"src/cli.go": file("package cli\n\nfunc save(path string) {}\n"),
+}
+
+func with(extra fstest.MapFS) fstest.MapFS {
+	fsys := fstest.MapFS{}
+	for k, v := range repo {
+		fsys[k] = v
+	}
+	for k, v := range extra {
+		fsys[k] = v
+	}
+	return fsys
+}
+
+func TestClaimsAreTheListItemsUnderTheClaimsHeading(t *testing.T) {
+	g := load(t, with(fstest.MapFS{"breadcrumbs/TK-0001.md": file(task(
+		"- `src/cli.go` contains `func save(`",
+		"- `src/cli.go` contains `package cli`",
+	))}))
+	b, _ := g.Lookup("breadcrumbs/TK-0001.md")
+	want := []Claim{{Path: "src/cli.go", Text: "func save(", Holds: true}, {Path: "src/cli.go", Text: "package cli", Holds: true}}
+	if !reflect.DeepEqual(b.Claims, want) || len(b.Problems) != 0 {
+		t.Errorf("got claims %+v and problems %q, want %+v", b.Claims, b.Problems, want)
+	}
+}
+
+func TestATaskIsConfirmedWhenEveryClaimHolds(t *testing.T) {
+	g := load(t, with(fstest.MapFS{"breadcrumbs/TK-0001.md": file(task("- `src/cli.go` contains `func save(`"))}))
+	if v := verdicts(g)["TK-0001"]; v != "Confirmed" {
+		t.Errorf("got %s", v)
+	}
+}
+
+func TestATaskIsRefutedWhenAClaimFails(t *testing.T) {
+	for name, claim := range map[string]string{
+		"text not in the file": "- `src/cli.go` contains `func Save(`",
+		"no such file":         "- `src/gone.go` contains `func save(`",
+		"a directory":          "- `src` contains `func save(`",
+	} {
+		g := load(t, with(fstest.MapFS{"breadcrumbs/TK-0001.md": file(task("- `src/cli.go` contains `func save(`", claim))}))
+		if v := verdicts(g)["TK-0001"]; v != "Refuted" {
+			t.Errorf("%s: got %s", name, v)
+		}
+	}
+}
+
+func TestATaskIsRefutedWhenAClaimCannotBeRead(t *testing.T) {
+	for _, claim := range []string{
+		"- src/cli.go contains func save(",
+		"- `src/cli.go` includes `func save(`",
+		"* `src/cli.go` contains `func save(`",
+		"  - `src/cli.go` contains `func save(`",
+		"- `/src/cli.go` contains `func save(`",
+		"- `src/../src/cli.go` contains `func save(`",
+		"- `./src/cli.go` contains `func save(`",
+	} {
+		g := load(t, with(fstest.MapFS{"breadcrumbs/TK-0001.md": file(task("- `src/cli.go` contains `func save(`", claim))}))
+		b, _ := g.Lookup("breadcrumbs/TK-0001.md")
+		if b.Verdict != Refuted || len(b.Problems) != 1 {
+			t.Errorf("%q: got %v with problems %q, want Refuted with one problem", claim, b.Verdict, b.Problems)
+		}
+	}
+}
+
+func TestATaskWithNoClaimsIsUndecided(t *testing.T) {
+	g := load(t, with(fstest.MapFS{"breadcrumbs/TK-0001.md": file(task())}))
+	if v := verdicts(g)["TK-0001"]; v != "Undecided" {
+		t.Errorf("got %s", v)
+	}
+}
+
+func TestClaimsOnlyCountInTasks(t *testing.T) {
+	g := load(t, with(fstest.MapFS{"breadcrumbs/TD-0001.md": file("# TD-0001: A decision\n\n## Claims\n\n- `src/cli.go` contains `nope`\n")}))
+	b := only(t, g)
+	if len(b.Claims) != 0 || b.Verdict != Undecided {
+		t.Errorf("got %+v", b)
+	}
+}
+
+// RQ-0006 and RQ-0008.
+func TestVerdictsPassUpTheChain(t *testing.T) {
+	holds := "- `src/cli.go` contains `func save(`"
+	fails := "- `src/cli.go` contains `func Save(`"
+	crumbs := func(second string) fstest.MapFS {
+		return with(fstest.MapFS{
+			"breadcrumbs/IN-0001.md": file("# IN-0001: An ask\n"),
+			"breadcrumbs/RQ-0001.md": file("# RQ-0001: A requirement\n\nParent: [IN-0001](IN-0001.md)\n"),
+			"breadcrumbs/TD-0001.md": file("# TD-0001: A decision\n\nParent: [RQ-0001](RQ-0001.md)\n"),
+			"breadcrumbs/TK-0001.md": file(task(holds)),
+			"breadcrumbs/TK-0002.md": file(strings.Replace(task(second), "TK-0001", "TK-0002", 1)),
+		})
+	}
+
+	tests := []struct {
+		name   string
+		second string
+		want   string
+	}{
+		{"all Confirmed", holds, "Confirmed"},
+		{"one Refuted", fails, "Refuted"},
+		{"one Undecided", "", "Undecided"},
+	}
+	for _, tt := range tests {
+		g := load(t, crumbs(tt.second))
+		v := verdicts(g)
+		for _, id := range []string{"TD-0001", "RQ-0001", "IN-0001"} {
+			if v[id] != tt.want {
+				t.Errorf("%s: %s is %s, want %s", tt.name, id, v[id], tt.want)
+			}
+		}
+	}
+}
+
+func TestATaskIsRefutedByARefutedChild(t *testing.T) {
+	g := load(t, with(fstest.MapFS{
+		"breadcrumbs/TK-0001.md": file(task("- `src/cli.go` contains `func save(`")),
+		"breadcrumbs/TK-0002.md": file("# TK-0002: A follow-up\n\nParent: [TK-0001](TK-0001.md)\n\n## Claims\n\n- `src/cli.go` contains `nope`\n"),
+	}))
+	if v := verdicts(g)["TK-0001"]; v != "Refuted" {
+		t.Errorf("got %s", v)
+	}
+}
+
+func TestACycleDecidesNothing(t *testing.T) {
+	g := load(t, fstest.MapFS{
+		"breadcrumbs/TD-0001.md": file("# TD-0001: A\n\nParent: [TD-0002](TD-0002.md)\n"),
+		"breadcrumbs/TD-0002.md": file("# TD-0002: B\n\nParent: [TD-0001](TD-0001.md)\n"),
+	})
+	for id, v := range verdicts(g) {
+		if v != "Undecided" {
+			t.Errorf("%s is %s", id, v)
+		}
 	}
 }
