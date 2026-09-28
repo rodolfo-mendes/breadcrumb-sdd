@@ -9,6 +9,8 @@ bcr \- audit the breadcrumbs of a repository
 bcr audit\-report \-\-html [\-o FILE]
 bcr check
 bcr verdict [ID|PATH|\-]...
+bcr list [ID|PATH|\-]...
+bcr links [\-r] [ID|PATH|\-]...
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -26,6 +28,8 @@ Flags are in getopt style: a short flag is one letter, such as \fB\-a\fR, and sh
 Results go to standard output, and nothing else does. Messages go to standard error and start with \fBbcr: \fR. A usage error is followed by the usage line (RQ\-0009, TD\-0020).
 .IP \(bu 2
 The exit status says whether the command found something wrong (see EXIT STATUS).
+.IP \(bu 2
+A command that takes breadcrumbs as operands takes an id, such as \fBTK\-0001\fR, a path relative to the repository root, such as \fBbreadcrumbs/TK\-0001.md\fR, or \fB\-\fR, which reads one breadcrumb per line of standard input, named by the line's first tab\-separated field. With no operands, it takes every breadcrumb, in order of path. An operand that names no breadcrumb is written to standard error, the others are still taken, and the command exits with 2 (TD\-0026, RQ\-0012, RQ\-0025).
 .PP
 Which files are breadcrumbs: TD\-0013. The kinds of breadcrumb: TD\-0001, TD\-0003, TD\-0004 and TD\-0011. How a breadcrumb names its parents: TD\-0005.
 .SH "COMMANDS"
@@ -113,9 +117,9 @@ Prints the verdict of each breadcrumb (RQ\-0024), or of the breadcrumbs it is gi
 .PP
 Flags: none.
 .PP
-Operands: with none, every breadcrumb, in order of path. Otherwise the breadcrumbs they name, in the order given. An operand is an id, such as \fBTK\-0001\fR, or a path relative to the repository root, such as \fBbreadcrumbs/TK\-0001.md\fR.
+Operands: breadcrumbs, as DESCRIPTION defines, in the order given (RQ\-0025).
 .PP
-Standard input: read when an operand is \fB\-\fR: one breadcrumb per line, named by the line's first tab\-separated field (RQ\-0012). The output of \fBbcr verdict\fR can feed it.
+Standard input: read when an operand is \fB\-\fR. The output of any command here can feed it.
 .PP
 Output: one line on standard output for each breadcrumb: its id, a tab, and its verdict, \fBConfirmed\fR, \fBRefuted\fR or \fBUndecided\fR:
 .PP
@@ -125,7 +129,7 @@ TK\-0001	Confirmed
 .fi
 .RE
 .PP
-How a verdict is reached: see audit\-report. An operand that names no breadcrumb is written to standard error, and the others are still printed.
+How a verdict is reached: see audit\-report.
 .PP
 Exit status (RQ\-0026):
 .IP \(bu 2
@@ -141,6 +145,62 @@ Examples:
 .nf
 bcr verdict | grep \-w Refuted | cut \-f1
 bcr verdict breadcrumbs/TK\-*.md
+.fi
+.RE
+.SS "list"
+.PP
+.RS 4
+.nf
+bcr list [ID|PATH|\-]...
+.fi
+.RE
+.PP
+Prints each breadcrumb with its type and title (RQ\-0027).
+.PP
+Flags: none.
+.PP
+Operands: breadcrumbs, as DESCRIPTION defines, in the order given (RQ\-0029).
+.PP
+Standard input: read when an operand is \fB\-\fR.
+.PP
+Output: one line on standard output for each breadcrumb: its id, its type and its title, separated by tabs. The type is \fBIntake\fR, \fBRequirement\fR, \fBTechnical Decision\fR or \fBTask\fR.
+.PP
+Exit status (RQ\-0029):
+.IP \(bu 2
+0: the breadcrumbs were printed.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, an operand names no breadcrumb, or there is no \fBbreadcrumbs/\fR directory in the current directory.
+.SS "links"
+.PP
+.RS 4
+.nf
+bcr links [\-r] [ID|PATH|\-]...
+.fi
+.RE
+.PP
+Prints each link from a breadcrumb to its parent (RQ\-0028).
+.PP
+Flags:
+.IP \(bu 2
+\fB\-r\fR, \fB\-\-recursive\fR: also print the links of each parent reached, and of their parents, up to the breadcrumbs with none. Each link is printed once, the first time it is reached (RQ\-0030).
+.PP
+Operands: breadcrumbs, as DESCRIPTION defines. Only the links they have are printed, in the order given (RQ\-0029).
+.PP
+Standard input: read when an operand is \fB\-\fR.
+.PP
+Output: one line on standard output for each \fBParent:\fR link: the id of the breadcrumb that has it, a tab, and the id of the parent, in order of the breadcrumb's \fBParent:\fR lines. A link to no breadcrumb prints the path it points to in place of the parent's id; \fBbcr check\fR reports it as a problem. How a breadcrumb names its parents: TD\-0005.
+.PP
+Exit status (RQ\-0029):
+.IP \(bu 2
+0: the links were printed.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, an operand names no breadcrumb, or there is no \fBbreadcrumbs/\fR directory in the current directory.
+.PP
+Examples: what a Refuted Task breaks, with titles:
+.PP
+.RS 4
+.nf
+bcr verdict | grep \-w Refuted | bcr links \-r \- | cut \-f2 | sort \-u | bcr list \-
 .fi
 .RE
 .SH "EXIT STATUS"

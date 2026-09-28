@@ -10,6 +10,8 @@ bcr - audit the breadcrumbs of a repository
 bcr audit-report --html [-o FILE]
 bcr check
 bcr verdict [ID|PATH|-]...
+bcr list [ID|PATH|-]...
+bcr links [-r] [ID|PATH|-]...
 ```
 
 ## DESCRIPTION
@@ -41,6 +43,16 @@ Every command follows the same conventions:
   [TD-0020](../breadcrumbs/TD-0020.md)).
 - The exit status says whether the command found something wrong (see
   EXIT STATUS).
+- A command that takes breadcrumbs as operands takes an id, such as
+  `TK-0001`, a path relative to the repository root, such as
+  `breadcrumbs/TK-0001.md`, or `-`, which reads one breadcrumb per line
+  of standard input, named by the line's first tab-separated field.
+  With no operands, it takes every breadcrumb, in order of path. An
+  operand that names no breadcrumb is written to standard error, the
+  others are still taken, and the command exits with 2
+  ([TD-0026](../breadcrumbs/TD-0026.md),
+  [RQ-0012](../breadcrumbs/RQ-0012.md),
+  [RQ-0025](../breadcrumbs/RQ-0025.md)).
 
 Which files are breadcrumbs:
 [TD-0013](../breadcrumbs/TD-0013.md). The kinds of breadcrumb:
@@ -163,15 +175,11 @@ given ([RQ-0025](../breadcrumbs/RQ-0025.md)).
 
 Flags: none.
 
-Operands: with none, every breadcrumb, in order of path. Otherwise the
-breadcrumbs they name, in the order given. An operand is an id, such as
-`TK-0001`, or a path relative to the repository root, such as
-`breadcrumbs/TK-0001.md`.
+Operands: breadcrumbs, as DESCRIPTION defines, in the order given
+([RQ-0025](../breadcrumbs/RQ-0025.md)).
 
-Standard input: read when an operand is `-`: one breadcrumb per line,
-named by the line's first tab-separated field
-([RQ-0012](../breadcrumbs/RQ-0012.md)). The output of `bcr verdict`
-can feed it.
+Standard input: read when an operand is `-`. The output of any
+command here can feed it.
 
 Output: one line on standard output for each breadcrumb: its id, a
 tab, and its verdict, `Confirmed`, `Refuted` or `Undecided`:
@@ -180,9 +188,7 @@ tab, and its verdict, `Confirmed`, `Refuted` or `Undecided`:
 TK-0001	Confirmed
 ```
 
-How a verdict is reached: see audit-report. An operand that names no
-breadcrumb is written to standard error, and the others are still
-printed.
+How a verdict is reached: see audit-report.
 
 Exit status ([RQ-0026](../breadcrumbs/RQ-0026.md)):
 
@@ -196,6 +202,73 @@ Examples:
 ```
 bcr verdict | grep -w Refuted | cut -f1
 bcr verdict breadcrumbs/TK-*.md
+```
+
+### list
+
+```
+bcr list [ID|PATH|-]...
+```
+
+Prints each breadcrumb with its type and title
+([RQ-0027](../breadcrumbs/RQ-0027.md)).
+
+Flags: none.
+
+Operands: breadcrumbs, as DESCRIPTION defines, in the order given
+([RQ-0029](../breadcrumbs/RQ-0029.md)).
+
+Standard input: read when an operand is `-`.
+
+Output: one line on standard output for each breadcrumb: its id, its
+type and its title, separated by tabs. The type is `Intake`,
+`Requirement`, `Technical Decision` or `Task`.
+
+Exit status ([RQ-0029](../breadcrumbs/RQ-0029.md)):
+
+- 0: the breadcrumbs were printed.
+- 2: `bcr` was used wrongly, an operand names no breadcrumb, or there
+  is no `breadcrumbs/` directory in the current directory.
+
+### links
+
+```
+bcr links [-r] [ID|PATH|-]...
+```
+
+Prints each link from a breadcrumb to its parent
+([RQ-0028](../breadcrumbs/RQ-0028.md)).
+
+Flags:
+
+- `-r`, `--recursive`: also print the links of each parent reached,
+  and of their parents, up to the breadcrumbs with none. Each link is
+  printed once, the first time it is reached
+  ([RQ-0030](../breadcrumbs/RQ-0030.md)).
+
+Operands: breadcrumbs, as DESCRIPTION defines. Only the links they
+have are printed, in the order given
+([RQ-0029](../breadcrumbs/RQ-0029.md)).
+
+Standard input: read when an operand is `-`.
+
+Output: one line on standard output for each `Parent:` link: the id
+of the breadcrumb that has it, a tab, and the id of the parent, in
+order of the breadcrumb's `Parent:` lines. A link to no breadcrumb
+prints the path it points to in place of the parent's id; `bcr check`
+reports it as a problem. How a breadcrumb names its parents:
+[TD-0005](../breadcrumbs/TD-0005.md).
+
+Exit status ([RQ-0029](../breadcrumbs/RQ-0029.md)):
+
+- 0: the links were printed.
+- 2: `bcr` was used wrongly, an operand names no breadcrumb, or there
+  is no `breadcrumbs/` directory in the current directory.
+
+Examples: what a Refuted Task breaks, with titles:
+
+```
+bcr verdict | grep -w Refuted | bcr links -r - | cut -f2 | sort -u | bcr list -
 ```
 
 ## EXIT STATUS

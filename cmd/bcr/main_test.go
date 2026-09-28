@@ -89,6 +89,9 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		{[]string{"check", "breadcrumbs/TD-0001.md"}, checkUsage},
 		{[]string{"verdict", "-x"}, verdictUsage},
 		{[]string{"verdict", "--refuted"}, verdictUsage},
+		{[]string{"list", "-r"}, listUsage},
+		{[]string{"links", "-x"}, linksUsage},
+		{[]string{"links", "--recursive=yes"}, linksUsage},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {
@@ -348,5 +351,110 @@ func TestVerdictOfAnEmptyStandardInputPrintsNothing(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"verdict", "-"}, strings.NewReader(""), &stdout, &stderr); code != 0 || stdout.Len() > 0 {
 		t.Errorf("exit %d, printed %q", code, stdout.String())
+	}
+}
+
+// chain makes a repository where TK-0001 carries out RQ-0001, which
+// derives from IN-0001 and TD-0002; TD-0002 derives from IN-0001 too,
+// and TK-0001 also links to a missing TD-0099.
+func chain(t *testing.T) {
+	t.Helper()
+	root := repo(t)
+	write(t, root, map[string]string{
+		"breadcrumbs/IN-0001.md": "# IN-0001: An ask\n",
+		"breadcrumbs/TD-0002.md": "# TD-0002: A decision\n\nParent: [IN-0001](IN-0001.md)\n",
+		"breadcrumbs/RQ-0001.md": "# RQ-0001: A requirement\n\nParent: [IN-0001](IN-0001.md)\nParent: [TD-0002](TD-0002.md)\n",
+		"breadcrumbs/TK-0001.md": "# TK-0001: A task\n\nParent: [RQ-0001](RQ-0001.md)\nParent: [TD-0099](TD-0099.md)\n",
+	})
+}
+
+func TestListPrintsEachBreadcrumbWithItsTypeAndTitle(t *testing.T) {
+	chain(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"list"}, nil, &stdout, &stderr); code != 0 {
+		t.Errorf("exit %d, want 0: %s", code, stderr.String())
+	}
+	want := "IN-0001\tIntake\tAn ask\n" +
+		"RQ-0001\tRequirement\tA requirement\n" +
+		"TD-0001\tTechnical Decision\tA decision\n" +
+		"TD-0002\tTechnical Decision\tA decision\n" +
+		"TK-0001\tTask\tA task\n"
+	if stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestListPrintsTheBreadcrumbsItIsGiven(t *testing.T) {
+	chain(t)
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"list", "TK-0001", "-"}, strings.NewReader("IN-0001\tUndecided\nTK-0042\n"), &stdout, &stderr)
+	if code != 2 {
+		t.Errorf("exit %d, want 2", code)
+	}
+	if want := "TK-0001\tTask\tA task\nIN-0001\tIntake\tAn ask\n"; stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+	if want := "bcr: TK-0042 names no breadcrumb\n"; stderr.String() != want {
+		t.Errorf("wrote %q to standard error, want %q", stderr.String(), want)
+	}
+}
+
+func TestLinksPrintsEachLinkToAParent(t *testing.T) {
+	chain(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"links"}, nil, &stdout, &stderr); code != 0 {
+		t.Errorf("exit %d, want 0: %s", code, stderr.String())
+	}
+	want := "RQ-0001\tIN-0001\n" +
+		"RQ-0001\tTD-0002\n" +
+		"TD-0002\tIN-0001\n" +
+		"TK-0001\tRQ-0001\n" +
+		"TK-0001\tbreadcrumbs/TD-0099.md\n"
+	if stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestLinksOfTheBreadcrumbsItIsGiven(t *testing.T) {
+	chain(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"links", "breadcrumbs/TD-0002.md", "TK-0001"}, nil, &stdout, &stderr); code != 0 {
+		t.Errorf("exit %d, want 0: %s", code, stderr.String())
+	}
+	if want := "TD-0002\tIN-0001\nTK-0001\tRQ-0001\nTK-0001\tbreadcrumbs/TD-0099.md\n"; stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestLinksRecursiveFollowsTheChainUpOnce(t *testing.T) {
+	chain(t)
+	for _, flag := range []string{"-r", "--recursive"} {
+		var stdout, stderr bytes.Buffer
+		if code := run([]string{"links", flag, "TK-0001"}, nil, &stdout, &stderr); code != 0 {
+			t.Errorf("%s: exit %d, want 0: %s", flag, code, stderr.String())
+		}
+		want := "TK-0001\tRQ-0001\n" +
+			"TK-0001\tbreadcrumbs/TD-0099.md\n" +
+			"RQ-0001\tIN-0001\n" +
+			"RQ-0001\tTD-0002\n" +
+			"TD-0002\tIN-0001\n"
+		if stdout.String() != want {
+			t.Errorf("%s: printed %q, want %q", flag, stdout.String(), want)
+		}
+	}
+}
+
+func TestLinksRecursiveEndsOnACycle(t *testing.T) {
+	root := repo(t)
+	write(t, root, map[string]string{
+		"breadcrumbs/RQ-0001.md": "# RQ-0001: One\n\nParent: [RQ-0002](RQ-0002.md)\n",
+		"breadcrumbs/RQ-0002.md": "# RQ-0002: Two\n\nParent: [RQ-0001](RQ-0001.md)\n",
+	})
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"links", "-r", "RQ-0001"}, nil, &stdout, &stderr); code != 0 {
+		t.Errorf("exit %d, want 0", code)
+	}
+	if want := "RQ-0001\tRQ-0002\nRQ-0002\tRQ-0001\n"; stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
 	}
 }
