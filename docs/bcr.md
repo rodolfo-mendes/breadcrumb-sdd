@@ -14,6 +14,7 @@ bcr list [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
 bcr new TYPE TITLE [PARENT|-]...
 bcr spec
+bcr init [-a FILE]
 ```
 
 ## DESCRIPTION
@@ -355,6 +356,68 @@ Example, the version of the specification this `bcr` carries out:
 
 ```
 bcr spec | sed -n 3p
+```
+
+### init
+
+```
+bcr init [-a FILE]
+```
+
+Sets up Breadcrumb SDD in the repository whose root is the current
+directory ([RQ-0042](../breadcrumbs/RQ-0042.md)). Each piece is set up
+only when it is not there yet, found by its name
+([TD-0034](../breadcrumbs/TD-0034.md)):
+
+- `breadcrumbs/TD-0001.md`, a Technical Decision to adopt the version
+  of the specification `bcr spec` prints, written only when
+  `breadcrumbs/` holds no breadcrumb;
+- a `## Breadcrumb SDD` section in the agents file, pointing agents to
+  the breadcrumbs and to that version's page on the site
+  ([RQ-0043](../breadcrumbs/RQ-0043.md));
+- `.github/workflows/breadcrumbs.yml`, a GitHub Actions workflow that
+  runs `bcr check` and `bcr verdict`, with this release of `bcr`, on
+  each push and pull request ([RQ-0044](../breadcrumbs/RQ-0044.md),
+  [TD-0035](../breadcrumbs/TD-0035.md)).
+
+Flags:
+
+- `-a FILE`, `--agents-file FILE`: the agents file, `AGENTS.md` or
+  `CLAUDE.md`. Without it, `AGENTS.md`
+  ([RQ-0046](../breadcrumbs/RQ-0046.md)).
+
+Operands: none.
+
+Standard input: not read.
+
+Output: on standard output, the path of each file created or added
+to, relative to the repository root, one per line. On standard
+error, a note for each piece that was already there, and left as it
+is.
+
+`bcr init` replaces no file, and changes none but the agents file,
+by adding its section at the end
+([RQ-0045](../breadcrumbs/RQ-0045.md)). It needs a released `bcr`,
+since the workflow installs the same release
+([TD-0036](../breadcrumbs/TD-0036.md)).
+
+On a CI other than GitHub Actions, the same check is:
+
+```
+bcr check && bcr verdict
+```
+
+Exit status ([RQ-0045](../breadcrumbs/RQ-0045.md)):
+
+- 0: everything is set up, including when it already was.
+- 2: `bcr` was used wrongly, has no version, or a piece cannot be set
+  up. Nothing is written when this is found before writing.
+
+Examples:
+
+```
+bcr init
+bcr init -a CLAUDE.md
 ```
 
 ## EXIT STATUS

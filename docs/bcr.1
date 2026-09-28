@@ -13,6 +13,7 @@ bcr list [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
 bcr new TYPE TITLE [PARENT|\-]...
 bcr spec
+bcr init [\-a FILE]
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -276,6 +277,56 @@ Example, the version of the specification this \fBbcr\fR carries out:
 .RS 4
 .nf
 bcr spec | sed \-n 3p
+.fi
+.RE
+.SS "init"
+.PP
+.RS 4
+.nf
+bcr init [\-a FILE]
+.fi
+.RE
+.PP
+Sets up Breadcrumb SDD in the repository whose root is the current directory (RQ\-0042). Each piece is set up only when it is not there yet, found by its name (TD\-0034):
+.IP \(bu 2
+\fBbreadcrumbs/TD\-0001.md\fR, a Technical Decision to adopt the version of the specification \fBbcr spec\fR prints, written only when \fBbreadcrumbs/\fR holds no breadcrumb;
+.IP \(bu 2
+a \fB## Breadcrumb SDD\fR section in the agents file, pointing agents to the breadcrumbs and to that version's page on the site (RQ\-0043);
+.IP \(bu 2
+\fB.github/workflows/breadcrumbs.yml\fR, a GitHub Actions workflow that runs \fBbcr check\fR and \fBbcr verdict\fR, with this release of \fBbcr\fR, on each push and pull request (RQ\-0044, TD\-0035).
+.PP
+Flags:
+.IP \(bu 2
+\fB\-a FILE\fR, \fB\-\-agents\-file FILE\fR: the agents file, \fBAGENTS.md\fR or \fBCLAUDE.md\fR. Without it, \fBAGENTS.md\fR (RQ\-0046).
+.PP
+Operands: none.
+.PP
+Standard input: not read.
+.PP
+Output: on standard output, the path of each file created or added to, relative to the repository root, one per line. On standard error, a note for each piece that was already there, and left as it is.
+.PP
+\fBbcr init\fR replaces no file, and changes none but the agents file, by adding its section at the end (RQ\-0045). It needs a released \fBbcr\fR, since the workflow installs the same release (TD\-0036).
+.PP
+On a CI other than GitHub Actions, the same check is:
+.PP
+.RS 4
+.nf
+bcr check && bcr verdict
+.fi
+.RE
+.PP
+Exit status (RQ\-0045):
+.IP \(bu 2
+0: everything is set up, including when it already was.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, has no version, or a piece cannot be set up. Nothing is written when this is found before writing.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+bcr init
+bcr init \-a CLAUDE.md
 .fi
 .RE
 .SH "EXIT STATUS"

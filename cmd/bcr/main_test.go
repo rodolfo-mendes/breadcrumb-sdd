@@ -627,3 +627,163 @@ func TestTheSpecificationStatesItsVersionOnItsThirdLine(t *testing.T) {
 		t.Errorf("the third line is not Version MAJOR.MINOR.PATCH (RQ-0036)")
 	}
 }
+
+// withVersion sets the version bcr was released as, for one test.
+func withVersion(t *testing.T, v string) {
+	t.Helper()
+	old := version
+	version = v
+	t.Cleanup(func() { version = old })
+}
+
+func readFile(t *testing.T, root, name string) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+func TestInitSetsUpARepository(t *testing.T) {
+	withVersion(t, "0.7.0")
+	root := t.TempDir()
+	chdir(t, root)
+
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"init"}, nil, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if want := "breadcrumbs/TD-0001.md\nAGENTS.md\n.github/workflows/breadcrumbs.yml\n"; stdout.String() != want {
+		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+	page := siteURL + "spec/" + specVersion() + "/"
+	if td := readFile(t, root, "breadcrumbs/TD-0001.md"); !strings.HasPrefix(td, "# TD-0001: Adopt Breadcrumb SDD\n") || !strings.Contains(td, page) {
+		t.Errorf("TD-0001 does not adopt the specification at %s (RQ-0042):\n%s", page, td)
+	}
+	if a := readFile(t, root, "AGENTS.md"); !strings.HasPrefix(a, agentsHead+"\n") || !strings.Contains(a, page) {
+		t.Errorf("AGENTS.md does not point to %s (RQ-0043):\n%s", page, a)
+	}
+	wf := readFile(t, root, ".github/workflows/breadcrumbs.yml")
+	for _, want := range []string{"pull_request:", releaseURL + "v0.7.0/bcr_0.7.0_linux_amd64.tar.gz", "sha256sum --check", "run: bcr check", "run: bcr verdict"} {
+		if !strings.Contains(wf, want) {
+			t.Errorf("the workflow has no %s (RQ-0044, TD-0035)", want)
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"check"}, nil, &stdout, &stderr); code != 0 || stdout.Len() > 0 || stderr.Len() > 0 {
+		t.Errorf("bcr check of a new repository: exit %d: %s%s", code, stdout.String(), stderr.String())
+	}
+}
+
+func TestInitTwiceChangesNothing(t *testing.T) {
+	withVersion(t, "0.7.0")
+	root := t.TempDir()
+	chdir(t, root)
+	var stdout, stderr bytes.Buffer
+	run([]string{"init"}, nil, &stdout, &stderr)
+	before := readFile(t, root, "AGENTS.md") + readFile(t, root, "breadcrumbs/TD-0001.md") + readFile(t, root, ".github/workflows/breadcrumbs.yml")
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"init"}, nil, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if stdout.Len() > 0 || strings.Count(stderr.String(), "left as it is") != 3 {
+		t.Errorf("printed %q, %q", stdout.String(), stderr.String())
+	}
+	if after := readFile(t, root, "AGENTS.md") + readFile(t, root, "breadcrumbs/TD-0001.md") + readFile(t, root, ".github/workflows/breadcrumbs.yml"); after != before {
+		t.Error("a second bcr init changed a file (RQ-0045)")
+	}
+}
+
+func TestInitAddsItsSectionToTheEndOfTheAgentsFile(t *testing.T) {
+	withVersion(t, "0.7.0")
+	for _, tc := range []struct {
+		args []string
+		file string
+	}{
+		{[]string{"init"}, "AGENTS.md"},
+		{[]string{"init", "-a", "CLAUDE.md"}, "CLAUDE.md"},
+		{[]string{"init", "--agents-file=CLAUDE.md"}, "CLAUDE.md"},
+	} {
+		root := t.TempDir()
+		chdir(t, root)
+		write(t, root, map[string]string{tc.file: "# Our notes\n\nKeep them."})
+		var stdout, stderr bytes.Buffer
+		if code := run(tc.args, nil, &stdout, &stderr); code != 0 {
+			t.Fatalf("%q: exit %d: %s", tc.args, code, stderr.String())
+		}
+		if got := readFile(t, root, tc.file); !strings.HasPrefix(got, "# Our notes\n\nKeep them.\n\n"+agentsHead+"\n") {
+			t.Errorf("%q: %s is\n%s", tc.args, tc.file, got)
+		}
+		other := "CLAUDE.md"
+		if tc.file == other {
+			other = "AGENTS.md"
+		}
+		if _, err := os.Stat(filepath.Join(root, other)); err == nil {
+			t.Errorf("%q: wrote %s too (RQ-0046)", tc.args, other)
+		}
+	}
+}
+
+func TestInitKeepsWhatTheRepositoryHas(t *testing.T) {
+	withVersion(t, "0.7.0")
+	root := repo(t)
+	files := map[string]string{
+		"AGENTS.md":                         "# Agents\n\n## Breadcrumb SDD\n\nOur own words.\n",
+		".github/workflows/breadcrumbs.yml": "name: Ours\n",
+	}
+	write(t, root, files)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"init"}, nil, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if stdout.Len() > 0 {
+		t.Errorf("printed %q", stdout.String())
+	}
+	for name, want := range files {
+		if got := readFile(t, root, name); got != want {
+			t.Errorf("%s changed to %q (RQ-0045)", name, got)
+		}
+	}
+	if got := readFile(t, root, "breadcrumbs/TD-0001.md"); got != "# TD-0001: A decision\n" {
+		t.Errorf("TD-0001 changed to %q", got)
+	}
+}
+
+func TestInitWritesNothingItCannotWriteRight(t *testing.T) {
+	for _, tc := range []struct {
+		version string
+		args    []string
+		files   map[string]string
+	}{
+		{"0.7.0", []string{"init", "-a", "README.md"}, nil},
+		{"0.7.0", []string{"init", "extra"}, nil},
+		{"0.7.0", []string{"init"}, map[string]string{"breadcrumbs": "a file"}},
+		{"", []string{"init"}, nil},
+	} {
+		withVersion(t, tc.version)
+		root := t.TempDir()
+		chdir(t, root)
+		write(t, root, tc.files)
+		var stdout, stderr bytes.Buffer
+		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {
+			t.Errorf("%q: exit %d, want 2", tc.args, code)
+		}
+		entries, _ := os.ReadDir(root)
+		if stdout.Len() > 0 || len(entries) != len(tc.files) {
+			t.Errorf("%q with version %q wrote something: %q", tc.args, tc.version, stdout.String())
+		}
+	}
+}
+
+func TestModuleVersion(t *testing.T) {
+	for v, want := range map[string]string{"v0.7.0": "0.7.0", "(devel)": "", "v0.0.0-20260928-abcdef": "", "": ""} {
+		if got := moduleVersion(v); got != want {
+			t.Errorf("moduleVersion(%q) = %q, want %q", v, got, want)
+		}
+	}
+}

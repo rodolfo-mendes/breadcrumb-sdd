@@ -70,6 +70,17 @@ Every command, flag, output and exit code of `bcr` is documented in
 `man ./bcr.1` in an unpacked release, or `man ./docs/bcr.1` in a
 clone.
 
+To adopt the method in a repository, run this from its root:
+
+```
+bcr init
+```
+
+It creates `breadcrumbs/` with a first Technical Decision, points
+agents to the breadcrumbs from `AGENTS.md` (or `CLAUDE.md`, with
+`-a CLAUDE.md`), and adds a GitHub Actions workflow that runs
+`bcr check` and `bcr verdict` on each change.
+
 To run it from a clone of this repository instead:
 
 ```

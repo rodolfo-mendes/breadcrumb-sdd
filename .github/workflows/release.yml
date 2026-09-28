@@ -44,7 +44,7 @@ jobs:
             if [ "$os" = windows ]; then exe=bcr.exe; fi
             mkdir "dist/$name"
             CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
-              go build -trimpath -ldflags "-s -w" -o "dist/$name/$exe" ./cmd/bcr
+              go build -trimpath -ldflags "-s -w -X main.version=$version" -o "dist/$name/$exe" ./cmd/bcr
             cp LICENSE README.md "dist/$name/"
             # The man page (TD-0023); tags before it have none.
             if [ -f docs/bcr.1 ]; then cp docs/bcr.1 "dist/$name/"; fi

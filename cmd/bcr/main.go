@@ -9,14 +9,15 @@
 //	bcr links [-r] [ID|PATH|-]...
 //	bcr new TYPE TITLE [PARENT|-]...
 //	bcr spec
+//	bcr init [-a FILE]
 //
 // Run it from the root of a repository. audit-report audits the
 // breadcrumbs in breadcrumbs/ and writes the report to
 // audit-report.html, to FILE, or to standard output when FILE is -.
 // check prints each problem in the breadcrumbs, verdict the verdict of
 // each breadcrumb, list its type and title, links its links to its
-// parents, new creates a breadcrumb, and spec prints the specification
-// bcr carries out. Its contract is docs/bcr.md.
+// parents, new creates a breadcrumb, spec prints the specification
+// bcr carries out, and init sets up Breadcrumb SDD in a repository. Its contract is docs/bcr.md.
 //
 // It exits 0 when it finds nothing wrong, 1 when it finds something
 // wrong, and 2 when it is used wrongly or cannot run (RQ-0010).
@@ -47,7 +48,8 @@ const (
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
 	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"
 	specUsage        = "usage: bcr spec\n"
-	usage            = auditReportUsage + checkUsage + verdictUsage + listUsage + linksUsage + newUsage + specUsage
+	initUsage        = "usage: bcr init [-a FILE]\n"
+	usage            = auditReportUsage + checkUsage + verdictUsage + listUsage + linksUsage + newUsage + specUsage + initUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -84,6 +86,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runNew(args, stdin, stdout, stderr)
 	case "spec":
 		return runSpec(args, stdout, stderr)
+	case "init":
+		return runInit(args, stdout, stderr)
 	}
 	return usageError(stderr, usage, fmt.Sprintf("unknown command %q", args[0]))
 }
