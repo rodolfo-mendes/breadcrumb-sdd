@@ -62,7 +62,9 @@ claim says that a file contains a piece of text (TD-0012):
    `go test ./internal/manpage -update` (TD-0023).
 4. **Write a Task.** Name the Requirements and Technical Decisions it
    carries out as its parents, and state as claims what the change
-   left in the files.
+   left in the files. When the change rewrites a line that a claim of
+   an earlier Task quotes, and that Task still holds, update the claim
+   in place and name it in the new Task (TD-0025).
 5. **Audit.** Run the tests and `bcr audit-report --html`. No
    breadcrumb should be red.
 6. **Commit.**
