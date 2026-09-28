@@ -8,6 +8,7 @@ bcr - audit the breadcrumbs of a repository
 
 ```
 bcr audit-report --html [-o FILE]
+bcr check
 ```
 
 ## DESCRIPTION
@@ -89,9 +90,8 @@ parents ([RQ-0004](../breadcrumbs/RQ-0004.md)), colored by its verdict
 [RQ-0007](../breadcrumbs/RQ-0007.md) for a Task, and
 [RQ-0006](../breadcrumbs/RQ-0006.md) and
 [RQ-0008](../breadcrumbs/RQ-0008.md) for the breadcrumbs above it.
-What makes a breadcrumb have a problem:
-[TD-0011](../breadcrumbs/TD-0011.md) and
-[TD-0013](../breadcrumbs/TD-0013.md).
+The report lists the same problems as `bcr check`, each with its file
+and line.
 
 Exit status:
 
@@ -102,6 +102,53 @@ Exit status:
 - 2: `bcr` was used wrongly, or there is no `breadcrumbs/` directory
   in the current directory, or the report could not be written, such
   as to a directory that does not exist. No report is written.
+
+### check
+
+```
+bcr check
+```
+
+Checks the syntax of the breadcrumbs and prints each problem it finds
+([RQ-0020](../breadcrumbs/RQ-0020.md)).
+
+Flags: none.
+
+Operands: none. Every breadcrumb is checked.
+
+Standard input: not read.
+
+Output: one line on standard output for each problem, in order of path
+and then of line:
+
+```
+PATH:LINE: MESSAGE
+```
+
+`PATH` is relative to the repository root, and `LINE` is counted from
+1 ([TD-0020](../breadcrumbs/TD-0020.md)). What is a problem: a first
+line that is not a title ([TD-0013](../breadcrumbs/TD-0013.md)), a
+`Parent:` line that is not a link or links to no breadcrumb
+([TD-0005](../breadcrumbs/TD-0005.md),
+[RQ-0022](../breadcrumbs/RQ-0022.md)), and a list item under a Task's
+`## Claims` heading that is not a claim
+([TD-0011](../breadcrumbs/TD-0011.md),
+[TD-0012](../breadcrumbs/TD-0012.md)). A claim that does not hold is
+not a problem; `bcr audit-report` shows it in the Task's verdict.
+
+Standard error gets a warning for each file in `breadcrumbs/` that is
+not a breadcrumb ([RQ-0023](../breadcrumbs/RQ-0023.md)):
+
+```
+bcr: warning: PATH is not a breadcrumb (TD-0013)
+```
+
+Exit status ([RQ-0021](../breadcrumbs/RQ-0021.md)):
+
+- 0: no problem was found. Warnings do not change it.
+- 1: a problem was found.
+- 2: `bcr` was used wrongly, or there is no `breadcrumbs/` directory
+  in the current directory.
 
 ## EXIT STATUS
 

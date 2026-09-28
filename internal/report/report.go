@@ -53,7 +53,10 @@ type text struct {
 type edge struct{ X1, Y1, X2, Y2 int }
 
 // problem is a breadcrumb that could not be read as the breadcrumbs define.
-type problem struct{ Path, Text string }
+type problem struct {
+	Path string
+	breadcrumb.Problem
+}
 
 type page struct {
 	Width, Height int
@@ -95,8 +98,8 @@ func build(g breadcrumb.Graph) page {
 			n.parents = append(n.parents, p.Target)
 		}
 		add(n)
-		for _, text := range b.Problems {
-			problems = append(problems, problem{Path: b.Path, Text: text})
+		for _, pr := range b.Problems {
+			problems = append(problems, problem{b.Path, pr})
 		}
 	}
 	// A link to a file that is not a breadcrumb draws a missing node.

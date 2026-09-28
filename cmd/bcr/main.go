@@ -3,13 +3,16 @@
 // Usage:
 //
 //	bcr audit-report --html [-o FILE]
+//	bcr check
 //
-// Run it from the root of a repository. It audits the breadcrumbs in
-// breadcrumbs/ and writes the report to audit-report.html, to FILE, or
-// to standard output when FILE is -. Its contract is docs/bcr.md.
+// Run it from the root of a repository. audit-report audits the
+// breadcrumbs in breadcrumbs/ and writes the report to
+// audit-report.html, to FILE, or to standard output when FILE is -.
+// check prints each problem in the breadcrumbs. Its contract is
+// docs/bcr.md.
 //
-// It exits 0 when it finds nothing wrong, 1 when a breadcrumb is Refuted
-// or has a problem, and 2 when it is used wrongly or cannot run (RQ-0010).
+// It exits 0 when it finds nothing wrong, 1 when it finds something
+// wrong, and 2 when it is used wrongly or cannot run (RQ-0010).
 package main
 
 import (
@@ -24,7 +27,12 @@ import (
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/report"
 )
 
-const usage = "usage: bcr audit-report --html [-o FILE]\n"
+// The usage line of each command (TD-0020), and of bcr.
+const (
+	auditReportUsage = "usage: bcr audit-report --html [-o FILE]\n"
+	checkUsage       = "usage: bcr check\n"
+	usage            = auditReportUsage + checkUsage
+)
 
 // reportFile is where the report is written without -o, in the
 // repository root (RQ-0019).
@@ -43,43 +51,92 @@ func main() {
 
 func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		return usageError(stderr, "no command")
+		return usageError(stderr, usage, "no command")
 	}
-	if args[0] != "audit-report" {
-		return usageError(stderr, fmt.Sprintf("unknown command %q", args[0]))
+	switch args[0] {
+	case "audit-report":
+		return runAuditReport(args, stdout, stderr)
+	case "check":
+		return runCheck(args, stdout, stderr)
 	}
+	return usageError(stderr, usage, fmt.Sprintf("unknown command %q", args[0]))
+}
+
+// runAuditReport runs bcr audit-report; args starts with the command.
+func runAuditReport(args []string, stdout, stderr io.Writer) int {
 	set, operands, err := cli.Parse(args[1:], []cli.Flag{{Long: "html"}, {Short: 'o', Long: "output", Value: true}})
 	if err != nil {
-		return usageError(stderr, err.Error())
+		return usageError(stderr, auditReportUsage, err.Error())
 	}
 	if len(operands) > 0 {
-		return usageError(stderr, fmt.Sprintf("unexpected operand %q", operands[0]))
+		return usageError(stderr, auditReportUsage, fmt.Sprintf("unexpected operand %q", operands[0]))
 	}
 	if _, ok := set["html"]; !ok {
-		return usageError(stderr, "audit-report needs --html")
+		return usageError(stderr, auditReportUsage, "audit-report needs --html")
 	}
 	out, ok := set["output"]
 	if !ok {
 		out = reportFile
 	}
 	if out == "" {
-		return usageError(stderr, "-o needs a file name, or - for standard output")
+		return usageError(stderr, auditReportUsage, "-o needs a file name, or - for standard output")
 	}
 	return auditReport(out, stdout, stderr)
+}
+
+// runCheck runs bcr check; args starts with the command.
+func runCheck(args []string, stdout, stderr io.Writer) int {
+	_, operands, err := cli.Parse(args[1:], nil)
+	if err != nil {
+		return usageError(stderr, checkUsage, err.Error())
+	}
+	if len(operands) > 0 {
+		return usageError(stderr, checkUsage, fmt.Sprintf("unexpected operand %q", operands[0]))
+	}
+	return check(stdout, stderr)
+}
+
+// load reads the breadcrumbs of the repository in the current directory.
+func load() (breadcrumb.Graph, string, error) {
+	root, err := os.Getwd()
+	if err != nil {
+		return breadcrumb.Graph{}, "", err
+	}
+	if info, err := os.Stat(filepath.Join(root, breadcrumb.Dir)); err != nil || !info.IsDir() {
+		return breadcrumb.Graph{}, "", fmt.Errorf("no %s/ directory here; run bcr from the root of a repository", breadcrumb.Dir)
+	}
+	g, err := breadcrumb.Load(os.DirFS(root))
+	return g, root, err
+}
+
+// check prints each problem in the breadcrumbs as PATH:LINE: MESSAGE
+// (RQ-0020, TD-0020), and warns of each file in breadcrumbs/ that is not
+// a breadcrumb (RQ-0023).
+func check(stdout, stderr io.Writer) int {
+	g, _, err := load()
+	if err != nil {
+		return trouble(stderr, err)
+	}
+	for _, o := range g.Others {
+		fmt.Fprintf(stderr, "bcr: warning: %s is not a breadcrumb (TD-0013)\n", o)
+	}
+	found := false
+	for _, b := range g.Breadcrumbs {
+		for _, p := range b.Problems {
+			fmt.Fprintf(stdout, "%s:%d: %s\n", b.Path, p.Line, p.Message)
+			found = true
+		}
+	}
+	if found {
+		return exitFound // RQ-0021
+	}
+	return exitOK
 }
 
 // auditReport writes the report to the file out, or to stdout when out
 // is - (RQ-0017, RQ-0018).
 func auditReport(out string, stdout, stderr io.Writer) int {
-	root, err := os.Getwd()
-	if err != nil {
-		return trouble(stderr, err)
-	}
-	if info, err := os.Stat(filepath.Join(root, breadcrumb.Dir)); err != nil || !info.IsDir() {
-		return trouble(stderr, fmt.Errorf("no %s/ directory here; run bcr from the root of a repository", breadcrumb.Dir))
-	}
-
-	g, err := breadcrumb.Load(os.DirFS(root))
+	g, root, err := load()
 	if err != nil {
 		return trouble(stderr, err)
 	}
@@ -116,8 +173,8 @@ func foundWrong(g breadcrumb.Graph) bool {
 	return false
 }
 
-// usageError writes msg and the usage line to stderr (TD-0020).
-func usageError(stderr io.Writer, msg string) int {
+// usageError writes msg and the usage to stderr (TD-0020).
+func usageError(stderr io.Writer, usage, msg string) int {
 	fmt.Fprintf(stderr, "bcr: %s\n%s", msg, usage)
 	return exitTrouble
 }

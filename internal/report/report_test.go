@@ -100,12 +100,12 @@ func TestLongTitlesWrapToThreeLines(t *testing.T) {
 
 func TestTheReportListsProblemsAndOtherFiles(t *testing.T) {
 	b := crumb("TD-0001")
-	b.Problems = []string{"not a Parent: link: Parent: x"}
+	b.Problems = []breadcrumb.Problem{{Line: 3, Message: "not a Parent: link: Parent: x"}}
 	var out bytes.Buffer
 	if err := Write(&out, breadcrumb.Graph{Breadcrumbs: []breadcrumb.Breadcrumb{b}, Others: []string{"breadcrumbs/notes.md"}}); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"not a Parent: link: Parent: x", "breadcrumbs/notes.md", "TD-0001"} {
+	for _, want := range []string{"breadcrumbs/TD-0001.md:3</code>: not a Parent: link: Parent: x", "breadcrumbs/notes.md", "TD-0001"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("report does not contain %q", want)
 		}

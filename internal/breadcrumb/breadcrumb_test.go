@@ -93,8 +93,8 @@ func TestParentsAreTheLinesRightBelowTheTitle(t *testing.T) {
 	b := only(t, load(t, fstest.MapFS{"breadcrumbs/RQ-0001.md": file(
 		"# RQ-0001: A requirement\n\nParent: [IN-0001](IN-0001.md)\nParent: [TD-0002](TD-0002.md)\n\nBody.\n")}))
 	want := []Link{
-		{Text: "IN-0001", Target: "breadcrumbs/IN-0001.md"},
-		{Text: "TD-0002", Target: "breadcrumbs/TD-0002.md"},
+		{Text: "IN-0001", Target: "breadcrumbs/IN-0001.md", Line: 3},
+		{Text: "TD-0002", Target: "breadcrumbs/TD-0002.md", Line: 4},
 	}
 	if !reflect.DeepEqual(b.Parents, want) {
 		t.Errorf("got %+v, want %+v", b.Parents, want)
@@ -119,8 +119,11 @@ func TestAMalformedParentLineIsAProblem(t *testing.T) {
 }
 
 func TestCarriageReturnsBelongToTheLineEnding(t *testing.T) {
-	b := only(t, load(t, fstest.MapFS{"breadcrumbs/RQ-0001.md": file(
-		"# RQ-0001: A requirement\r\n\r\nParent: [IN-0001](IN-0001.md)\r\n")}))
+	g := load(t, fstest.MapFS{
+		"breadcrumbs/IN-0001.md": file("# IN-0001: An ask\n"),
+		"breadcrumbs/RQ-0001.md": file("# RQ-0001: A requirement\r\n\r\nParent: [IN-0001](IN-0001.md)\r\n"),
+	})
+	b, _ := g.Lookup("breadcrumbs/RQ-0001.md")
 	if b.Title != "A requirement" || len(b.Parents) != 1 || len(b.Problems) != 0 {
 		t.Errorf("got %+v", b)
 	}
@@ -156,7 +159,8 @@ func verdicts(g Graph) map[string]string {
 }
 
 var repo = fstest.MapFS{
-	"src/cli.go": file("package cli\n\nfunc save(path string) {}\n"),
+	"src/cli.go":             file("package cli\n\nfunc save(path string) {}\n"),
+	"breadcrumbs/TD-0001.md": file("# TD-0001: The decision every task carries out\n"),
 }
 
 func with(extra fstest.MapFS) fstest.MapFS {
@@ -287,6 +291,40 @@ func TestACycleDecidesNothing(t *testing.T) {
 	for id, v := range verdicts(g) {
 		if v != "Undecided" {
 			t.Errorf("%s is %s", id, v)
+		}
+	}
+}
+
+func TestProblemsCarryTheirLines(t *testing.T) {
+	g := load(t, with(fstest.MapFS{"breadcrumbs/TK-0002.md": file(
+		"# TK-0002: A task\n\nParent: [TD-0001](TD-0001.md)\nParent: TD-0001\nParent: [TD-0099](TD-0099.md)\n\n## Claims\n\n- `src/cli.go` contains `func save(`\n- src/cli.go contains func save(\n")}))
+	b, _ := g.Lookup("breadcrumbs/TK-0002.md")
+	want := []Problem{
+		{4, "not a Parent: link: Parent: TD-0001"},
+		{5, "Parent: links to no breadcrumb: breadcrumbs/TD-0099.md"},
+		{10, "not a claim: - src/cli.go contains func save("},
+	}
+	if !reflect.DeepEqual(b.Problems, want) {
+		t.Errorf("got %+v, want %+v", b.Problems, want)
+	}
+
+	b = only(t, load(t, fstest.MapFS{"breadcrumbs/TD-0001.md": file("Adopt the method\n")}))
+	if want := []Problem{{1, "the first line is not a # title"}}; !reflect.DeepEqual(b.Problems, want) {
+		t.Errorf("got %+v, want %+v", b.Problems, want)
+	}
+}
+
+// RQ-0022
+func TestALinkToNoBreadcrumbIsAProblem(t *testing.T) {
+	g := load(t, fstest.MapFS{
+		"breadcrumbs/RQ-0001.md": file("# RQ-0001: A requirement\n\nParent: [IN-0001](IN-0001.md)\n"),
+		"breadcrumbs/notes.md":   file("# Notes\n"),
+		"breadcrumbs/RQ-0002.md": file("# RQ-0002: Another\n\nParent: [notes](notes.md)\n"),
+	})
+	for _, id := range []string{"RQ-0001", "RQ-0002"} {
+		b, _ := g.Lookup("breadcrumbs/" + id + ".md")
+		if len(b.Problems) != 1 || b.Problems[0].Line != 3 {
+			t.Errorf("%s: got problems %+v, want one on line 3", id, b.Problems)
 		}
 	}
 }

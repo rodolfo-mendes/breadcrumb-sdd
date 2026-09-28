@@ -64,6 +64,14 @@ func (v Verdict) String() string {
 type Link struct {
 	Text   string // the link's text, as written
 	Target string // the path it points to, relative to the repository root
+	Line   int    // the line it is on, counted from 1
+}
+
+// Problem is a line of a breadcrumb that cannot be read as the
+// breadcrumbs define (RQ-0020, TD-0024).
+type Problem struct {
+	Line    int // counted from 1
+	Message string
 }
 
 // Claim is a contains claim of a Task (TD-0012): the file at Path holds Text.
@@ -80,8 +88,8 @@ type Breadcrumb struct {
 	Path     string // relative to the repository root
 	Title    string // the # title, without a leading "<ID>: "
 	Parents  []Link
-	Claims   []Claim  // a Task's claims that could be read
-	Problems []string // what could not be read as the breadcrumbs define
+	Claims   []Claim   // a Task's claims that could be read
+	Problems []Problem // what could not be read as the breadcrumbs define, in order of line
 	Verdict  Verdict
 
 	unreadable bool // a Task with a claim that could not be read
@@ -162,7 +170,7 @@ func parse(p, content string) Breadcrumb {
 
 	// TD-0013: the first line is the title.
 	if !strings.HasPrefix(lines[0], "# ") {
-		b.Problems = append(b.Problems, "the first line is not a # title")
+		b.Problems = append(b.Problems, Problem{1, "the first line is not a # title"})
 		return b
 	}
 	b.Title = strings.TrimPrefix(strings.TrimPrefix(lines[0], "# "), id+": ")
@@ -176,23 +184,24 @@ func parse(p, content string) Breadcrumb {
 	for ; i < len(lines) && strings.HasPrefix(lines[i], "Parent:"); i++ {
 		m := parentLine.FindStringSubmatch(lines[i])
 		if m == nil {
-			b.Problems = append(b.Problems, "not a Parent: link: "+lines[i])
+			b.Problems = append(b.Problems, Problem{i + 1, "not a Parent: link: " + lines[i]})
 			continue
 		}
-		b.Parents = append(b.Parents, Link{Text: m[1], Target: path.Join(path.Dir(p), m[2])})
+		b.Parents = append(b.Parents, Link{Text: m[1], Target: path.Join(path.Dir(p), m[2]), Line: i + 1})
 	}
 
 	if b.Type == Task {
-		parseClaims(&b, lines[i:])
+		parseClaims(&b, lines, i)
 	}
 	return b
 }
 
 // parseClaims reads the list items under a Task's ## Claims heading,
-// up to the next heading (TD-0011).
-func parseClaims(b *Breadcrumb, lines []string) {
+// up to the next heading (TD-0011), from lines[start:].
+func parseClaims(b *Breadcrumb, lines []string, start int) {
 	in := false
-	for _, l := range lines {
+	for n := start; n < len(lines); n++ {
+		l := lines[n]
 		if strings.HasPrefix(l, "#") {
 			in = l == "## Claims"
 			continue
@@ -202,7 +211,7 @@ func parseClaims(b *Breadcrumb, lines []string) {
 		}
 		m := claimLine.FindStringSubmatch(l)
 		if m == nil || !fs.ValidPath(m[1]) || m[1] == "." {
-			b.Problems = append(b.Problems, "not a claim: "+l)
+			b.Problems = append(b.Problems, Problem{n + 1, "not a claim: " + l})
 			b.unreadable = true
 			continue
 		}
@@ -238,8 +247,12 @@ func audit(fsys fs.FS, crumbs []Breadcrumb) {
 		for _, p := range b.Parents {
 			if _, ok := byPath[p.Target]; ok {
 				children[p.Target] = append(children[p.Target], i)
+				continue
 			}
+			// RQ-0022: a link to no breadcrumb is a problem.
+			crumbs[i].Problems = append(crumbs[i].Problems, Problem{p.Line, "Parent: links to no breadcrumb: " + p.Target})
 		}
+		sort.SliceStable(crumbs[i].Problems, func(a, c int) bool { return crumbs[i].Problems[a].Line < crumbs[i].Problems[c].Line })
 	}
 
 	done := map[int]bool{}

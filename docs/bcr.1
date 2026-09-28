@@ -7,6 +7,7 @@ bcr \- audit the breadcrumbs of a repository
 .RS 4
 .nf
 bcr audit\-report \-\-html [\-o FILE]
+bcr check
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -49,7 +50,7 @@ Standard input: not read.
 .PP
 Output: without \fB\-o\fR, the report is written to \fBaudit\-report.html\fR in the current directory, replacing any file there (RQ\-0019). When the report is written to a file, standard output gets one line, the absolute path of the report. With \fB\-o \-\fR, standard output gets the report, and no file is written.
 .PP
-The report draws the breadcrumbs as a graph (RQ\-0002), each with its properties (RQ\-0003) and an arrow to each of its parents (RQ\-0004), colored by its verdict (RQ\-0005). How a verdict is reached: TD\-0012 for a claim, RQ\-0007 for a Task, and RQ\-0006 and RQ\-0008 for the breadcrumbs above it. What makes a breadcrumb have a problem: TD\-0011 and TD\-0013.
+The report draws the breadcrumbs as a graph (RQ\-0002), each with its properties (RQ\-0003) and an arrow to each of its parents (RQ\-0004), colored by its verdict (RQ\-0005). How a verdict is reached: TD\-0012 for a claim, RQ\-0007 for a Task, and RQ\-0006 and RQ\-0008 for the breadcrumbs above it. The report lists the same problems as \fBbcr check\fR, each with its file and line.
 .PP
 Exit status:
 .IP \(bu 2
@@ -58,6 +59,47 @@ Exit status:
 1: the report is written, and a breadcrumb is Refuted or has a problem.
 .IP \(bu 2
 2: \fBbcr\fR was used wrongly, or there is no \fBbreadcrumbs/\fR directory in the current directory, or the report could not be written, such as to a directory that does not exist. No report is written.
+.SS "check"
+.PP
+.RS 4
+.nf
+bcr check
+.fi
+.RE
+.PP
+Checks the syntax of the breadcrumbs and prints each problem it finds (RQ\-0020).
+.PP
+Flags: none.
+.PP
+Operands: none. Every breadcrumb is checked.
+.PP
+Standard input: not read.
+.PP
+Output: one line on standard output for each problem, in order of path and then of line:
+.PP
+.RS 4
+.nf
+PATH:LINE: MESSAGE
+.fi
+.RE
+.PP
+\fBPATH\fR is relative to the repository root, and \fBLINE\fR is counted from 1 (TD\-0020). What is a problem: a first line that is not a title (TD\-0013), a \fBParent:\fR line that is not a link or links to no breadcrumb (TD\-0005, RQ\-0022), and a list item under a Task's \fB## Claims\fR heading that is not a claim (TD\-0011, TD\-0012). A claim that does not hold is not a problem; \fBbcr audit\-report\fR shows it in the Task's verdict.
+.PP
+Standard error gets a warning for each file in \fBbreadcrumbs/\fR that is not a breadcrumb (RQ\-0023):
+.PP
+.RS 4
+.nf
+bcr: warning: PATH is not a breadcrumb (TD\-0013)
+.fi
+.RE
+.PP
+Exit status (RQ\-0021):
+.IP \(bu 2
+0: no problem was found. Warnings do not change it.
+.IP \(bu 2
+1: a problem was found.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, or there is no \fBbreadcrumbs/\fR directory in the current directory.
 .SH "EXIT STATUS"
 .PP
 Every command exits with (RQ\-0010):

@@ -74,24 +74,29 @@ func TestAuditReportExitsOneWhenABreadcrumbIsRefuted(t *testing.T) {
 }
 
 func TestAnythingElseIsAUsageError(t *testing.T) {
-	for _, args := range [][]string{
-		nil,
-		{"help"},
-		{"audit-report"},
-		{"audit-report", "--pdf"},
-		{"audit-report", "--html=yes"},
-		{"audit-report", "-x"},
-		{"audit-report", "--html", "extra"},
+	for _, tc := range []struct {
+		args  []string
+		usage string
+	}{
+		{nil, usage},
+		{[]string{"help"}, usage},
+		{[]string{"audit-report"}, auditReportUsage},
+		{[]string{"audit-report", "--pdf"}, auditReportUsage},
+		{[]string{"audit-report", "--html=yes"}, auditReportUsage},
+		{[]string{"audit-report", "-x"}, auditReportUsage},
+		{[]string{"audit-report", "--html", "extra"}, auditReportUsage},
+		{[]string{"check", "-x"}, checkUsage},
+		{[]string{"check", "breadcrumbs/TD-0001.md"}, checkUsage},
 	} {
 		var stdout, stderr bytes.Buffer
-		if code := run(args, &stdout, &stderr); code != 2 {
-			t.Errorf("%q: exit %d, want 2", args, code)
+		if code := run(tc.args, &stdout, &stderr); code != 2 {
+			t.Errorf("%q: exit %d, want 2", tc.args, code)
 		}
 		if stdout.Len() > 0 {
-			t.Errorf("%q: wrote %q to standard output", args, stdout.String())
+			t.Errorf("%q: wrote %q to standard output", tc.args, stdout.String())
 		}
-		if !strings.HasPrefix(stderr.String(), "bcr: ") || !strings.HasSuffix(stderr.String(), usage) {
-			t.Errorf("%q: wrote %q to standard error", args, stderr.String())
+		if !strings.HasPrefix(stderr.String(), "bcr: ") || !strings.HasSuffix(stderr.String(), "\n"+tc.usage) {
+			t.Errorf("%q: wrote %q to standard error", tc.args, stderr.String())
 		}
 	}
 }
@@ -172,5 +177,96 @@ func TestAuditReportNeedsAFileNameForOutput(t *testing.T) {
 		if code := run(args, &stdout, &stderr); code != 2 {
 			t.Errorf("%q: exit %d, want 2", args, code)
 		}
+	}
+}
+
+func write(t *testing.T, root string, files map[string]string) {
+	t.Helper()
+	for name, content := range files {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestCheckPrintsEachProblemWithItsFileAndLine(t *testing.T) {
+	root := repo(t)
+	write(t, root, map[string]string{
+		"breadcrumbs/RQ-0002.md": "# RQ-0002: A requirement\n\nParent: [TD-0099](TD-0099.md)\nParent: TD-0001\n",
+		"breadcrumbs/IN-0001.md": "An ask with no title\n",
+		"breadcrumbs/TK-0001.md": "# TK-0001: A task\n\nParent: [RQ-0002](RQ-0002.md)\n\n## Claims\n\n- `go.mod` contains `module`\n- go.mod contains module\n",
+	})
+
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("exit %d, want 1: %s", code, stderr.String())
+	}
+	want := "breadcrumbs/IN-0001.md:1: the first line is not a # title\n" +
+		"breadcrumbs/RQ-0002.md:3: Parent: links to no breadcrumb: breadcrumbs/TD-0099.md\n" +
+		"breadcrumbs/RQ-0002.md:4: not a Parent: link: Parent: TD-0001\n" +
+		"breadcrumbs/TK-0001.md:8: not a claim: - go.mod contains module\n"
+	if stdout.String() != want {
+		t.Errorf("printed:\n%s\nwant:\n%s", stdout.String(), want)
+	}
+	if stderr.Len() > 0 {
+		t.Errorf("wrote %q to standard error", stderr.String())
+	}
+}
+
+// A claim that does not hold is a verdict, not a problem (RQ-0020).
+func TestCheckFindsNothingWrongInAClaimThatDoesNotHold(t *testing.T) {
+	root := repo(t)
+	write(t, root, map[string]string{
+		"breadcrumbs/TK-0001.md": "# TK-0001: A task\n\nParent: [TD-0001](TD-0001.md)\n\n## Claims\n\n- `go.mod` contains `module`\n",
+	})
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"check"}, &stdout, &stderr); code != 0 {
+		t.Errorf("exit %d, want 0: %s", code, stdout.String())
+	}
+	if stdout.Len() > 0 {
+		t.Errorf("printed %q", stdout.String())
+	}
+}
+
+func TestCheckWarnsOfFilesThatAreNotBreadcrumbs(t *testing.T) {
+	root := repo(t)
+	write(t, root, map[string]string{
+		"breadcrumbs/TD-001.md":      "# TD-001: A typo\n",
+		"breadcrumbs/old/TD-0002.md": "# TD-0002: Moved\n",
+	})
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"check"}, &stdout, &stderr); code != 0 {
+		t.Errorf("exit %d, want 0", code)
+	}
+	if stdout.Len() > 0 {
+		t.Errorf("printed %q", stdout.String())
+	}
+	want := "bcr: warning: breadcrumbs/TD-001.md is not a breadcrumb (TD-0013)\n" +
+		"bcr: warning: breadcrumbs/old/TD-0002.md is not a breadcrumb (TD-0013)\n"
+	if stderr.String() != want {
+		t.Errorf("wrote %q to standard error, want %q", stderr.String(), want)
+	}
+}
+
+func TestCheckNeedsABreadcrumbsDirectory(t *testing.T) {
+	chdir(t, t.TempDir())
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"check"}, &stdout, &stderr); code != 2 {
+		t.Errorf("exit %d, want 2", code)
+	}
+}
+
+// RQ-0022: audit-report counts a link to no breadcrumb as a problem.
+func TestAuditReportExitsOneForALinkToNoBreadcrumb(t *testing.T) {
+	root := repo(t)
+	write(t, root, map[string]string{"breadcrumbs/RQ-0001.md": "# RQ-0001: A requirement\n\nParent: [IN-0009](IN-0009.md)\n"})
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"audit-report", "--html", "-o", "-"}, &stdout, &stderr); code != 1 {
+		t.Errorf("exit %d, want 1", code)
+	}
+	if !strings.Contains(stdout.String(), "breadcrumbs/RQ-0001.md:3</code>: Parent: links to no breadcrumb") {
+		t.Error("the report does not list the problem")
 	}
 }

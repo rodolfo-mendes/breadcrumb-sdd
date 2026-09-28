@@ -86,7 +86,7 @@ code { font-size: 13px; }
 <h2>Problems</h2>
 <ul>
 {{- range .Problems}}
-  <li><code>{{.Path}}</code>: {{.Text}}</li>
+  <li><code>{{.Path}}:{{.Line}}</code>: {{.Message}}</li>
 {{- end}}
 </ul>
 {{- end}}
