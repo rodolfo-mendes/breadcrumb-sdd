@@ -7,13 +7,14 @@
 //	bcr verdict [ID|PATH|-]...
 //	bcr list [ID|PATH|-]...
 //	bcr links [-r] [ID|PATH|-]...
+//	bcr new TYPE TITLE [PARENT|-]...
 //
 // Run it from the root of a repository. audit-report audits the
 // breadcrumbs in breadcrumbs/ and writes the report to
 // audit-report.html, to FILE, or to standard output when FILE is -.
 // check prints each problem in the breadcrumbs, verdict the verdict of
-// each breadcrumb, list its type and title, and links its links to its
-// parents. Its contract is docs/bcr.md.
+// each breadcrumb, list its type and title, links its links to its
+// parents, and new creates a breadcrumb. Its contract is docs/bcr.md.
 //
 // It exits 0 when it finds nothing wrong, 1 when it finds something
 // wrong, and 2 when it is used wrongly or cannot run (RQ-0010).
@@ -24,7 +25,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/breadcrumb"
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/cli"
@@ -38,7 +42,8 @@ const (
 	verdictUsage     = "usage: bcr verdict [ID|PATH|-]...\n"
 	listUsage        = "usage: bcr list [ID|PATH|-]...\n"
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
-	usage            = auditReportUsage + checkUsage + verdictUsage + listUsage + linksUsage
+	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"
+	usage            = auditReportUsage + checkUsage + verdictUsage + listUsage + linksUsage + newUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -71,6 +76,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runList(args, stdin, stdout, stderr)
 	case "links":
 		return runLinks(args, stdin, stdout, stderr)
+	case "new":
+		return runNew(args, stdin, stdout, stderr)
 	}
 	return usageError(stderr, usage, fmt.Sprintf("unknown command %q", args[0]))
 }
@@ -185,6 +192,89 @@ func runLinks(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		}
 	}
 	return code
+}
+
+// sections are the empty sections a new breadcrumb of a type starts
+// with (RQ-0032).
+var sections = map[breadcrumb.Type]string{
+	breadcrumb.TechnicalDecision: "\n## Decision\n\n## Why\n\n## What it beat\n",
+	breadcrumb.Task:              "\n## Claims\n",
+}
+
+// runNew runs bcr new; args starts with the command. It creates a
+// breadcrumb under the next free number of its type and prints its path
+// (RQ-0031, TD-0027), or writes nothing (RQ-0033).
+func runNew(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	_, operands, err := cli.Parse(args[1:], nil)
+	if err != nil {
+		return usageError(stderr, newUsage, err.Error())
+	}
+	if len(operands) < 2 {
+		return usageError(stderr, newUsage, "new needs a TYPE and a TITLE")
+	}
+	typ, title, names := breadcrumb.Type(operands[0]), operands[1], operands[2:]
+	switch typ {
+	case breadcrumb.Intake, breadcrumb.Requirement, breadcrumb.TechnicalDecision, breadcrumb.Task:
+	default:
+		return usageError(stderr, newUsage, fmt.Sprintf("TYPE is IN, RQ, TD or TK, not %q", operands[0]))
+	}
+	if strings.TrimSpace(title) == "" || strings.ContainsAny(title, "\r\n") {
+		return usageError(stderr, newUsage, "TITLE must be one line, and not empty")
+	}
+
+	var g breadcrumb.Graph
+	var parents []breadcrumb.Breadcrumb
+	if len(names) == 0 {
+		if g, _, err = load(); err != nil {
+			return trouble(stderr, err)
+		}
+	} else {
+		loaded, crumbs, code := selected(names, stdin, stderr)
+		if loaded == nil || code != exitOK {
+			return code
+		}
+		g, parents = *loaded, crumbs
+	}
+
+	n := 1
+	for _, b := range g.Breadcrumbs {
+		if b.Type != typ {
+			continue
+		}
+		if m, err := strconv.Atoi(b.ID[3:]); err == nil && m >= n {
+			n = m + 1
+		}
+	}
+	if n > 9999 {
+		return trouble(stderr, fmt.Errorf("no %s number is left after %s-9999", operands[0], operands[0]))
+	}
+	id := fmt.Sprintf("%s-%04d", operands[0], n) // the prefix, not typ's name
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "# %s: %s\n", id, strings.TrimSpace(title))
+	if len(parents) > 0 {
+		b.WriteString("\n")
+	}
+	for _, p := range parents {
+		fmt.Fprintf(&b, "Parent: [%s](%s)\n", p.ID, path.Base(p.Path))
+	}
+	b.WriteString(sections[typ])
+
+	rel := path.Join(breadcrumb.Dir, id+".md")
+	f, err := os.OpenFile(filepath.FromSlash(rel), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return trouble(stderr, err)
+	}
+	if _, err := f.WriteString(b.String()); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return trouble(stderr, err)
+	}
+	if err := f.Close(); err != nil {
+		return trouble(stderr, err)
+	}
+	fmt.Fprintln(stdout, rel)
+	return exitOK
 }
 
 // selected loads the breadcrumbs and returns those operands name, or

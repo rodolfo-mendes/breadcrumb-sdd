@@ -12,6 +12,7 @@ bcr check
 bcr verdict [ID|PATH|-]...
 bcr list [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
+bcr new TYPE TITLE [PARENT|-]...
 ```
 
 ## DESCRIPTION
@@ -269,6 +270,53 @@ Examples: what a Refuted Task breaks, with titles:
 
 ```
 bcr verdict | grep -w Refuted | bcr links -r - | cut -f2 | sort -u | bcr list -
+```
+
+### new
+
+```
+bcr new TYPE TITLE [PARENT|-]...
+```
+
+Creates a breadcrumb in `breadcrumbs/` and prints its path
+([RQ-0031](../breadcrumbs/RQ-0031.md)).
+
+Flags: none.
+
+Operands:
+
+- `TYPE`: `IN`, `RQ`, `TD` or `TK`, the prefix of the breadcrumb's
+  kind ([TD-0027](../breadcrumbs/TD-0027.md)).
+- `TITLE`: its title, on one line. Quote it in the shell.
+- `PARENT`: each breadcrumb it derives from, as DESCRIPTION defines;
+  with none, it has no parent ([RQ-0033](../breadcrumbs/RQ-0033.md)).
+
+Standard input: read when a `PARENT` is `-`.
+
+Output: the path of the new breadcrumb, relative to the repository
+root, on standard output. Its number is one more than the highest of
+its type ([TD-0027](../breadcrumbs/TD-0027.md)). It holds its title
+line, a `Parent:` line for each parent, and, for a Technical Decision
+or a Task, the empty sections to fill in
+([RQ-0032](../breadcrumbs/RQ-0032.md)).
+
+A breadcrumb made by `bcr new` is a draft. Who approves it before it
+is committed: [TD-0002](../breadcrumbs/TD-0002.md) and
+[TD-0006](../breadcrumbs/TD-0006.md).
+
+Exit status ([RQ-0033](../breadcrumbs/RQ-0033.md)):
+
+- 0: the breadcrumb was written.
+- 2: `bcr` was used wrongly, the type or title is not valid, a parent
+  names no breadcrumb, no number is left, the file could not be
+  written, or there is no `breadcrumbs/` directory in the current
+  directory. Nothing is written, and no file is ever replaced.
+
+Examples:
+
+```
+bcr new TD "Use a cache" IN-0003
+bcr verdict | grep -w Undecided | grep '^RQ' | bcr new TK "Carry them out" -
 ```
 
 ## EXIT STATUS

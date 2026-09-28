@@ -92,6 +92,7 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		{[]string{"list", "-r"}, listUsage},
 		{[]string{"links", "-x"}, linksUsage},
 		{[]string{"links", "--recursive=yes"}, linksUsage},
+		{[]string{"new", "TK"}, newUsage},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {
@@ -456,5 +457,136 @@ func TestLinksRecursiveEndsOnACycle(t *testing.T) {
 	}
 	if want := "RQ-0001\tRQ-0002\nRQ-0002\tRQ-0001\n"; stdout.String() != want {
 		t.Errorf("printed %q, want %q", stdout.String(), want)
+	}
+}
+
+func read(t *testing.T, name string) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.FromSlash(name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+func TestNewCreatesEachTypeWithItsShape(t *testing.T) {
+	chain(t)
+	for _, tc := range []struct {
+		args       []string
+		path, want string
+	}{
+		{[]string{"new", "IN", "An ask"}, "breadcrumbs/IN-0002.md", "# IN-0002: An ask\n"},
+		{[]string{"new", "RQ", "A need", "IN-0001"}, "breadcrumbs/RQ-0002.md",
+			"# RQ-0002: A need\n\nParent: [IN-0001](IN-0001.md)\n"},
+		{[]string{"new", "TD", "A choice", "breadcrumbs/IN-0001.md", "RQ-0001"}, "breadcrumbs/TD-0003.md",
+			"# TD-0003: A choice\n\nParent: [IN-0001](IN-0001.md)\nParent: [RQ-0001](RQ-0001.md)\n\n## Decision\n\n## Why\n\n## What it beat\n"},
+		{[]string{"new", "TK", "A change", "TD-0003"}, "breadcrumbs/TK-0002.md",
+			"# TK-0002: A change\n\nParent: [TD-0003](TD-0003.md)\n\n## Claims\n"},
+	} {
+		var stdout, stderr bytes.Buffer
+		if code := run(tc.args, nil, &stdout, &stderr); code != 0 {
+			t.Fatalf("%q: exit %d: %s", tc.args, code, stderr.String())
+		}
+		if stdout.String() != tc.path+"\n" {
+			t.Errorf("%q: printed %q, want %q", tc.args, stdout.String(), tc.path)
+		}
+		if got := read(t, tc.path); got != tc.want {
+			t.Errorf("%q: wrote %q, want %q", tc.args, got, tc.want)
+		}
+	}
+
+	// RQ-0032: bcr check finds no problem in them.
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"check"}, nil, &stdout, &stderr); code != 1 {
+		t.Fatalf("check: exit %d", code)
+	}
+	for _, l := range strings.Split(strings.TrimSpace(stdout.String()), "\n") {
+		if !strings.HasPrefix(l, "breadcrumbs/TK-0001.md:") { // chain's broken link
+			t.Errorf("check found %q", l)
+		}
+	}
+}
+
+func TestNewNumbersAfterTheHighestOfItsType(t *testing.T) {
+	root := repo(t)
+	write(t, root, map[string]string{
+		"breadcrumbs/TK-0003.md":  "# TK-0003: Three\n",
+		"breadcrumbs/TK-0007.md":  "# TK-0007: Seven\n",
+		"breadcrumbs/RQ-0041.md":  "# RQ-0041: Other type\n",
+		"breadcrumbs/TK-0099.txt": "not a breadcrumb\n",
+	})
+	for _, want := range []string{"breadcrumbs/TK-0008.md", "breadcrumbs/TK-0009.md"} {
+		var stdout, stderr bytes.Buffer
+		if code := run([]string{"new", "TK", "Next"}, nil, &stdout, &stderr); code != 0 {
+			t.Fatalf("exit %d: %s", code, stderr.String())
+		}
+		if strings.TrimSpace(stdout.String()) != want {
+			t.Errorf("printed %q, want %q", stdout.String(), want)
+		}
+	}
+	var stdout, stderr bytes.Buffer
+	run([]string{"new", "IN", "First"}, nil, &stdout, &stderr)
+	if strings.TrimSpace(stdout.String()) != "breadcrumbs/IN-0001.md" {
+		t.Errorf("printed %q, want breadcrumbs/IN-0001.md", stdout.String())
+	}
+}
+
+func TestNewReadsParentsFromStandardInput(t *testing.T) {
+	chain(t)
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"new", "TK", "Carry them out", "-"}, strings.NewReader("RQ-0001\tUndecided\nTD-0002\tUndecided\n"), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	want := "# TK-0002: Carry them out\n\nParent: [RQ-0001](RQ-0001.md)\nParent: [TD-0002](TD-0002.md)\n\n## Claims\n"
+	if got := read(t, "breadcrumbs/TK-0002.md"); got != want {
+		t.Errorf("wrote %q, want %q", got, want)
+	}
+}
+
+func TestNewWritesNothingItCannotWriteRight(t *testing.T) {
+	for _, tc := range []struct {
+		args  []string
+		files map[string]string
+	}{
+		{[]string{"new"}, nil},
+		{[]string{"new", "TK"}, nil},
+		{[]string{"new", "XX", "A title"}, nil},
+		{[]string{"new", "tk", "A title"}, nil},
+		{[]string{"new", "Task", "A title"}, nil},
+		{[]string{"new", "TK", ""}, nil},
+		{[]string{"new", "TK", "  "}, nil},
+		{[]string{"new", "TK", "Two\nlines"}, nil},
+		{[]string{"new", "TK", "A title", "TD-0001", "TD-0099"}, nil},
+		{[]string{"new", "TK", "A title"}, map[string]string{"breadcrumbs/TK-9999.md": "# TK-9999: Last\n"}},
+		{[]string{"new", "-x", "TK", "A title"}, nil},
+	} {
+		root := repo(t)
+		write(t, root, tc.files)
+		before, _ := os.ReadDir(filepath.Join(root, "breadcrumbs"))
+
+		var stdout, stderr bytes.Buffer
+		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {
+			t.Errorf("%q: exit %d, want 2", tc.args, code)
+		}
+		if stdout.Len() > 0 || !strings.HasPrefix(stderr.String(), "bcr: ") {
+			t.Errorf("%q: wrote %q and %q", tc.args, stdout.String(), stderr.String())
+		}
+		if after, _ := os.ReadDir(filepath.Join(root, "breadcrumbs")); len(after) != len(before) {
+			t.Errorf("%q: wrote a file", tc.args)
+		}
+	}
+}
+
+func TestNewNeverReplacesAFile(t *testing.T) {
+	root := repo(t)
+	// Not a breadcrumb, so not counted, but in the way of TK-0001.md.
+	write(t, root, map[string]string{"breadcrumbs/TK-0001.md/keep": "x"})
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"new", "TK", "A title"}, nil, &stdout, &stderr); code != 2 {
+		t.Errorf("exit %d, want 2", code)
+	}
+	if read(t, "breadcrumbs/TK-0001.md/keep") != "x" {
+		t.Error("the file in the way was changed")
 	}
 }

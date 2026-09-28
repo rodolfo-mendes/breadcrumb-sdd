@@ -11,6 +11,7 @@ bcr check
 bcr verdict [ID|PATH|\-]...
 bcr list [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
+bcr new TYPE TITLE [PARENT|\-]...
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -201,6 +202,46 @@ Examples: what a Refuted Task breaks, with titles:
 .RS 4
 .nf
 bcr verdict | grep \-w Refuted | bcr links \-r \- | cut \-f2 | sort \-u | bcr list \-
+.fi
+.RE
+.SS "new"
+.PP
+.RS 4
+.nf
+bcr new TYPE TITLE [PARENT|\-]...
+.fi
+.RE
+.PP
+Creates a breadcrumb in \fBbreadcrumbs/\fR and prints its path (RQ\-0031).
+.PP
+Flags: none.
+.PP
+Operands:
+.IP \(bu 2
+\fBTYPE\fR: \fBIN\fR, \fBRQ\fR, \fBTD\fR or \fBTK\fR, the prefix of the breadcrumb's kind (TD\-0027).
+.IP \(bu 2
+\fBTITLE\fR: its title, on one line. Quote it in the shell.
+.IP \(bu 2
+\fBPARENT\fR: each breadcrumb it derives from, as DESCRIPTION defines; with none, it has no parent (RQ\-0033).
+.PP
+Standard input: read when a \fBPARENT\fR is \fB\-\fR.
+.PP
+Output: the path of the new breadcrumb, relative to the repository root, on standard output. Its number is one more than the highest of its type (TD\-0027). It holds its title line, a \fBParent:\fR line for each parent, and, for a Technical Decision or a Task, the empty sections to fill in (RQ\-0032).
+.PP
+A breadcrumb made by \fBbcr new\fR is a draft. Who approves it before it is committed: TD\-0002 and TD\-0006.
+.PP
+Exit status (RQ\-0033):
+.IP \(bu 2
+0: the breadcrumb was written.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, the type or title is not valid, a parent names no breadcrumb, no number is left, the file could not be written, or there is no \fBbreadcrumbs/\fR directory in the current directory. Nothing is written, and no file is ever replaced.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+bcr new TD "Use a cache" IN\-0003
+bcr verdict | grep \-w Undecided | grep '^RQ' | bcr new TK "Carry them out" \-
 .fi
 .RE
 .SH "EXIT STATUS"
