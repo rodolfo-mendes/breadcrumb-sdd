@@ -15,6 +15,8 @@
   code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code); padding: 0.1em 0.3em; border-radius: 4px; overflow-wrap: anywhere; }
   pre { background: var(--code); padding: 0.75rem 1rem; border-radius: 6px; overflow-x: auto; }
   pre code { padding: 0; overflow-wrap: normal; }
+  main.wide { max-width: none; }
+  iframe { display: block; width: 100%; height: 85vh; border: 1px solid var(--rule); border-radius: 6px; background: #fff; }
   footer { max-width: 46rem; margin: 3rem auto; padding: 1rem 16px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.9rem; }
 </style>{{end}}
 
@@ -45,12 +47,31 @@
 <h1>Breadcrumb SDD Specification</h1>
 <p>Breadcrumb SDD is a method for recording why a repository changed. Its source is <a href="{{.Repo}}">on GitHub</a>.</p>
 {{if .Pages}}<p>The latest version: <a href="spec/latest/">spec/latest/</a>.</p>
+{{end}}{{if .Report}}<p>The method at work on its own repository: <a href="report/">the audit report of the latest release</a>.</p>
+{{end}}{{if .Pages}}
 <h2 id="versions">Versions</h2>
 <ul>
 {{range .Pages}}<li><a href="spec/{{.Version}}/">{{.Version}}</a>, published from <a href="{{$.Repo}}/tree/{{.Release.Tag}}">{{.Release.Tag}}</a></li>
 {{end}}</ul>
 {{else}}<p>No version has been published yet.</p>
 {{end}}</main>
+</body>
+</html>
+{{end}}
+
+{{define "report"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "style"}}
+<title>Audit report {{.Tag}}</title>
+</head>
+<body>
+<nav><a href="../">All versions</a> · <a href="../spec/latest/">The specification</a> · the audit report of <a href="{{.TagURL}}">{{.Tag}}</a></nav>
+<main class="wide">
+<h1>Audit report</h1>
+<p>The breadcrumbs of this repository at <a href="{{.TagURL}}">{{.Tag}}</a>, as <code>bcr audit-report --html</code> draws them: green when Confirmed, red when Refuted, gray when Undecided. <a href="audit-report.html">Open the report on its own</a>.</p>
+<iframe src="audit-report.html" sandbox title="Audit report of {{.Tag}}"></iframe>
+</main>
 </body>
 </html>
 {{end}}

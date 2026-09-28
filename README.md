@@ -37,7 +37,9 @@ The method makes drift visible after the fact; it does not prevent
 it.
 
 This repository is developed with Breadcrumb SDD itself: its own
-breadcrumbs are in [`breadcrumbs/`](breadcrumbs/).
+breadcrumbs are in [`breadcrumbs/`](breadcrumbs/), and the audit
+report of its latest release is published at
+<https://rodolfo-mendes.github.io/breadcrumb-sdd/report/>.
 
 The rules of the method are in its specification,
 [`docs/breadcrumb-sdd.md`](docs/breadcrumb-sdd.md), also printed by

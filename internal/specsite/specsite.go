@@ -1,6 +1,7 @@
 // Package specsite builds the web site of the specification of
 // Breadcrumb SDD (IN-0016): a page for each of its versions, one for
-// the latest, and a list of them all at the root.
+// the latest, a list of them all at the root, and the audit report of
+// the latest release (IN-0018).
 //
 // It turns the specification into HTML itself (TD-0032), reading the
 // part of Markdown TD-0022 allows: a first heading `# title`, `##` and
@@ -27,6 +28,13 @@ type Release struct {
 	Spec string // docs/breadcrumb-sdd.md at the tag
 }
 
+// Report is the audit report of the repository at a tag, as
+// bcr audit-report --html writes it (RQ-0047).
+type Report struct {
+	Tag  string
+	HTML []byte
+}
+
 // SpecPath is where the specification is in the repository.
 const SpecPath = "docs/breadcrumb-sdd.md"
 
@@ -51,8 +59,9 @@ type page struct {
 // Build returns the files of the site, by their path in it, for the
 // releases of the repository at repo, such as
 // https://github.com/rodolfo-mendes/breadcrumb-sdd. A release whose
-// tag is not vMAJOR.MINOR.PATCH is left out.
-func Build(repo string, releases []Release) (map[string][]byte, error) {
+// tag is not vMAJOR.MINOR.PATCH is left out. With a report, the site
+// also has the report page.
+func Build(repo string, releases []Release, report *Report) (map[string][]byte, error) {
 	// TD-0031: the latest tag of each version.
 	byVersion := map[string]page{}
 	for _, r := range releases {
@@ -90,15 +99,38 @@ func Build(repo string, releases []Release) (map[string][]byte, error) {
 			files["spec/latest/index.html"] = b // RQ-0038
 		}
 	}
+	if report != nil {
+		// TD-0038: the report as bcr writes it, in a frame of a page.
+		var b bytes.Buffer
+		if err := reportPage.Execute(&b, struct{ Tag, TagURL string }{report.Tag, repo + "/tree/" + report.Tag}); err != nil {
+			return nil, err
+		}
+		files["report/index.html"] = b.Bytes()
+		files["report/audit-report.html"] = report.HTML
+	}
+
 	var index bytes.Buffer
 	if err := indexPage.Execute(&index, struct {
-		Repo  string
-		Pages []page
-	}{repo, pages}); err != nil {
+		Repo   string
+		Pages  []page
+		Report bool
+	}{repo, pages, report != nil}); err != nil {
 		return nil, err
 	}
 	files["index.html"] = index.Bytes()
 	return files, nil
+}
+
+// LatestTag is the highest of tags that is vMAJOR.MINOR.PATCH, or ""
+// when there is none (RQ-0047).
+func LatestTag(tags []string) string {
+	latest, top := "", [3]int{-1, -1, -1}
+	for _, t := range tags {
+		if m := tagName.FindStringSubmatch(t); m != nil && less(top, numbers(m)) {
+			latest, top = t, numbers(m)
+		}
+	}
+	return latest
 }
 
 // render is the page of p. Its links to the root are relative, so the
@@ -282,7 +314,8 @@ func less(a, b [3]int) bool {
 var siteHTML string
 
 var (
-	site      = template.Must(template.New("site").Parse(siteHTML))
-	specPage  = site.Lookup("page")
-	indexPage = site.Lookup("index")
+	site       = template.Must(template.New("site").Parse(siteHTML))
+	specPage   = site.Lookup("page")
+	indexPage  = site.Lookup("index")
+	reportPage = site.Lookup("report")
 )
