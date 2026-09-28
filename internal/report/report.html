@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit report</title>
+<style>
+:root {
+  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #8c959f;
+  --confirmed-fill: #dafbe1; --confirmed-stroke: #1a7f37;
+  --refuted-fill: #ffebe9; --refuted-stroke: #cf222e;
+  --undecided-fill: #eaeef2; --undecided-stroke: #6e7781;
+  --missing-fill: #ffffff; --missing-stroke: #6e7781;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #8d96a0; --line: #6e7681;
+    --confirmed-fill: #12261e; --confirmed-stroke: #3fb950;
+    --refuted-fill: #2d1214; --refuted-stroke: #f85149;
+    --undecided-fill: #21262d; --undecided-stroke: #8d96a0;
+    --missing-fill: #0d1117; --missing-stroke: #8d96a0;
+  }
+}
+body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 24px 0 8px; }
+p { margin: 0 0 12px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px;
+  margin-right: 6px; vertical-align: -1px; border: 1.5px solid; border-radius: 2px; }
+.legend .confirmed::before { background: var(--confirmed-fill); border-color: var(--confirmed-stroke); }
+.legend .refuted::before { background: var(--refuted-fill); border-color: var(--refuted-stroke); }
+.legend .undecided::before { background: var(--undecided-fill); border-color: var(--undecided-stroke); }
+.legend .missing::before { background: var(--missing-fill); border-color: var(--missing-stroke); border-style: dashed; }
+.diagram { overflow-x: auto; }
+svg text { fill: var(--fg); font-size: 12px; }
+svg text.id { font-weight: 600; font-size: 13px; }
+svg .edge { stroke: var(--line); stroke-width: 1.2; fill: none; }
+svg .arrow { fill: var(--line); }
+svg rect { stroke-width: 1.5; }
+svg .confirmed rect { fill: var(--confirmed-fill); stroke: var(--confirmed-stroke); }
+svg .refuted rect { fill: var(--refuted-fill); stroke: var(--refuted-stroke); }
+svg .undecided rect { fill: var(--undecided-fill); stroke: var(--undecided-stroke); }
+svg .missing rect { fill: var(--missing-fill); stroke: var(--missing-stroke); stroke-dasharray: 5 4; }
+svg line.divider { stroke-width: 1; }
+svg .confirmed line.divider { stroke: var(--confirmed-stroke); }
+svg .refuted line.divider { stroke: var(--refuted-stroke); }
+svg .undecided line.divider, svg .missing line.divider { stroke: var(--undecided-stroke); }
+ul { margin: 0; padding-left: 20px; }
+code { font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Audit report</h1>
+<p>{{.Count}} breadcrumbs. Each arrow points from a breadcrumb to its parent.</p>
+<div class="legend">
+  <span class="confirmed">Confirmed</span>
+  <span class="refuted">Refuted</span>
+  <span class="undecided">Undecided</span>
+  <span class="missing">Missing: a parent link to no breadcrumb</span>
+</div>
+<div class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" width="{{.Width}}" height="{{.Height}}" viewBox="0 0 {{.Width}} {{.Height}}">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path class="arrow" d="M 0 0 L 10 5 L 0 10 z"/>
+  </marker>
+</defs>
+{{- range .Edges}}
+<line class="edge" x1="{{.X1}}" y1="{{.Y1}}" x2="{{.X2}}" y2="{{.Y2}}" marker-end="url(#arrow)"/>
+{{- end}}
+{{- range $n := .Nodes}}
+<g class="{{$n.Class}}">
+  <rect x="{{$n.X}}" y="{{$n.Y}}" width="{{$n.W}}" height="{{$n.H}}" rx="3"/>
+  <text class="id" x="{{$n.TextX}}" y="{{$n.HeaderY}}">{{$n.Header}}</text>
+  <line class="divider" x1="{{$n.X}}" y1="{{$n.DividerY}}" x2="{{$n.DividerX2}}" y2="{{$n.DividerY}}"/>
+  {{- range $n.Texts}}
+  <text x="{{$n.TextX}}" y="{{.Y}}">{{.Text}}</text>
+  {{- end}}
+</g>
+{{- end}}
+</svg>
+</div>
+{{- if .Problems}}
+<h2>Problems</h2>
+<ul>
+{{- range .Problems}}
+  <li><code>{{.Path}}</code>: {{.Text}}</li>
+{{- end}}
+</ul>
+{{- end}}
+{{- if .Others}}
+<h2>Files in breadcrumbs/ that are not breadcrumbs</h2>
+<ul>
+{{- range .Others}}
+  <li><code>{{.}}</code></li>
+{{- end}}
+</ul>
+{{- end}}
+</body>
+</html>
