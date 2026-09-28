@@ -13,6 +13,7 @@ bcr verdict [ID|PATH|-]...
 bcr list [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
 bcr new TYPE TITLE [PARENT|-]...
+bcr spec
 ```
 
 ## DESCRIPTION
@@ -62,6 +63,10 @@ Which files are breadcrumbs:
 [TD-0004](../breadcrumbs/TD-0004.md) and
 [TD-0011](../breadcrumbs/TD-0011.md). How a breadcrumb names its
 parents: [TD-0005](../breadcrumbs/TD-0005.md).
+
+The rules of the method are gathered in its specification,
+[breadcrumb-sdd.md](breadcrumb-sdd.md), which `bcr spec` prints
+([TD-0028](../breadcrumbs/TD-0028.md)).
 
 ## COMMANDS
 
@@ -319,6 +324,39 @@ bcr new TD "Use a cache" IN-0003
 bcr verdict | grep -w Undecided | grep '^RQ' | bcr new TK "Carry them out" -
 ```
 
+### spec
+
+```
+bcr spec
+```
+
+Prints the specification of Breadcrumb SDD that this `bcr` carries
+out ([RQ-0035](../breadcrumbs/RQ-0035.md)). The specification is
+built into the binary, so `bcr spec` reads no file and runs anywhere
+([TD-0029](../breadcrumbs/TD-0029.md)).
+
+Flags: none.
+
+Operands: none.
+
+Standard input: not read.
+
+Output: the specification, as Markdown, on standard output. Its third
+line is its version, `Version MAJOR.MINOR.PATCH`
+([RQ-0036](../breadcrumbs/RQ-0036.md)); how the version changes:
+[TD-0030](../breadcrumbs/TD-0030.md).
+
+Exit status:
+
+- 0: the specification was printed.
+- 2: `bcr` was used wrongly, or standard output could not be written.
+
+Example, the version of the specification this `bcr` carries out:
+
+```
+bcr spec | sed -n 3p
+```
+
 ## EXIT STATUS
 
 Every command exits with ([RQ-0010](../breadcrumbs/RQ-0010.md)):
@@ -329,5 +367,6 @@ Every command exits with ([RQ-0010](../breadcrumbs/RQ-0010.md)):
 
 ## SEE ALSO
 
-The method: `README.md`. How the repository is developed:
-`CONTRIBUTING.md`. The rules: the breadcrumbs in `breadcrumbs/`.
+The method: `README.md`. Its rules: the specification, printed by
+`bcr spec`, and the breadcrumbs in `breadcrumbs/`. How the repository
+is developed: `CONTRIBUTING.md`.

@@ -12,6 +12,7 @@ bcr verdict [ID|PATH|\-]...
 bcr list [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
 bcr new TYPE TITLE [PARENT|\-]...
+bcr spec
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -33,6 +34,8 @@ The exit status says whether the command found something wrong (see EXIT STATUS)
 A command that takes breadcrumbs as operands takes an id, such as \fBTK\-0001\fR, a path relative to the repository root, such as \fBbreadcrumbs/TK\-0001.md\fR, or \fB\-\fR, which reads one breadcrumb per line of standard input, named by the line's first tab\-separated field. With no operands, it takes every breadcrumb, in order of path. An operand that names no breadcrumb is written to standard error, the others are still taken, and the command exits with 2 (TD\-0026, RQ\-0012, RQ\-0025).
 .PP
 Which files are breadcrumbs: TD\-0013. The kinds of breadcrumb: TD\-0001, TD\-0003, TD\-0004 and TD\-0011. How a breadcrumb names its parents: TD\-0005.
+.PP
+The rules of the method are gathered in its specification, breadcrumb\-sdd.md, which \fBbcr spec\fR prints (TD\-0028).
 .SH "COMMANDS"
 .SS "audit\-report"
 .PP
@@ -244,6 +247,37 @@ bcr new TD "Use a cache" IN\-0003
 bcr verdict | grep \-w Undecided | grep '^RQ' | bcr new TK "Carry them out" \-
 .fi
 .RE
+.SS "spec"
+.PP
+.RS 4
+.nf
+bcr spec
+.fi
+.RE
+.PP
+Prints the specification of Breadcrumb SDD that this \fBbcr\fR carries out (RQ\-0035). The specification is built into the binary, so \fBbcr spec\fR reads no file and runs anywhere (TD\-0029).
+.PP
+Flags: none.
+.PP
+Operands: none.
+.PP
+Standard input: not read.
+.PP
+Output: the specification, as Markdown, on standard output. Its third line is its version, \fBVersion MAJOR.MINOR.PATCH\fR (RQ\-0036); how the version changes: TD\-0030.
+.PP
+Exit status:
+.IP \(bu 2
+0: the specification was printed.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, or standard output could not be written.
+.PP
+Example, the version of the specification this \fBbcr\fR carries out:
+.PP
+.RS 4
+.nf
+bcr spec | sed \-n 3p
+.fi
+.RE
 .SH "EXIT STATUS"
 .PP
 Every command exits with (RQ\-0010):
@@ -255,4 +289,4 @@ Every command exits with (RQ\-0010):
 2: it was used wrongly, or could not run.
 .SH "SEE ALSO"
 .PP
-The method: \fBREADME.md\fR. How the repository is developed: \fBCONTRIBUTING.md\fR. The rules: the breadcrumbs in \fBbreadcrumbs/\fR.
+The method: \fBREADME.md\fR. Its rules: the specification, printed by \fBbcr spec\fR, and the breadcrumbs in \fBbreadcrumbs/\fR. How the repository is developed: \fBCONTRIBUTING.md\fR.

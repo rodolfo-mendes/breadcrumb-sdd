@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/rodolfo-mendes/breadcrumb-sdd/docs"
 )
 
 func chdir(t *testing.T, dir string) {
@@ -588,5 +591,39 @@ func TestNewNeverReplacesAFile(t *testing.T) {
 	}
 	if read(t, "breadcrumbs/TK-0001.md/keep") != "x" {
 		t.Error("the file in the way was changed")
+	}
+}
+
+func TestSpecPrintsTheSpecificationOutsideARepository(t *testing.T) {
+	want, err := os.ReadFile(filepath.Join("..", "..", "docs", "breadcrumb-sdd.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	chdir(t, t.TempDir())
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"spec"}, nil, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if !bytes.Equal(stdout.Bytes(), want) || stderr.Len() > 0 {
+		t.Errorf("bcr spec does not print docs/breadcrumb-sdd.md alone")
+	}
+}
+
+func TestSpecTakesNoFlagsOrOperands(t *testing.T) {
+	for _, args := range [][]string{{"spec", "-x"}, {"spec", "extra"}} {
+		var stdout, stderr bytes.Buffer
+		if code := run(args, nil, &stdout, &stderr); code != 2 {
+			t.Errorf("%q: exit %d, want 2", args, code)
+		}
+		if stdout.Len() > 0 || !strings.HasSuffix(stderr.String(), specUsage) {
+			t.Errorf("%q: printed %q, %q", args, stdout.String(), stderr.String())
+		}
+	}
+}
+
+func TestTheSpecificationStatesItsVersionOnItsThirdLine(t *testing.T) {
+	lines := strings.Split(docs.Spec, "\n")
+	if len(lines) < 3 || !regexp.MustCompile(`^Version [0-9]+\.[0-9]+\.[0-9]+$`).MatchString(lines[2]) {
+		t.Errorf("the third line is not Version MAJOR.MINOR.PATCH (RQ-0036)")
 	}
 }

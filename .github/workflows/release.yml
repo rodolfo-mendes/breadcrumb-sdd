@@ -48,6 +48,8 @@ jobs:
             cp LICENSE README.md "dist/$name/"
             # The man page (TD-0023); tags before it have none.
             if [ -f docs/bcr.1 ]; then cp docs/bcr.1 "dist/$name/"; fi
+            # The specification (RQ-0034); tags before it have none.
+            if [ -f docs/breadcrumb-sdd.md ]; then cp docs/breadcrumb-sdd.md "dist/$name/"; fi
             if [ "$os" = windows ]; then
               (cd dist && zip -qr "$name.zip" "$name")
             else

@@ -37,10 +37,11 @@ The method makes drift visible after the fact; it does not prevent
 it.
 
 This repository is developed with Breadcrumb SDD itself: its own
-breadcrumbs are in [`breadcrumbs/`](breadcrumbs/). There is no
-written specification; the model in
-[`internal/breadcrumb`](internal/breadcrumb/) defines the method
-(TD-0007).
+breadcrumbs are in [`breadcrumbs/`](breadcrumbs/).
+
+The rules of the method are in its specification,
+[`docs/breadcrumb-sdd.md`](docs/breadcrumb-sdd.md), also printed by
+`bcr spec` and shipped in each release.
 
 ## Running bcr
 

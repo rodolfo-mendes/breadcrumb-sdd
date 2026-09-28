@@ -8,13 +8,15 @@
 //	bcr list [ID|PATH|-]...
 //	bcr links [-r] [ID|PATH|-]...
 //	bcr new TYPE TITLE [PARENT|-]...
+//	bcr spec
 //
 // Run it from the root of a repository. audit-report audits the
 // breadcrumbs in breadcrumbs/ and writes the report to
 // audit-report.html, to FILE, or to standard output when FILE is -.
 // check prints each problem in the breadcrumbs, verdict the verdict of
 // each breadcrumb, list its type and title, links its links to its
-// parents, and new creates a breadcrumb. Its contract is docs/bcr.md.
+// parents, new creates a breadcrumb, and spec prints the specification
+// bcr carries out. Its contract is docs/bcr.md.
 //
 // It exits 0 when it finds nothing wrong, 1 when it finds something
 // wrong, and 2 when it is used wrongly or cannot run (RQ-0010).
@@ -30,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rodolfo-mendes/breadcrumb-sdd/docs"
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/breadcrumb"
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/cli"
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/report"
@@ -43,7 +46,8 @@ const (
 	listUsage        = "usage: bcr list [ID|PATH|-]...\n"
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
 	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"
-	usage            = auditReportUsage + checkUsage + verdictUsage + listUsage + linksUsage + newUsage
+	specUsage        = "usage: bcr spec\n"
+	usage            = auditReportUsage + checkUsage + verdictUsage + listUsage + linksUsage + newUsage + specUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -78,6 +82,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runLinks(args, stdin, stdout, stderr)
 	case "new":
 		return runNew(args, stdin, stdout, stderr)
+	case "spec":
+		return runSpec(args, stdout, stderr)
 	}
 	return usageError(stderr, usage, fmt.Sprintf("unknown command %q", args[0]))
 }
@@ -114,6 +120,23 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return usageError(stderr, checkUsage, fmt.Sprintf("unexpected operand %q", operands[0]))
 	}
 	return check(stdout, stderr)
+}
+
+// runSpec runs bcr spec; args starts with the command. It writes the
+// specification embedded in the binary, and reads no file (RQ-0035).
+func runSpec(args []string, stdout, stderr io.Writer) int {
+	_, operands, err := cli.Parse(args[1:], nil)
+	if err != nil {
+		return usageError(stderr, specUsage, err.Error())
+	}
+	if len(operands) > 0 {
+		return usageError(stderr, specUsage, fmt.Sprintf("unexpected operand %q", operands[0]))
+	}
+	if _, err := io.WriteString(stdout, docs.Spec); err != nil {
+		fmt.Fprintf(stderr, "bcr: %v\n", err)
+		return exitTrouble
+	}
+	return exitOK
 }
 
 // runVerdict runs bcr verdict; args starts with the command.
