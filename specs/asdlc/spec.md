@@ -1,3 +1,11 @@
+---
+breadcrumb:
+  id: asdlc
+  type: spec
+  links:
+    - follows ADR-0001
+    - follows ADR-0002
+---
 # Feature: ASDLC
 
 How this repository is built with ASDLC: which of its patterns it
@@ -49,6 +57,11 @@ Where this repository goes beyond ASDLC, it is listed here.
 - **Numbers.** ADRs have four digits and PBIs five, where ASDLC shows
   three, so that neither runs out and file names keep sorting in
   order.
+- **Breadcrumbs.** Each ADR, PBI and spec carries a breadcrumb in its
+  front matter, under a `breadcrumb` key
+  ([ADR-0002](../../docs/adrs/ADR-0002-breadcrumb-metadata.md)).
+  It comes from Breadcrumb, not from ASDLC. A spec's id is the name
+  of its directory, such as `asdlc`.
 
 ## Contract
 
@@ -70,8 +83,8 @@ Where this repository goes beyond ASDLC, it is listed here.
   - `docs/adrs/ADR-0001-adopt-asdlc.md` contains `Status: Accepted`
 
 - An Accepted ADR keeps its Context, Decision, Consequences and
-  Alternatives Considered; only its Status changes. Checked by hand:
-  `git log -p -- docs/adrs/`.
+  Alternatives Considered; only its Status and its breadcrumb change.
+  Checked by hand: `git log -p -- docs/adrs/`.
 
 - A PBI stays in `tasks/`. Checked by hand:
   `git log --diff-filter=D --name-only -- tasks/` lists no file.

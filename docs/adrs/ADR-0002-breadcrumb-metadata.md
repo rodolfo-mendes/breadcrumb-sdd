@@ -6,7 +6,7 @@ breadcrumb:
 ---
 # ADR-0002: Record breadcrumbs in the artifacts' front matter
 
-Status: Proposed
+Status: Accepted
 Date: 2026-09-30
 
 ## Context

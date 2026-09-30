@@ -40,6 +40,8 @@ This repository is developed with ASDLC
 - Read the feature's spec and the PBI before changing its code.
 - Change a feature's spec in the same commit as the behavior it
   describes.
+- Give a new ADR, PBI or spec a breadcrumb in its front matter, as
+  [ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md) describes.
 - When the method specification and `bcr` disagree, report it as
   drift and say which one your change follows.
 
