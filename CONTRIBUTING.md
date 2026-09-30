@@ -1,12 +1,11 @@
 # Contributing to Breadcrumb SDD
 
-This repository is developed with Breadcrumb SDD itself (TD-0001).
-Every change leaves breadcrumbs in `breadcrumbs/`: small Markdown files
-that record why the repository changed, in a form a reader can check
-against the code. Read them before you change anything.
-
-This guide summarizes the breadcrumbs. Where the two disagree, the
-breadcrumbs win.
+This repository is developed with ASDLC
+([ADR-0001](docs/adrs/ADR-0001-adopt-asdlc.md)).
+[`specs/asdlc/spec.md`](specs/asdlc/spec.md) says how a change is
+made: which artifacts it uses, where their files live, and where the
+repository goes beyond ASDLC. Where this guide and the spec disagree,
+the spec wins.
 
 ## Build and test
 
@@ -22,52 +21,32 @@ The second command writes `audit-report.html` at the repository root:
 a graph of the breadcrumbs, each colored by its verdict. Green is
 Confirmed, red is Refuted, gray is Undecided.
 
-## The breadcrumbs
+## Artifacts
 
-| Prefix | Kind                | Records                                       | Decided by |
-|--------|---------------------|-----------------------------------------------|------------|
-| `IN`   | Intake              | an ask, in the words of whoever made it       | TD-0003    |
-| `RQ`   | Requirement         | one thing the software must do                | TD-0004    |
-| `TD`   | Technical Decision  | one decision about how the repository is built | TD-0001   |
-| `TK`   | Task                | one change, as claims about the files it left | TD-0011    |
+| Artifact | Files | Records |
+|---|---|---|
+| Spec | `specs/<feature>/spec.md` | what a feature does, and the claims that check it |
+| PBI | `tasks/PBI-NNNNN.md` | one change, and how to verify it |
+| ADR | `docs/adrs/ADR-NNNN-<slug>.md` | one decision about how the repository is built |
 
-Each sits directly in `breadcrumbs/`, in a file named `XX-NNNN.md`
-with the next free four-digit number, and starts with a `# ` title
-(TD-0013). A breadcrumb names each breadcrumb it derives from on its
-own line, right below its title (TD-0005):
-
-```markdown
-Parent: [IN-0001](IN-0001.md)
-```
-
-A Task lists its claims under a `## Claims` heading. The only kind of
-claim says that a file contains a piece of text (TD-0012):
-
-```markdown
-- `cmd/bcr/main.go` contains `func run(`
-```
+`breadcrumbs/` holds the Intakes, Requirements, Technical Decisions
+and Tasks written before ADR-0001. `bcr` still audits them.
 
 ## Making a change
 
-1. **Start from an ask.** A new ask becomes an Intake, and what the
-   software must do becomes Requirements. They state what the
-   maintainers want, so a maintainer approves each one (TD-0006). Open
-   an issue before proposing one.
+1. **Write a PBI.** Name the spec it changes in its Context.
 2. **Record decisions.** When the change decides how the repository is
-   built, write a Technical Decision with `## Decision`, `## Why` and
-   `## What it beat` sections. Earlier ones show the form.
-3. **Change the code.** When the change touches a command, flag,
-   output or exit code of `bcr`, update its contract in `docs/bcr.md`
-   (TD-0022) and write the man page again with
-   `go test ./internal/manpage -update` (TD-0023).
-4. **Write a Task.** Name the Requirements and Technical Decisions it
-   carries out as its parents, and state as claims what the change
-   left in the files. When the change rewrites a line that a claim of
-   an earlier Task quotes, and that Task still holds, update the claim
-   in place and name it in the new Task (TD-0025).
-5. **Audit.** Run the tests and `bcr audit-report --html`. No
-   breadcrumb should be red.
-6. **Commit.**
+   built, write an ADR. A maintainer accepts it. An Accepted ADR is not
+   edited; a new ADR supersedes it.
+3. **Change the code and its spec together.** The spec describes the
+   new state in the same commit. When the change touches a command,
+   flag, output or exit code of `bcr`, update its contract in
+   `docs/bcr.md` and write the man page again with
+   `go test ./internal/manpage -update`.
+4. **Check.** Each item of the Definition of Done in
+   `specs/asdlc/spec.md` holds.
+5. **Commit.** The PBI reaches the main branch in the same merge as its
+   change.
 
 ## Commit messages
 
@@ -98,10 +77,7 @@ Verify with: go test ./... and go run ./cmd/bcr audit-report --html
 
 ## Agents
 
-Coding agents learn about the breadcrumbs from `AGENTS.md` (TD-0002).
-They follow this guide too: they may write Technical Decisions and
-Tasks, and they draft Intakes and Requirements for a person to approve
-(TD-0006).
+Coding agents learn how the repository is built from `AGENTS.md`.
 
 ## License
 
