@@ -43,7 +43,7 @@ breadcrumb:
 - `links` lists links to other breadcrumbs, one per line, each a verb
   and the id of the breadcrumb it points to, separated by a space.
   An artifact with no links writes `links: []`.
-- A file whose front matter has no `breadcrumb` key do not define a
+- A file whose front matter has no `breadcrumb` key does not define a
   breadcrumb. Keys outside `breadcrumb` are not read.
 - A `breadcrumb` key without `id`, `type` or `links`, or with a bare
   `links:` and no list, is a violation.

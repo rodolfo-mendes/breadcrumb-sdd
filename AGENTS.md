@@ -5,7 +5,7 @@
 > the claims against the files. `bcr` is its toolkit.
 > **Core constraints:** Code is the source of truth. Breadcrumb makes
 > drift between intent and code visible after the fact; it does not
-> prevent it. Every check it defines can be made by hand.
+> prevent it. `bcr`'s behavior defines Breadcrumb.
 
 This repository is developed with ASDLC
 ([ADR-0001](docs/adrs/ADR-0001-adopt-asdlc.md)).
@@ -42,15 +42,15 @@ This repository is developed with ASDLC
   describes.
 - Give a new ADR, PBI or spec a breadcrumb in its front matter, as
   [ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md) describes.
-- When the method specification and `bcr` disagree, report it as
-  drift and say which one your change follows.
+- When `docs/breadcrumb-sdd.md` and `bcr` disagree, report it as
+  drift; `bcr`'s behavior holds until one of them is fixed.
 
 ## Context Map
 
 ```yaml
-docs/breadcrumb-sdd.md: the method specification, the product; not a feature spec
+docs/breadcrumb-sdd.md: describes Breadcrumb as bcr carries it out; not a feature spec
 docs/bcr.md: the contract of bcr; docs/bcr.1 is generated from it
-internal/breadcrumb: the model that carries out the method specification
+internal/breadcrumb: the model of Breadcrumb in bcr
 specs/: feature specs, one directory per feature
 tasks/: PBIs, closed after merge and kept
 docs/adrs/: decisions, from ADR-0001 on
