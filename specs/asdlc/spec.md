@@ -19,8 +19,8 @@ uses, where their files live, and where it goes beyond ASDLC.
 for adopting ASDLC.
 
 This spec covers how the repository is built, not what Breadcrumb
-does. The method specification, `docs/breadcrumb-sdd.md`, defines
-Breadcrumb. It is the product, not a feature spec.
+does. `bcr`'s behavior defines Breadcrumb, and `docs/breadcrumb-sdd.md`
+describes it. Neither is a feature spec.
 
 ### Architecture
 
@@ -45,8 +45,8 @@ Where this repository goes beyond ASDLC, it is listed here.
 - **This spec.** It describes how the repository is built, not a
   feature of Breadcrumb; ASDLC's specs describe features.
 - **Claims.** An item of a spec's Contract may carry claims: statements
-  about the repository's files that a tool can check and a person can
-  check by hand. They come from Breadcrumb, not from ASDLC. Each is
+  about the repository's files that a tool can check. They come from
+  Breadcrumb, not from ASDLC. Each is
   written below the item it checks, under `Claims:`, in the form
   ``- `path` contains `text` ``. A claim may quote a line of code:
   unlike a copied sample, it turns Refuted when the code moves on.
@@ -83,7 +83,8 @@ Where this repository goes beyond ASDLC, it is listed here.
   - `docs/adrs/ADR-0001-adopt-asdlc.md` contains `Status: Accepted`
 
 - An Accepted ADR keeps its Context, Decision, Consequences and
-  Alternatives Considered; only its Status and its breadcrumb change.
+  Alternatives Considered; only its Status, its breadcrumb and
+  editorial fixes that keep its meaning, such as a typo, change.
   Checked by hand: `git log -p -- docs/adrs/`.
 
 - A PBI stays in `tasks/`. Checked by hand:
