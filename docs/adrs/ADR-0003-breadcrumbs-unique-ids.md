@@ -6,7 +6,7 @@ breadcrumb:
 ---
 # ADR-0003: Breadcrumb ids are unique
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-02
 
 ## Context
