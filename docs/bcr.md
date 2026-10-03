@@ -9,6 +9,7 @@ bcr - audit the breadcrumbs of a repository
 ```
 bcr audit-report --html [-o FILE]
 bcr check
+bcr extract FILE...
 bcr verdict [ID|PATH|-]...
 bcr list [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
@@ -169,6 +170,70 @@ Exit status ([RQ-0021](../breadcrumbs/RQ-0021.md)):
 - 1: a problem was found.
 - 2: `bcr` was used wrongly, or there is no `breadcrumbs/` directory
   in the current directory.
+
+### extract
+
+```
+bcr extract FILE...
+```
+
+Reads the breadcrumb of each file it is given, from the file's front
+matter, and prints it as records other programs can use.
+
+Flags: none.
+
+Operands: the files to read, in the order given. Which files to read
+is the caller's choice, for example with `git ls-files` or `find`;
+`bcr extract` does not walk directories, and does not check the name
+or the path of a file. At least one is needed.
+
+Standard input: not read.
+
+Output: for a file with a valid breadcrumb, one `breadcrumb` record on
+standard output, then one `link` record for each entry of its
+`links`, in the order written. Fields are separated by a tab:
+
+```
+breadcrumb	ID	TYPE	PATH
+link	ID	VERB	OBJECT
+```
+
+`PATH` is the file as given. In a `link` record, `ID` is the id of the
+breadcrumb the link belongs to, and `VERB` and `OBJECT` are the two
+words of its entry. Select records by their first field: new kinds of
+record may be added.
+
+A file whose first line is not `---` has no front matter, and prints
+nothing; so does front matter with no `breadcrumb` key. A line may end
+in `\n` or `\r\n`.
+
+A breadcrumb is written under the `breadcrumb` key of the front
+matter, in a small part of YAML: plain one-line values, lists of them,
+and `[]`. It has an `id` and a `type`, each one word, and `links`, a
+list of entries of a verb and an id. A file whose breadcrumb breaks a
+rule prints no records; each problem is written to standard error, in
+order of line:
+
+```
+PATH:LINE: MESSAGE
+```
+
+A file that cannot be read is written to standard error as a message
+starting `bcr: `. The other files are still read.
+
+Exit status:
+
+- 0: every file was read, and none had a problem.
+- 1: a file had a problem in its breadcrumb.
+- 2: `bcr` was used wrongly, such as with no `FILE`, or a file could
+  not be read, even when another file had a problem.
+
+Examples:
+
+```
+git ls-files '*.md' | xargs bcr extract
+bcr extract tasks/*.md | grep '^link' | cut -f2,4
+```
 
 ### verdict
 

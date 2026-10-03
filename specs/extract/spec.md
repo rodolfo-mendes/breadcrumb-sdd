@@ -83,7 +83,10 @@ breadcrumb	ID	TYPE	PATH
 link	ID	VERB	OBJECT
 ```
 
-- `PATH` is the operand as given.
+- `PATH` is the operand as given. `bcr extract` checks neither the
+  name nor the path of a file: which files to read, and how they are
+  named, is the caller's choice. A file of any kind whose first line
+  is not `---` prints nothing.
 - `ID` in a `link` record is the id of the breadcrumb the link belongs
   to; `VERB` and `OBJECT` are the two words of its entry (ADR-0012).
 - A consumer selects records by their first field. New kinds of record
