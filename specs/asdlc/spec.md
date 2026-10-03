@@ -33,6 +33,9 @@ describes it. Neither is a feature spec.
 
 - `NNNN` and `NNNNN` are the next free number of their kind, padded
   with zeros.
+- Each command of `bcr` is a feature: its spec is
+  `specs/<command>/spec.md`, and its directory has the command's name
+  ([ADR-0008](../../docs/adrs/ADR-0008-user-documentation-in-docs-bcr-md.md)).
 - A PBI whose change is about how the repository is built names this
   spec in its Context.
 - `breadcrumbs/` holds the Intakes, Requirements, Technical Decisions

@@ -51,9 +51,9 @@ This repository is developed with ASDLC
 
 ```yaml
 docs/breadcrumb-sdd.md: describes Breadcrumb as bcr carries it out; not a feature spec
-docs/bcr.md: the contract of bcr; docs/bcr.1 is generated from it
+docs/bcr.md: the user documentation of bcr; docs/bcr.1 is generated from it
 internal/breadcrumb: the model of Breadcrumb in bcr
-specs/: feature specs, one directory per feature
+specs/: feature specs, one directory per feature; each command of bcr is a feature
 tasks/: PBIs, closed after merge and kept
 docs/adrs/: decisions, from ADR-0001 on
 breadcrumbs/: intakes, requirements, decisions and tasks from before ADR-0001; still audited by bcr
