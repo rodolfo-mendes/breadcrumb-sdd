@@ -41,7 +41,7 @@ existing breadcrumb, needs every file and is not checked here.
 | Part | Does | Kind (ADR-0007) |
 |---|---|---|
 | Command | Reads the operands, opens the files, prints records and problems, sets the exit status | Infrastructure |
-| Front matter reader | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
+| Front matter reader, `internal/frontmatter` | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
 | Core, `internal/crumb` | Holds the breadcrumb, the link and the problem; checks the breadcrumb's properties (ADR-0002) and its link entries (ADR-0012); builds the breadcrumb or reports what is wrong | Core domain |
 
 - The core imports only the standard library, and knows no file format
@@ -50,7 +50,19 @@ existing breadcrumb, needs every file and is not checked here.
   core the others. The command prints both alike (ADR-0013).
 - A file's front matter starts on its first line, which is exactly
   `---`, and ends at the next line that is exactly `---`. A file whose
-  first line is not `---` has no front matter.
+  first line is not `---` has no front matter. A line ends at `\n` or
+  `\r\n`, and a byte order mark before the first line is ignored.
+- Front matter that is empty, is not a map, or has no `breadcrumb` key
+  has no breadcrumb. Keys outside `breadcrumb` are not read, and
+  comments are allowed (ADR-0002).
+- A `breadcrumb` key with no value has no properties: the core reports
+  each one missing.
+- A value is the text written: `0001`, `true` and `~` are text. Only a
+  value left empty has none.
+- A second `breadcrumb` key, or a key written twice under it, is a
+  problem at the second.
+- Front matter that is not YAML is a problem at the first line it
+  cannot be read up to, with the parser's message.
 - Line numbers count from 1, from the first line of the file.
 
 ### Interface
@@ -210,8 +222,8 @@ Scenario: A link to itself
 
 Scenario: YAML outside the part ADR-0002 allows
   Given a breadcrumb that uses an anchor, an alias, a tag, a quoted
-    value, a value over several lines, or a flow collection other
-    than "[]"
+    value, a value over several lines, a flow collection other
+    than "[]", a map as a value, or a list inside a list
   When I extract it
   Then a problem is printed at the line of each
   And the exit status is 1
@@ -239,6 +251,24 @@ Scenario: No operand
   When I run "bcr extract" with no operand
   Then its usage line is printed to standard error
   And the exit status is 2
+
+Scenario: Front matter that is not YAML
+  Given a file whose breadcrumb has "links: [a" on line 3
+  When I extract it
+  Then a problem is printed at line 3
+  And the exit status is 1
+
+Scenario: A key written twice
+  Given a breadcrumb whose id is written on lines 3 and 5
+  When I extract it
+  Then a problem is printed at line 5
+  And the exit status is 1
+
+Scenario: Windows line endings
+  Given a file with a valid breadcrumb, a byte order mark and lines
+    that end in "\r\n"
+  When I extract it
+  Then its records are the same as with lines that end in "\n"
 
 Scenario: Front matter that does not close
   Given a file whose first line is "---" and that has no other line
