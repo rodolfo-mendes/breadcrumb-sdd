@@ -17,10 +17,6 @@ that, `bcr` should behave like any other POSIX utility: text on
 standard output, messages on standard error, and an exit status that
 says what happened.
 
-IN-0007 asked for this, and TD-0020, TD-0021 and RQ-0011, in
-`breadcrumbs/`, settled the details. This ADR moves them into the
-ADRs.
-
 POSIX's Utility Syntax Guidelines define short flags only. Long flags,
 such as `--output`, come from GNU's `getopt_long`.
 
@@ -54,10 +50,9 @@ such as `--output`, come from GNU's `getopt_long`.
   fields must not contain them.
 - An operand that starts with `-` has to come after `--`.
 - Flags are read by a getopt-style parser of this repository's own, in
-  `internal/cli` (TD-0021): Go's `flag` package cannot combine short
-  flags, and reads `-name` and `--name` alike. The parser exists and
-  is tested, so it stays; replacing it with a library would need an
-  ADR (ADR-0005).
+  `internal/cli`: Go's `flag` package cannot combine short flags, and
+  reads `-name` and `--name` alike. The parser exists and is tested,
+  so it stays; replacing it with a library would need an ADR (ADR-0005).
 - Each command's flags, operands and exit status are listed in
   `docs/bcr.md`.
 

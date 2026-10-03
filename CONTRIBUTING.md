@@ -9,8 +9,12 @@ the spec wins.
 
 ## Build and test
 
-`bcr` is written in Go (TD-0008), using only the standard library
-(TD-0010). You need the Go version named in `go.mod`.
+`bcr` is written in Go, as one static binary
+([ADR-0004](docs/adrs/ADR-0004-one-go-binary.md)). It may depend on
+Go modules outside the standard library, each introduced by an ADR
+that names it and gives the reason
+([ADR-0005](docs/adrs/ADR-0005-dependencies-enter-through-adr.md)).
+You need the Go version named in `go.mod`.
 
 ```
 go test ./...
