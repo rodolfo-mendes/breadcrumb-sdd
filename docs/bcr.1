@@ -8,6 +8,7 @@ bcr \- audit the breadcrumbs of a repository
 .nf
 bcr audit\-report \-\-html [\-o FILE]
 bcr check
+bcr extract FILE...
 bcr verdict [ID|PATH|\-]...
 bcr list [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
@@ -110,6 +111,61 @@ Exit status (RQ\-0021):
 1: a problem was found.
 .IP \(bu 2
 2: \fBbcr\fR was used wrongly, or there is no \fBbreadcrumbs/\fR directory in the current directory.
+.SS "extract"
+.PP
+.RS 4
+.nf
+bcr extract FILE...
+.fi
+.RE
+.PP
+Reads the breadcrumb of each file it is given, from the file's front matter, and prints it as records other programs can use.
+.PP
+Flags: none.
+.PP
+Operands: the files to read, in the order given. Which files to read is the caller's choice, for example with \fBgit ls\-files\fR or \fBfind\fR; \fBbcr extract\fR does not walk directories, and does not check the name or the path of a file. At least one is needed.
+.PP
+Standard input: not read.
+.PP
+Output: for a file with a valid breadcrumb, one \fBbreadcrumb\fR record on standard output, then one \fBlink\fR record for each entry of its \fBlinks\fR, in the order written. Fields are separated by a tab:
+.PP
+.RS 4
+.nf
+breadcrumb	ID	TYPE	PATH
+link	ID	VERB	OBJECT
+.fi
+.RE
+.PP
+\fBPATH\fR is the file as given. In a \fBlink\fR record, \fBID\fR is the id of the breadcrumb the link belongs to, and \fBVERB\fR and \fBOBJECT\fR are the two words of its entry. Select records by their first field: new kinds of record may be added.
+.PP
+A file whose first line is not \fB\-\-\-\fR has no front matter, and prints nothing; so does front matter with no \fBbreadcrumb\fR key. A line may end in \fB\en\fR or \fB\er\en\fR.
+.PP
+A breadcrumb is written under the \fBbreadcrumb\fR key of the front matter, in a small part of YAML: plain one\-line values, lists of them, and \fB[]\fR. It has an \fBid\fR and a \fBtype\fR, each one word, and \fBlinks\fR, a list of entries of a verb and an id. A file whose breadcrumb breaks a rule prints no records; each problem is written to standard error, in order of line:
+.PP
+.RS 4
+.nf
+PATH:LINE: MESSAGE
+.fi
+.RE
+.PP
+A file that cannot be read is written to standard error as a message starting \fBbcr: \fR. The other files are still read.
+.PP
+Exit status:
+.IP \(bu 2
+0: every file was read, and none had a problem.
+.IP \(bu 2
+1: a file had a problem in its breadcrumb.
+.IP \(bu 2
+2: \fBbcr\fR was used wrongly, such as with no \fBFILE\fR, or a file could not be read, even when another file had a problem.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+git ls\-files '*.md' | xargs bcr extract
+bcr extract tasks/*.md | grep '^link' | cut \-f2,4
+.fi
+.RE
 .SS "verdict"
 .PP
 .RS 4

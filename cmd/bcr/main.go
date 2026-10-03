@@ -4,6 +4,7 @@
 //
 //	bcr audit-report --html [-o FILE]
 //	bcr check
+//	bcr extract FILE...
 //	bcr verdict [ID|PATH|-]...
 //	bcr list [ID|PATH|-]...
 //	bcr links [-r] [ID|PATH|-]...
@@ -14,7 +15,8 @@
 // Run it from the root of a repository. audit-report audits the
 // breadcrumbs in breadcrumbs/ and writes the report to
 // audit-report.html, to FILE, or to standard output when FILE is -.
-// check prints each problem in the breadcrumbs, verdict the verdict of
+// check prints each problem in the breadcrumbs, extract the breadcrumb
+// of each file it is given, as records, verdict the verdict of
 // each breadcrumb, list its type and title, links its links to its
 // parents, new creates a breadcrumb, spec prints the specification
 // bcr carries out, and init sets up Breadcrumb SDD in a repository. Its contract is docs/bcr.md.
@@ -43,13 +45,14 @@ import (
 const (
 	auditReportUsage = "usage: bcr audit-report --html [-o FILE]\n"
 	checkUsage       = "usage: bcr check\n"
+	extractUsage     = "usage: bcr extract FILE...\n"
 	verdictUsage     = "usage: bcr verdict [ID|PATH|-]...\n"
 	listUsage        = "usage: bcr list [ID|PATH|-]...\n"
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
 	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"
 	specUsage        = "usage: bcr spec\n"
 	initUsage        = "usage: bcr init [-a FILE]\n"
-	usage            = auditReportUsage + checkUsage + verdictUsage + listUsage + linksUsage + newUsage + specUsage + initUsage
+	usage            = auditReportUsage + checkUsage + extractUsage + verdictUsage + listUsage + linksUsage + newUsage + specUsage + initUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -76,6 +79,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runAuditReport(args, stdout, stderr)
 	case "check":
 		return runCheck(args, stdout, stderr)
+	case "extract":
+		return runExtract(args, stdout, stderr)
 	case "verdict":
 		return runVerdict(args, stdin, stdout, stderr)
 	case "list":
