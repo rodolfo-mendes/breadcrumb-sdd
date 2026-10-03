@@ -6,7 +6,6 @@
 //	bcr check
 //	bcr extract FILE...
 //	bcr verdict [ID|PATH|-]...
-//	bcr list [ID|PATH|-]...
 //	bcr links [-r] [ID|PATH|-]...
 //	bcr new TYPE TITLE [PARENT|-]...
 //	bcr spec
@@ -17,7 +16,7 @@
 // audit-report.html, to FILE, or to standard output when FILE is -.
 // check prints each problem in the breadcrumbs, extract the breadcrumb
 // of each file it is given, as records, verdict the verdict of
-// each breadcrumb, list its type and title, links its links to its
+// each breadcrumb, links its links to its
 // parents, new creates a breadcrumb, spec prints the specification
 // bcr carries out, and init sets up Breadcrumb SDD in a repository. Its contract is docs/bcr.md.
 //
@@ -47,12 +46,11 @@ const (
 	checkUsage       = "usage: bcr check\n"
 	extractUsage     = "usage: bcr extract FILE...\n"
 	verdictUsage     = "usage: bcr verdict [ID|PATH|-]...\n"
-	listUsage        = "usage: bcr list [ID|PATH|-]...\n"
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
 	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"
 	specUsage        = "usage: bcr spec\n"
 	initUsage        = "usage: bcr init [-a FILE]\n"
-	usage            = auditReportUsage + checkUsage + extractUsage + verdictUsage + listUsage + linksUsage + newUsage + specUsage + initUsage
+	usage            = auditReportUsage + checkUsage + extractUsage + verdictUsage + linksUsage + newUsage + specUsage + initUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -83,8 +81,6 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runExtract(args, stdout, stderr)
 	case "verdict":
 		return runVerdict(args, stdin, stdout, stderr)
-	case "list":
-		return runList(args, stdin, stdout, stderr)
 	case "links":
 		return runLinks(args, stdin, stdout, stderr)
 	case "new":
@@ -165,23 +161,6 @@ func runVerdict(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 	if refuted && code == exitOK {
 		return exitFound // RQ-0026
-	}
-	return code
-}
-
-// runList runs bcr list; args starts with the command. It prints
-// ID<TAB>TYPE<TAB>TITLE for each breadcrumb (RQ-0027).
-func runList(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	_, operands, err := cli.Parse(args[1:], nil)
-	if err != nil {
-		return usageError(stderr, listUsage, err.Error())
-	}
-	g, crumbs, code := selected(operands, stdin, stderr)
-	if g == nil {
-		return code
-	}
-	for _, b := range crumbs {
-		fmt.Fprintf(stdout, "%s\t%s\t%s\n", b.ID, b.Type, b.Title)
 	}
 	return code
 }

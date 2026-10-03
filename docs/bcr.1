@@ -10,7 +10,6 @@ bcr audit\-report \-\-html [\-o FILE]
 bcr check
 bcr extract FILE...
 bcr verdict [ID|PATH|\-]...
-bcr list [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
 bcr new TYPE TITLE [PARENT|\-]...
 bcr spec
@@ -208,29 +207,6 @@ bcr verdict | grep \-w Refuted | cut \-f1
 bcr verdict breadcrumbs/TK\-*.md
 .fi
 .RE
-.SS "list"
-.PP
-.RS 4
-.nf
-bcr list [ID|PATH|\-]...
-.fi
-.RE
-.PP
-Prints each breadcrumb with its type and title (RQ\-0027).
-.PP
-Flags: none.
-.PP
-Operands: breadcrumbs, as DESCRIPTION defines, in the order given (RQ\-0029).
-.PP
-Standard input: read when an operand is \fB\-\fR.
-.PP
-Output: one line on standard output for each breadcrumb: its id, its type and its title, separated by tabs. The type is \fBIntake\fR, \fBRequirement\fR, \fBTechnical Decision\fR or \fBTask\fR.
-.PP
-Exit status (RQ\-0029):
-.IP \(bu 2
-0: the breadcrumbs were printed.
-.IP \(bu 2
-2: \fBbcr\fR was used wrongly, an operand names no breadcrumb, or there is no \fBbreadcrumbs/\fR directory in the current directory.
 .SS "links"
 .PP
 .RS 4
@@ -257,11 +233,11 @@ Exit status (RQ\-0029):
 .IP \(bu 2
 2: \fBbcr\fR was used wrongly, an operand names no breadcrumb, or there is no \fBbreadcrumbs/\fR directory in the current directory.
 .PP
-Examples: what a Refuted Task breaks, with titles:
+Examples: what a Refuted Task breaks:
 .PP
 .RS 4
 .nf
-bcr verdict | grep \-w Refuted | bcr links \-r \- | cut \-f2 | sort \-u | bcr list \-
+bcr verdict | grep \-w Refuted | bcr links \-r \- | cut \-f2 | sort \-u
 .fi
 .RE
 .SS "new"
