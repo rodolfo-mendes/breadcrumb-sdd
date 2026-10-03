@@ -10,6 +10,7 @@ breadcrumb:
     - follows ADR-0010
     - follows ADR-0011
     - follows ADR-0012
+    - follows ADR-0013
 ---
 # Feature: extract
 
@@ -40,11 +41,13 @@ existing breadcrumb, needs every file and is not checked here.
 | Part | Does | Kind (ADR-0007) |
 |---|---|---|
 | Command | Reads the operands, opens the files, prints records and problems, sets the exit status | Infrastructure |
-| Front matter reader | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; turns the tree into the core's types, each value as the text written, with its line (ADR-0010) | Infrastructure |
-| Core | Holds the breadcrumb, the link and the problem; checks ADR-0002, ADR-0010's part of YAML and ADR-0012; builds the breadcrumb or reports what is wrong | Core domain |
+| Front matter reader | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
+| Core, `internal/crumb` | Holds the breadcrumb, the link and the problem; checks the breadcrumb's properties (ADR-0002) and its link entries (ADR-0012); builds the breadcrumb or reports what is wrong | Core domain |
 
-- The core imports only the standard library, and reads files through
-  `io/fs` (ADR-0007). Its package is named by the PBI that creates it.
+- The core imports only the standard library, and knows no file format
+  (ADR-0007, ADR-0013).
+- The front matter reader finds the problems of the format, and the
+  core the others. The command prints both alike (ADR-0013).
 - A file's front matter starts on its first line, which is exactly
   `---`, and ends at the next line that is exactly `---`. A file whose
   first line is not `---` has no front matter.
@@ -78,8 +81,8 @@ A file with no front matter, or with front matter and no `breadcrumb`
 key, prints nothing.
 
 A problem is printed to standard error as `PATH:LINE: MESSAGE`
-(ADR-0006). A file with a problem prints no records; the other files
-are still read.
+(ADR-0006). A file's problems are printed in order of line. A file
+with a problem prints no records; the other files are still read.
 
 Exit status:
 
@@ -165,8 +168,16 @@ Scenario: A missing property
   And the file prints no records
   And the exit status is 1
 
+Scenario: An id or a type that is not one word
+  Given a file whose breadcrumb has an empty id, an id written as a
+    list, or a type with white space in it
+  When I extract it
+  Then a problem is printed at the line of each
+  And the exit status is 1
+
 Scenario: Links with no list
-  Given a file whose breadcrumb has a bare "links:"
+  Given a file whose breadcrumb has a bare "links:", or "links:"
+    followed by text on the same line
   When I extract it
   Then a problem is printed at the line of "links:"
   And the exit status is 1
