@@ -95,7 +95,6 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		{[]string{"extract", "--"}, extractUsage},
 		{[]string{"verdict", "-x"}, verdictUsage},
 		{[]string{"verdict", "--refuted"}, verdictUsage},
-		{[]string{"list", "-r"}, listUsage},
 		{[]string{"links", "-x"}, linksUsage},
 		{[]string{"links", "--recursive=yes"}, linksUsage},
 		{[]string{"new", "TK"}, newUsage},
@@ -373,37 +372,6 @@ func chain(t *testing.T) {
 		"breadcrumbs/RQ-0001.md": "# RQ-0001: A requirement\n\nParent: [IN-0001](IN-0001.md)\nParent: [TD-0002](TD-0002.md)\n",
 		"breadcrumbs/TK-0001.md": "# TK-0001: A task\n\nParent: [RQ-0001](RQ-0001.md)\nParent: [TD-0099](TD-0099.md)\n",
 	})
-}
-
-func TestListPrintsEachBreadcrumbWithItsTypeAndTitle(t *testing.T) {
-	chain(t)
-	var stdout, stderr bytes.Buffer
-	if code := run([]string{"list"}, nil, &stdout, &stderr); code != 0 {
-		t.Errorf("exit %d, want 0: %s", code, stderr.String())
-	}
-	want := "IN-0001\tIntake\tAn ask\n" +
-		"RQ-0001\tRequirement\tA requirement\n" +
-		"TD-0001\tTechnical Decision\tA decision\n" +
-		"TD-0002\tTechnical Decision\tA decision\n" +
-		"TK-0001\tTask\tA task\n"
-	if stdout.String() != want {
-		t.Errorf("printed %q, want %q", stdout.String(), want)
-	}
-}
-
-func TestListPrintsTheBreadcrumbsItIsGiven(t *testing.T) {
-	chain(t)
-	var stdout, stderr bytes.Buffer
-	code := run([]string{"list", "TK-0001", "-"}, strings.NewReader("IN-0001\tUndecided\nTK-0042\n"), &stdout, &stderr)
-	if code != 2 {
-		t.Errorf("exit %d, want 2", code)
-	}
-	if want := "TK-0001\tTask\tA task\nIN-0001\tIntake\tAn ask\n"; stdout.String() != want {
-		t.Errorf("printed %q, want %q", stdout.String(), want)
-	}
-	if want := "bcr: TK-0042 names no breadcrumb\n"; stderr.String() != want {
-		t.Errorf("wrote %q to standard error, want %q", stderr.String(), want)
-	}
 }
 
 func TestLinksPrintsEachLinkToAParent(t *testing.T) {

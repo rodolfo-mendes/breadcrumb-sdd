@@ -11,7 +11,6 @@ bcr audit-report --html [-o FILE]
 bcr check
 bcr extract FILE...
 bcr verdict [ID|PATH|-]...
-bcr list [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
 bcr new TYPE TITLE [PARENT|-]...
 bcr spec
@@ -276,32 +275,6 @@ bcr verdict | grep -w Refuted | cut -f1
 bcr verdict breadcrumbs/TK-*.md
 ```
 
-### list
-
-```
-bcr list [ID|PATH|-]...
-```
-
-Prints each breadcrumb with its type and title
-([RQ-0027](../breadcrumbs/RQ-0027.md)).
-
-Flags: none.
-
-Operands: breadcrumbs, as DESCRIPTION defines, in the order given
-([RQ-0029](../breadcrumbs/RQ-0029.md)).
-
-Standard input: read when an operand is `-`.
-
-Output: one line on standard output for each breadcrumb: its id, its
-type and its title, separated by tabs. The type is `Intake`,
-`Requirement`, `Technical Decision` or `Task`.
-
-Exit status ([RQ-0029](../breadcrumbs/RQ-0029.md)):
-
-- 0: the breadcrumbs were printed.
-- 2: `bcr` was used wrongly, an operand names no breadcrumb, or there
-  is no `breadcrumbs/` directory in the current directory.
-
 ### links
 
 ```
@@ -337,10 +310,10 @@ Exit status ([RQ-0029](../breadcrumbs/RQ-0029.md)):
 - 2: `bcr` was used wrongly, an operand names no breadcrumb, or there
   is no `breadcrumbs/` directory in the current directory.
 
-Examples: what a Refuted Task breaks, with titles:
+Examples: what a Refuted Task breaks:
 
 ```
-bcr verdict | grep -w Refuted | bcr links -r - | cut -f2 | sort -u | bcr list -
+bcr verdict | grep -w Refuted | bcr links -r - | cut -f2 | sort -u
 ```
 
 ### new
