@@ -33,7 +33,9 @@ This repository is developed with ASDLC
 - Before setting an ADR to Accepted.
 - Before changing a spec's Contract beyond what the PBI asks for.
 - Before changing the method specification.
-- Before adding a dependency outside Go's standard library.
+- Before adding a Go module outside the standard library. Each
+  module `bcr` requires directly is introduced by its own ADR
+  ([ADR-0005](docs/adrs/ADR-0005-dependencies-enter-through-adr.md)).
 - Before deleting a file in `breadcrumbs/`.
 
 **ALWAYS**
