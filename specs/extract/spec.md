@@ -11,11 +11,14 @@ breadcrumb:
     - follows ADR-0011
     - follows ADR-0012
     - follows ADR-0013
+    - follows ADR-0014
+    - follows ADR-0015
 ---
 # Feature: extract
 
-`bcr extract` reads the breadcrumb of each file it is given, and
-prints it as records other programs can use.
+`bcr extract` reads the breadcrumb of each file it is given, or of
+each file `.breadcrumbs` names, and prints it as records other
+programs can use.
 
 ## Blueprint
 
@@ -27,12 +30,17 @@ everything later, from the check of unique ids to the cache in
 for an author, printing only problems, comes later and is not this
 command's job.
 
-The caller chooses the files, for example with `git ls-files` or
-`find`; `bcr extract` does not walk directories. A rule about one file
-can be checked on any set of files, so this command checks the form of
-each breadcrumb (ADR-0002, ADR-0010, ADR-0012). A rule about the whole
-repository, such as unique ids (ADR-0003) or links that point to an
-existing breadcrumb, needs every file and is not checked here.
+The files come from the caller, as operands, for example from
+`git ls-files` or `find`. With no operand, they come from the
+repository: `.breadcrumbs` names them by pattern (ADR-0014), and
+`bcr extract` walks the repository only to find the files those
+patterns name.
+
+A rule about one file can be checked on any set of files, so this
+command checks the form of each breadcrumb (ADR-0002, ADR-0010,
+ADR-0012). A rule about the whole set, such as unique ids (ADR-0003)
+or links that point to an existing breadcrumb, is checked by
+`bcr verify`, which reads the records this command prints (ADR-0015).
 
 `bcr extract` replaces the old `bcr list`, which read `breadcrumbs/`.
 
@@ -41,6 +49,7 @@ existing breadcrumb, needs every file and is not checked here.
 | Part | Does | Kind (ADR-0007) |
 |---|---|---|
 | Command | Reads the operands, opens the files, prints records and problems, sets the exit status | Infrastructure |
+| File set reader | With no operand: reads `.breadcrumbs`, checks its patterns, and finds the files they name from the root of the repository (ADR-0014) | Infrastructure |
 | Front matter reader, `internal/frontmatter` | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
 | Core, `internal/crumb` | Holds the breadcrumb, the link and the problem; checks the breadcrumb's properties (ADR-0002) and its link entries (ADR-0012); builds the breadcrumb or reports what is wrong | Core domain |
 
@@ -68,10 +77,12 @@ existing breadcrumb, needs every file and is not checked here.
 ### Interface
 
 ```
-bcr extract FILE...
+bcr extract [FILE...]
 ```
 
-Each operand is a file, handled on its own, in the order given.
+Given operands, each is a file, handled on its own, in the order
+given. Given none, `bcr extract` reads every file `.breadcrumbs`
+names, in order of path compared as bytes (ADR-0014).
 
 For a file with a valid breadcrumb, `bcr extract` prints to standard
 output one `breadcrumb` record, then one `link` record for each entry
@@ -79,18 +90,25 @@ of `links`, in the order they are written. Fields are separated by a
 tab (ADR-0006):
 
 ```
-breadcrumb	ID	TYPE	PATH
-link	ID	VERB	OBJECT
+breadcrumb	ID	TYPE	PATH	LINE
+link	ID	VERB	OBJECT	PATH	LINE
 ```
 
-- `PATH` is the operand as given. `bcr extract` checks neither the
+- `PATH` is the operand as given, or, with no operand, the file's path
+  from the root of the repository, with `/` between its parts.
+- `LINE` is the line where the record was written: for a `breadcrumb`
+  record, the line of its `id`; for a `link` record, the line of its
+  entry. A `link` record carries its `PATH` and `LINE` so that a
+  check of the whole set can report it where it is (ADR-0015).
+- `bcr extract` checks neither the
   name nor the path of a file: which files to read, and how they are
   named, is the caller's choice. A file of any kind whose first line
   is not `---` prints nothing.
 - `ID` in a `link` record is the id of the breadcrumb the link belongs
   to; `VERB` and `OBJECT` are the two words of its entry (ADR-0012).
-- A consumer selects records by their first field. New kinds of record
-  may be added (ADR-0011).
+- A consumer selects records by their first field, and reads their
+  fields by position. New kinds of record may be added (ADR-0011), and
+  new fields may be added at the end of a record.
 
 A file with no front matter, or with front matter and no `breadcrumb`
 key, prints nothing.
@@ -99,12 +117,18 @@ A problem is printed to standard error as `PATH:LINE: MESSAGE`
 (ADR-0006). A file's problems are printed in order of line. A file
 with a problem prints no records; the other files are still read.
 
+A pattern `.breadcrumbs` does not allow is a problem at its line in
+`.breadcrumbs`. When `.breadcrumbs` has a problem, no file is read,
+since the set it names is not known.
+
 Exit status:
 
 - 0: every file was read, and none had a problem.
-- 1: at least one file had a problem in its breadcrumb.
-- 2: `bcr extract` was given no operand, or a file could not be read.
-  2 is returned even when another file had a problem.
+- 1: at least one file had a problem in its breadcrumb, or
+  `.breadcrumbs` had a problem.
+- 2: `bcr extract` was given no operand and there is no
+  `.breadcrumbs`, or a file could not be read. 2 is returned even when
+  another file had a problem.
 
 ### Constraints
 
@@ -116,14 +140,19 @@ Exit status:
 ### Definition of Done
 
 - [ ] Each Scenario below has a test.
-- [ ] `docs/bcr.md` describes `bcr extract` under `### extract` and no
-      longer has `### list`; `docs/bcr.1` is generated again.
-- [ ] The old `bcr list` and its tests are removed.
+- [x] The old `bcr list` and its tests are removed.
+- [ ] `docs/bcr.md` describes `bcr extract` under `### extract`,
+      including the reading of `.breadcrumbs` and the `PATH` and
+      `LINE` fields; `docs/bcr.1` is generated again.
 - [ ] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
+- [ ] This repository has a `.breadcrumbs` with three lines:
+      `docs/adrs/*.md`, `specs/*/spec.md` and `tasks/*.md`.
+- [ ] In this repository, `bcr extract` with no operand prints one
+      `breadcrumb` record for each file with a breadcrumb, writes
+      nothing to standard error, and exits 0.
 - [ ] In this repository, `git ls-files '*.md' | xargs bcr extract`
-      prints one `breadcrumb` record for each file with a breadcrumb,
-      writes nothing to standard error, and exits 0.
+      prints the same records, in the order of its operands.
 
 ### Regression Guardrails
 
@@ -152,9 +181,9 @@ Scenario: A breadcrumb with links
   When I run "bcr extract tasks/PBI-00001.md"
   Then standard output is
     """
-    breadcrumb	PBI-00001	PBI	tasks/PBI-00001.md
-    link	PBI-00001	implements	ADR-0001
-    link	PBI-00001	changes	asdlc
+    breadcrumb	PBI-00001	PBI	tasks/PBI-00001.md	3
+    link	PBI-00001	implements	ADR-0001	tasks/PBI-00001.md	6
+    link	PBI-00001	changes	asdlc	tasks/PBI-00001.md	7
     """
   And the exit status is 0
 
@@ -201,7 +230,8 @@ Scenario: White space in a link entry
   Given a link entry "  implements   ADR-0001 " with tabs or
     non-breaking spaces among the spaces
   When I extract it
-  Then the link record is "link	ID	implements	ADR-0001"
+  Then the link record's verb is "implements" and its object
+    "ADR-0001"
   And no problem is printed
 
 Scenario: A link entry that is not two words
@@ -250,10 +280,53 @@ Scenario: A file that cannot be read
   And the valid file's records are printed
   And the exit status is 2
 
-Scenario: No operand
+Scenario: No operand and no .breadcrumbs
+  Given a repository with no .breadcrumbs at its root
   When I run "bcr extract" with no operand
-  Then its usage line is printed to standard error
+  Then a message starting "bcr: " is printed to standard error
   And the exit status is 2
+
+Scenario: The files .breadcrumbs names
+  Given a .breadcrumbs with the lines "docs/adrs/*.md" and "tasks/*.md"
+  And breadcrumbs in docs/adrs/ADR-0002.md, tasks/PBI-00001.md and
+    specs/asdlc/spec.md
+  When I run "bcr extract" with no operand
+  Then the records of docs/adrs/ADR-0002.md come before those of
+    tasks/PBI-00001.md
+  And nothing is printed for specs/asdlc/spec.md
+
+Scenario: A pattern that excludes
+  Given a .breadcrumbs with the lines "tasks/*.md" and
+    "!tasks/PBI-00009.md"
+  When I run "bcr extract" with no operand
+  Then nothing is printed for tasks/PBI-00009.md
+  And the records of the other files in tasks/ are printed
+
+Scenario: A pattern without a slash
+  Given a .breadcrumbs with the line "*.md"
+  And breadcrumbs in README.md and docs/adrs/ADR-0002.md
+  When I run "bcr extract" with no operand
+  Then the records of README.md are printed
+  And nothing is printed for docs/adrs/ADR-0002.md
+
+Scenario: A pattern .breadcrumbs does not allow
+  Given a .breadcrumbs whose line 2 is "docs/**/*.md"
+  When I run "bcr extract" with no operand
+  Then a problem is printed at ".breadcrumbs:2"
+  And no file is read
+  And the exit status is 1
+
+Scenario: What the walk does not enter
+  Given a .breadcrumbs with the line "*/*.md"
+  And a breadcrumb in .git/x.md, and a symbolic link docs/link.md to a
+    file with a breadcrumb
+  When I run "bcr extract" with no operand
+  Then nothing is printed for .git/x.md or docs/link.md
+
+Scenario: Operands and .breadcrumbs
+  Given a .breadcrumbs that does not name notes/draft.md
+  When I run "bcr extract notes/draft.md"
+  Then the records of notes/draft.md are printed
 
 Scenario: Front matter that is not YAML
   Given a file whose breadcrumb has "links: [a" on line 3
