@@ -8,7 +8,7 @@ bcr \- audit the breadcrumbs of a repository
 .nf
 bcr audit\-report \-\-html [\-o FILE]
 bcr check
-bcr extract FILE...
+bcr extract [FILE...]
 bcr verdict [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
 bcr new TYPE TITLE [PARENT|\-]...
@@ -114,15 +114,33 @@ Exit status (RQ\-0021):
 .PP
 .RS 4
 .nf
-bcr extract FILE...
+bcr extract [FILE...]
 .fi
 .RE
 .PP
-Reads the breadcrumb of each file it is given, from the file's front matter, and prints it as records other programs can use.
+Reads the breadcrumb of each file it is given, or of each file \fB.breadcrumbs\fR names, from the file's front matter, and prints it as records other programs can use.
 .PP
 Flags: none.
 .PP
-Operands: the files to read, in the order given. Which files to read is the caller's choice, for example with \fBgit ls\-files\fR or \fBfind\fR; \fBbcr extract\fR does not walk directories, and does not check the name or the path of a file. At least one is needed.
+Operands: the files to read, in the order given. Which files to read is the caller's choice, for example with \fBgit ls\-files\fR or \fBfind\fR; \fBbcr extract\fR does not check the name or the path of a file. Given operands, \fB.breadcrumbs\fR is not read.
+.PP
+With no operand, \fBbcr extract\fR reads every file that \fB.breadcrumbs\fR, in the current directory, names, in order of path compared as bytes. Run it from the root of the repository. The files are found from the current directory: a directory named \fB.git\fR is not entered, symbolic links are not followed, and only regular files are read.
+.PP
+\fB.breadcrumbs\fR holds one pattern on each line. Blank lines, and lines that start with \fB#\fR, are ignored:
+.PP
+.RS 4
+.nf
+# the decisions, the specs and the tasks
+docs/adrs/*.md
+specs/*/spec.md
+tasks/*.md
+!tasks/README.md
+.fi
+.RE
+.PP
+A pattern is matched against the whole path of a file from the current directory, with \fB/\fR between its parts. \fB*\fR matches any characters except \fB/\fR, \fB?\fR one character except \fB/\fR, and \fB[...]\fR one character from a set. Unlike in \fB.gitignore\fR, a pattern with no \fB/\fR names only files at the root: \fB*.md\fR does not name \fBdocs/bcr.md\fR. A pattern that starts with \fB!\fR excludes the files it matches. When several lines match a file, the last one decides; a file no line matches is not read.
+.PP
+A pattern may not use \fB**\fR, start or end with \fB/\fR, be empty after \fB!\fR, or be malformed, such as with a \fB[\fR that does not close. Such a line is a problem, written to standard error as \fB.breadcrumbs:LINE: MESSAGE\fR, and then no file is read.
 .PP
 Standard input: not read.
 .PP
@@ -135,7 +153,7 @@ link	ID	VERB	OBJECT	PATH	LINE
 .fi
 .RE
 .PP
-\fBPATH\fR is the file as given. \fBLINE\fR is the line of the file where the record was written, counted from 1: for a \fBbreadcrumb\fR record, the line of its \fBid\fR; for a \fBlink\fR record, the line of its entry. In a \fBlink\fR record, \fBID\fR is the id of the breadcrumb the link belongs to, and \fBVERB\fR and \fBOBJECT\fR are the two words of its entry.
+\fBPATH\fR is the file as given, or, with no operand, its path from the current directory, with \fB/\fR between its parts. \fBLINE\fR is the line of the file where the record was written, counted from 1: for a \fBbreadcrumb\fR record, the line of its \fBid\fR; for a \fBlink\fR record, the line of its entry. In a \fBlink\fR record, \fBID\fR is the id of the breadcrumb the link belongs to, and \fBVERB\fR and \fBOBJECT\fR are the two words of its entry.
 .PP
 Select records by their first field, and read their fields by position: new kinds of record may be added, and new fields may be added at the end of a record.
 .PP
@@ -149,20 +167,21 @@ PATH:LINE: MESSAGE
 .fi
 .RE
 .PP
-A file that cannot be read is written to standard error as a message starting \fBbcr: \fR. The other files are still read.
+A file or a directory that cannot be read is written to standard error as a message starting \fBbcr: \fR. The other files are still read.
 .PP
 Exit status:
 .IP \(bu 2
 0: every file was read, and none had a problem.
 .IP \(bu 2
-1: a file had a problem in its breadcrumb.
+1: a file had a problem in its breadcrumb, or \fB.breadcrumbs\fR had a problem.
 .IP \(bu 2
-2: \fBbcr\fR was used wrongly, such as with no \fBFILE\fR, or a file could not be read, even when another file had a problem.
+2: \fBbcr\fR was used wrongly, there is no operand and no \fB.breadcrumbs\fR, or a file could not be read, even when another file had a problem.
 .PP
 Examples:
 .PP
 .RS 4
 .nf
+bcr extract
 git ls\-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut \-f2,4
 .fi

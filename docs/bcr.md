@@ -9,7 +9,7 @@ bcr - audit the breadcrumbs of a repository
 ```
 bcr audit-report --html [-o FILE]
 bcr check
-bcr extract FILE...
+bcr extract [FILE...]
 bcr verdict [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
 bcr new TYPE TITLE [PARENT|-]...
@@ -173,18 +173,50 @@ Exit status ([RQ-0021](../breadcrumbs/RQ-0021.md)):
 ### extract
 
 ```
-bcr extract FILE...
+bcr extract [FILE...]
 ```
 
-Reads the breadcrumb of each file it is given, from the file's front
-matter, and prints it as records other programs can use.
+Reads the breadcrumb of each file it is given, or of each file
+`.breadcrumbs` names, from the file's front matter, and prints it as
+records other programs can use.
 
 Flags: none.
 
 Operands: the files to read, in the order given. Which files to read
 is the caller's choice, for example with `git ls-files` or `find`;
-`bcr extract` does not walk directories, and does not check the name
-or the path of a file. At least one is needed.
+`bcr extract` does not check the name or the path of a file. Given
+operands, `.breadcrumbs` is not read.
+
+With no operand, `bcr extract` reads every file that `.breadcrumbs`,
+in the current directory, names, in order of path compared as bytes.
+Run it from the root of the repository. The files are found from the
+current directory: a directory named `.git` is not entered, symbolic
+links are not followed, and only regular files are read.
+
+`.breadcrumbs` holds one pattern on each line. Blank lines, and lines
+that start with `#`, are ignored:
+
+```
+# the decisions, the specs and the tasks
+docs/adrs/*.md
+specs/*/spec.md
+tasks/*.md
+!tasks/README.md
+```
+
+A pattern is matched against the whole path of a file from the
+current directory, with `/` between its parts. `*` matches any
+characters except `/`, `?` one character except `/`, and `[...]` one
+character from a set. Unlike in `.gitignore`, a pattern with no `/`
+names only files at the root: `*.md` does not name `docs/bcr.md`. A
+pattern that starts with `!` excludes the files it matches. When
+several lines match a file, the last one decides; a file no line
+matches is not read.
+
+A pattern may not use `**`, start or end with `/`, be empty after `!`,
+or be malformed, such as with a `[` that does not close. Such a line
+is a problem, written to standard error as `.breadcrumbs:LINE:
+MESSAGE`, and then no file is read.
 
 Standard input: not read.
 
@@ -197,7 +229,8 @@ breadcrumb	ID	TYPE	PATH	LINE
 link	ID	VERB	OBJECT	PATH	LINE
 ```
 
-`PATH` is the file as given. `LINE` is the line of the file where the
+`PATH` is the file as given, or, with no operand, its path from the
+current directory, with `/` between its parts. `LINE` is the line of the file where the
 record was written, counted from 1: for a `breadcrumb` record, the
 line of its `id`; for a `link` record, the line of its entry. In a
 `link` record, `ID` is the id of the breadcrumb the link belongs to,
@@ -222,19 +255,22 @@ order of line:
 PATH:LINE: MESSAGE
 ```
 
-A file that cannot be read is written to standard error as a message
-starting `bcr: `. The other files are still read.
+A file or a directory that cannot be read is written to standard
+error as a message starting `bcr: `. The other files are still read.
 
 Exit status:
 
 - 0: every file was read, and none had a problem.
-- 1: a file had a problem in its breadcrumb.
-- 2: `bcr` was used wrongly, such as with no `FILE`, or a file could
-  not be read, even when another file had a problem.
+- 1: a file had a problem in its breadcrumb, or `.breadcrumbs` had a
+  problem.
+- 2: `bcr` was used wrongly, there is no operand and no
+  `.breadcrumbs`, or a file could not be read, even when another file
+  had a problem.
 
 Examples:
 
 ```
+bcr extract
 git ls-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut -f2,4
 ```

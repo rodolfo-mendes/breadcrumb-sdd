@@ -4,7 +4,7 @@
 //
 //	bcr audit-report --html [-o FILE]
 //	bcr check
-//	bcr extract FILE...
+//	bcr extract [FILE...]
 //	bcr verdict [ID|PATH|-]...
 //	bcr links [-r] [ID|PATH|-]...
 //	bcr new TYPE TITLE [PARENT|-]...
@@ -15,7 +15,8 @@
 // breadcrumbs in breadcrumbs/ and writes the report to
 // audit-report.html, to FILE, or to standard output when FILE is -.
 // check prints each problem in the breadcrumbs, extract the breadcrumb
-// of each file it is given, as records, verdict the verdict of
+// of each file it is given, or of each file .breadcrumbs names, as
+// records, verdict the verdict of
 // each breadcrumb, links its links to its
 // parents, new creates a breadcrumb, spec prints the specification
 // bcr carries out, and init sets up Breadcrumb SDD in a repository. Its contract is docs/bcr.md.
@@ -44,7 +45,7 @@ import (
 const (
 	auditReportUsage = "usage: bcr audit-report --html [-o FILE]\n"
 	checkUsage       = "usage: bcr check\n"
-	extractUsage     = "usage: bcr extract FILE...\n"
+	extractUsage     = "usage: bcr extract [FILE...]\n"
 	verdictUsage     = "usage: bcr verdict [ID|PATH|-]...\n"
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
 	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"

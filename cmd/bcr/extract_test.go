@@ -230,10 +230,107 @@ func TestExtractAFileThatCannotBeRead(t *testing.T) {
 	}
 }
 
-func TestExtractNoOperand(t *testing.T) {
-	_, stderr, code := extractRun()
-	if !strings.HasSuffix(stderr, "\n"+extractUsage) || code != 2 {
-		t.Errorf("got %q, exit %d", stderr, code)
+func TestExtractNoOperandAndNoBreadcrumbsFile(t *testing.T) {
+	files(t, map[string]string{"a.md": crumbOf("A")})
+	for _, operands := range [][]string{nil, {"--"}} {
+		stdout, stderr, code := extractRun(operands...)
+		if stdout != "" || !strings.HasPrefix(stderr, "bcr: ") || code != 2 {
+			t.Errorf("got %q, %q, exit %d; want a message, exit 2", stdout, stderr, code)
+		}
+	}
+}
+
+func TestExtractTheFilesBreadcrumbsNames(t *testing.T) {
+	files(t, map[string]string{
+		".breadcrumbs":          "# the decisions and the tasks\ntasks/*.md\n\ndocs/adrs/*.md\n",
+		"docs/adrs/ADR-0002.md": crumbOf("ADR-0002"),
+		"tasks/PBI-00001.md":    crumbOf("PBI-00001", "implements ADR-0002"),
+		"specs/asdlc/spec.md":   crumbOf("asdlc"),
+	})
+	stdout, stderr, code := extractRun()
+	want := "breadcrumb\tADR-0002\tPBI\tdocs/adrs/ADR-0002.md\t3\n" +
+		"breadcrumb\tPBI-00001\tPBI\ttasks/PBI-00001.md\t3\n" +
+		"link\tPBI-00001\timplements\tADR-0002\ttasks/PBI-00001.md\t6\n"
+	if stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractAPatternThatExcludes(t *testing.T) {
+	files(t, map[string]string{
+		".breadcrumbs":       "tasks/*.md\n!tasks/PBI-00009.md\n",
+		"tasks/PBI-00001.md": crumbOf("PBI-00001"),
+		"tasks/PBI-00009.md": crumbOf("PBI-00009"),
+		"tasks/PBI-00010.md": crumbOf("PBI-00010"),
+	})
+	stdout, stderr, code := extractRun()
+	want := "breadcrumb\tPBI-00001\tPBI\ttasks/PBI-00001.md\t3\n" +
+		"breadcrumb\tPBI-00010\tPBI\ttasks/PBI-00010.md\t3\n"
+	if stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractAPatternWithoutASlash(t *testing.T) {
+	files(t, map[string]string{
+		".breadcrumbs":          "*.md\n",
+		"README.md":             crumbOf("README"),
+		"docs/adrs/ADR-0002.md": crumbOf("ADR-0002"),
+	})
+	stdout, stderr, code := extractRun()
+	if stdout != "breadcrumb\tREADME\tPBI\tREADME.md\t3\n" || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d", stdout, stderr, code)
+	}
+}
+
+func TestExtractAPatternBreadcrumbsDoesNotAllow(t *testing.T) {
+	for _, pattern := range []string{"docs/**/*.md", "docs/", "/docs/*.md", "!", "docs/[a.md"} {
+		files(t, map[string]string{
+			".breadcrumbs": "tasks/*.md\n" + pattern + "\n",
+			"tasks/a.md":   crumbOf("A"),
+			"tasks/b.md":   fm("breadcrumb:"),
+		})
+		stdout, stderr, code := extractRun()
+		if stdout != "" {
+			t.Errorf("%s: printed records %q", pattern, stdout)
+		}
+		if got := problemLines(t, ".breadcrumbs", stderr); !reflect.DeepEqual(got, []string{"2"}) {
+			t.Errorf("%s: problems at lines %q, want line 2:\n%s", pattern, got, stderr)
+		}
+		if code != 1 {
+			t.Errorf("%s: exit %d, want 1", pattern, code)
+		}
+	}
+}
+
+func TestExtractWhatTheWalkDoesNotEnter(t *testing.T) {
+	files(t, map[string]string{
+		".breadcrumbs":  "*/*.md\n",
+		".git/x.md":     crumbOf("X"),
+		"docs/a.md":     crumbOf("A"),
+		"other/b.notes": crumbOf("B"),
+	})
+	if err := os.Symlink(filepath.Join("..", "other", "b.notes"), filepath.Join("docs", "link.md")); err != nil {
+		t.Skip("no symbolic links here:", err)
+	}
+	if err := os.Symlink("other", "linked"); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, code := extractRun()
+	if stdout != "breadcrumb\tA\tPBI\tdocs/a.md\t3\n" || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d", stdout, stderr, code)
+	}
+}
+
+func TestExtractOperandsAndBreadcrumbs(t *testing.T) {
+	files(t, map[string]string{
+		".breadcrumbs":   "tasks/*.md\ndocs/**\n",
+		"tasks/a.md":     crumbOf("A"),
+		"notes/draft.md": crumbOf("DRAFT"),
+	})
+	stdout, stderr, code := extractRun("notes/draft.md")
+	if stdout != "breadcrumb\tDRAFT\tPBI\tnotes/draft.md\t3\n" || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d", stdout, stderr, code)
 	}
 }
 

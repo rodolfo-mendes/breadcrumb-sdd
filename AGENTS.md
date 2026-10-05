@@ -55,6 +55,8 @@ docs/bcr.md: the user documentation of bcr; docs/bcr.1 is generated from it
 internal/breadcrumb: the model of Breadcrumb in bcr
 internal/crumb: the core of the front matter breadcrumbs; knows no file format (ADR-0013)
 internal/frontmatter: reads a breadcrumb from a file's YAML front matter for internal/crumb
+internal/fileset: reads .breadcrumbs and finds the files it names; infrastructure (ADR-0014)
+.breadcrumbs: names by pattern the files bcr extract reads when given none
 specs/: feature specs, one directory per feature; each command of bcr is a feature
 tasks/: PBIs, closed after merge and kept
 docs/adrs/: decisions, from ADR-0001 on

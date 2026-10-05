@@ -73,6 +73,13 @@ or links that point to an existing breadcrumb, is checked by
 - Front matter that is not YAML is a problem at the first line it
   cannot be read up to, with the parser's message.
 - Line numbers count from 1, from the first line of the file.
+- A line of `.breadcrumbs` ends at `\n` or `\r\n`, and a byte order
+  mark before the first is ignored. A line of only white space is
+  blank.
+- The walk reads only regular files: a directory or a symbolic link a
+  pattern matches is not read. A directory named `.git` is not
+  entered, wherever it is. A directory that cannot be read is treated
+  as a file that cannot be read.
 
 ### Interface
 
@@ -117,6 +124,8 @@ A problem is printed to standard error as `PATH:LINE: MESSAGE`
 (ADR-0006). A file's problems are printed in order of line. A file
 with a problem prints no records; the other files are still read.
 
+A pattern may not use `**`, start or end with `/`, be empty after
+`!`, or be malformed, such as with a `[` that does not close.
 A pattern `.breadcrumbs` does not allow is a problem at its line in
 `.breadcrumbs`. When `.breadcrumbs` has a problem, no file is read,
 since the set it names is not known.
@@ -139,19 +148,19 @@ Exit status:
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
+- [x] Each Scenario below has a test.
 - [x] The old `bcr list` and its tests are removed.
-- [ ] `docs/bcr.md` describes `bcr extract` under `### extract`,
+- [x] `docs/bcr.md` describes `bcr extract` under `### extract`,
       including the reading of `.breadcrumbs` and the `PATH` and
       `LINE` fields; `docs/bcr.1` is generated again.
-- [ ] `go list -f '{{.Imports}}'` on the core's packages lists only
+- [x] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
-- [ ] This repository has a `.breadcrumbs` with three lines:
+- [x] This repository has a `.breadcrumbs` with three lines:
       `docs/adrs/*.md`, `specs/*/spec.md` and `tasks/*.md`.
-- [ ] In this repository, `bcr extract` with no operand prints one
+- [x] In this repository, `bcr extract` with no operand prints one
       `breadcrumb` record for each file with a breadcrumb, writes
       nothing to standard error, and exits 0.
-- [ ] In this repository, `git ls-files '*.md' | xargs bcr extract`
+- [x] In this repository, `git ls-files '*.md' | xargs bcr extract`
       prints the same records, in the order of its operands.
 
 ### Regression Guardrails

@@ -1,0 +1,3 @@
+docs/adrs/*.md
+specs/*/spec.md
+tasks/*.md
