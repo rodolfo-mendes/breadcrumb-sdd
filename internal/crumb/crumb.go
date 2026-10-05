@@ -43,6 +43,7 @@ type Entry struct {
 type Breadcrumb struct {
 	ID    string
 	Type  string
+	Line  int    // the line of its id, counted from 1
 	Links []Link // in the order written
 }
 
@@ -73,7 +74,7 @@ func Read(line int, props map[string]Property) (Breadcrumb, []Problem) {
 		sort.SliceStable(r.problems, func(i, j int) bool { return r.problems[i].Line < r.problems[j].Line })
 		return Breadcrumb{}, r.problems
 	}
-	return Breadcrumb{ID: id, Type: typ, Links: links}, nil
+	return Breadcrumb{ID: id, Type: typ, Line: props["id"].Line, Links: links}, nil
 }
 
 // reader gathers the problems of one breadcrumb.

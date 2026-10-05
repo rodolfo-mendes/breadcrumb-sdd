@@ -91,9 +91,9 @@ func problems(t *testing.T, path string, want ...string) {
 func TestExtractABreadcrumbWithLinks(t *testing.T) {
 	files(t, map[string]string{"tasks/PBI-00001.md": crumbOf("PBI-00001", "implements ADR-0001", "changes asdlc")})
 	stdout, stderr, code := extractRun("tasks/PBI-00001.md")
-	want := "breadcrumb\tPBI-00001\tPBI\ttasks/PBI-00001.md\n" +
-		"link\tPBI-00001\timplements\tADR-0001\n" +
-		"link\tPBI-00001\tchanges\tasdlc\n"
+	want := "breadcrumb\tPBI-00001\tPBI\ttasks/PBI-00001.md\t3\n" +
+		"link\tPBI-00001\timplements\tADR-0001\ttasks/PBI-00001.md\t6\n" +
+		"link\tPBI-00001\tchanges\tasdlc\ttasks/PBI-00001.md\t7\n"
 	if stdout != want || stderr != "" || code != 0 {
 		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
 	}
@@ -102,7 +102,7 @@ func TestExtractABreadcrumbWithLinks(t *testing.T) {
 func TestExtractABreadcrumbWithNoLinks(t *testing.T) {
 	files(t, map[string]string{"a.md": crumbOf("A")})
 	stdout, stderr, code := extractRun("a.md")
-	if stdout != "breadcrumb\tA\tPBI\ta.md\n" || stderr != "" || code != 0 {
+	if stdout != "breadcrumb\tA\tPBI\ta.md\t3\n" || stderr != "" || code != 0 {
 		t.Errorf("got %q, %q, exit %d", stdout, stderr, code)
 	}
 }
@@ -122,9 +122,9 @@ func TestExtractAFileWithNoBreadcrumb(t *testing.T) {
 func TestExtractSeveralFiles(t *testing.T) {
 	files(t, map[string]string{"a.md": crumbOf("A", "follows B"), "b.md": crumbOf("B")})
 	stdout, _, _ := extractRun("b.md", "a.md")
-	want := "breadcrumb\tB\tPBI\tb.md\n" +
-		"breadcrumb\tA\tPBI\ta.md\n" +
-		"link\tA\tfollows\tB\n"
+	want := "breadcrumb\tB\tPBI\tb.md\t3\n" +
+		"breadcrumb\tA\tPBI\ta.md\t3\n" +
+		"link\tA\tfollows\tB\ta.md\t6\n"
 	if stdout != want {
 		t.Errorf("got %q, want %q", stdout, want)
 	}
@@ -160,7 +160,7 @@ func TestExtractLinksWithNoList(t *testing.T) {
 func TestExtractWhiteSpaceInALinkEntry(t *testing.T) {
 	files(t, map[string]string{"a.md": crumbOf("A", "implements \t\u00a0 ADR-0001\u00a0")})
 	stdout, stderr, code := extractRun("a.md")
-	if !strings.HasSuffix(stdout, "\nlink\tA\timplements\tADR-0001\n") || stderr != "" || code != 0 {
+	if !strings.HasSuffix(stdout, "\nlink\tA\timplements\tADR-0001\ta.md\t6\n") || stderr != "" || code != 0 {
 		t.Errorf("got %q, %q, exit %d", stdout, stderr, code)
 	}
 }
@@ -198,7 +198,7 @@ func TestExtractYAMLOutsideThePartADR0002Allows(t *testing.T) {
 
 func TestExtractAValueThatLooksLikeANumber(t *testing.T) {
 	files(t, map[string]string{"a.md": crumbOf("0001")})
-	if stdout, _, _ := extractRun("a.md"); stdout != "breadcrumb\t0001\tPBI\ta.md\n" {
+	if stdout, _, _ := extractRun("a.md"); stdout != "breadcrumb\t0001\tPBI\ta.md\t3\n" {
 		t.Errorf("got %q", stdout)
 	}
 }
@@ -206,7 +206,7 @@ func TestExtractAValueThatLooksLikeANumber(t *testing.T) {
 func TestExtractOneBadFileAmongGoodOnes(t *testing.T) {
 	files(t, map[string]string{"a.md": crumbOf("A"), "b.md": fm("breadcrumb:", "  id: B")})
 	stdout, stderr, code := extractRun("a.md", "b.md")
-	if stdout != "breadcrumb\tA\tPBI\ta.md\n" {
+	if stdout != "breadcrumb\tA\tPBI\ta.md\t3\n" {
 		t.Errorf("got %q", stdout)
 	}
 	if !strings.HasPrefix(stderr, "b.md:2: ") || code != 1 {
@@ -218,7 +218,7 @@ func TestExtractAFileThatCannotBeRead(t *testing.T) {
 	files(t, map[string]string{"a.md": crumbOf("A"), "b.md": fm("breadcrumb:"), "dir/c.md": crumbOf("C")})
 	for _, missing := range []string{"missing.md", "dir"} {
 		stdout, stderr, code := extractRun(missing, "b.md", "a.md")
-		if stdout != "breadcrumb\tA\tPBI\ta.md\n" {
+		if stdout != "breadcrumb\tA\tPBI\ta.md\t3\n" {
 			t.Errorf("%s: got %q", missing, stdout)
 		}
 		if !strings.HasPrefix(stderr, "bcr: ") || !strings.Contains(stderr, "\nb.md:2: ") {

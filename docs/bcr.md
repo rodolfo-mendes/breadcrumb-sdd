@@ -193,14 +193,19 @@ standard output, then one `link` record for each entry of its
 `links`, in the order written. Fields are separated by a tab:
 
 ```
-breadcrumb	ID	TYPE	PATH
-link	ID	VERB	OBJECT
+breadcrumb	ID	TYPE	PATH	LINE
+link	ID	VERB	OBJECT	PATH	LINE
 ```
 
-`PATH` is the file as given. In a `link` record, `ID` is the id of the
-breadcrumb the link belongs to, and `VERB` and `OBJECT` are the two
-words of its entry. Select records by their first field: new kinds of
-record may be added.
+`PATH` is the file as given. `LINE` is the line of the file where the
+record was written, counted from 1: for a `breadcrumb` record, the
+line of its `id`; for a `link` record, the line of its entry. In a
+`link` record, `ID` is the id of the breadcrumb the link belongs to,
+and `VERB` and `OBJECT` are the two words of its entry.
+
+Select records by their first field, and read their fields by
+position: new kinds of record may be added, and new fields may be
+added at the end of a record.
 
 A file whose first line is not `---` has no front matter, and prints
 nothing; so does front matter with no `breadcrumb` key. A line may end

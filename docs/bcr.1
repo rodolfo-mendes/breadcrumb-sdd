@@ -130,12 +130,14 @@ Output: for a file with a valid breadcrumb, one \fBbreadcrumb\fR record on stand
 .PP
 .RS 4
 .nf
-breadcrumb	ID	TYPE	PATH
-link	ID	VERB	OBJECT
+breadcrumb	ID	TYPE	PATH	LINE
+link	ID	VERB	OBJECT	PATH	LINE
 .fi
 .RE
 .PP
-\fBPATH\fR is the file as given. In a \fBlink\fR record, \fBID\fR is the id of the breadcrumb the link belongs to, and \fBVERB\fR and \fBOBJECT\fR are the two words of its entry. Select records by their first field: new kinds of record may be added.
+\fBPATH\fR is the file as given. \fBLINE\fR is the line of the file where the record was written, counted from 1: for a \fBbreadcrumb\fR record, the line of its \fBid\fR; for a \fBlink\fR record, the line of its entry. In a \fBlink\fR record, \fBID\fR is the id of the breadcrumb the link belongs to, and \fBVERB\fR and \fBOBJECT\fR are the two words of its entry.
+.PP
+Select records by their first field, and read their fields by position: new kinds of record may be added, and new fields may be added at the end of a record.
 .PP
 A file whose first line is not \fB\-\-\-\fR has no front matter, and prints nothing; so does front matter with no \fBbreadcrumb\fR key. A line may end in \fB\en\fR or \fB\er\en\fR.
 .PP

@@ -55,9 +55,9 @@ func extract(path string, src []byte, stdout, stderr io.Writer) bool {
 	if len(problems) > 0 {
 		return false
 	}
-	fmt.Fprintf(stdout, "breadcrumb\t%s\t%s\t%s\n", b.ID, b.Type, path)
+	fmt.Fprintf(stdout, "breadcrumb\t%s\t%s\t%s\t%d\n", b.ID, b.Type, path, b.Line)
 	for _, l := range b.Links {
-		fmt.Fprintf(stdout, "link\t%s\t%s\t%s\n", b.ID, l.Verb, l.Object)
+		fmt.Fprintf(stdout, "link\t%s\t%s\t%s\t%s\t%d\n", b.ID, l.Verb, l.Object, path, l.Line)
 	}
 	return true
 }

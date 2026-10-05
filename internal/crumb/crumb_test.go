@@ -56,6 +56,7 @@ func TestABreadcrumbWithLinks(t *testing.T) {
 	want := Breadcrumb{
 		ID:   "PBI-00001",
 		Type: "PBI",
+		Line: 3,
 		Links: []Link{
 			{Verb: "implements", Object: "ADR-0001", Line: 6},
 			{Verb: "changes", Object: "asdlc", Line: 7},
