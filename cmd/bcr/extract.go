@@ -12,6 +12,7 @@ import (
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/crumb"
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/fileset"
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/frontmatter"
+	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/records"
 )
 
 // runExtract runs bcr extract; args starts with the command. For each
@@ -97,9 +98,6 @@ func extract(path string, src []byte, stdout, stderr io.Writer) bool {
 	if len(problems) > 0 {
 		return false
 	}
-	fmt.Fprintf(stdout, "breadcrumb\t%s\t%s\t%s\t%d\n", b.ID, b.Type, path, b.Line)
-	for _, l := range b.Links {
-		fmt.Fprintf(stdout, "link\t%s\t%s\t%s\t%s\t%d\n", b.ID, l.Verb, l.Object, path, l.Line)
-	}
+	records.Write(stdout, path, b)
 	return true
 }
