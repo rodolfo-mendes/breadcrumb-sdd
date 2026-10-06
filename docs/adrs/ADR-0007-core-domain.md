@@ -6,7 +6,7 @@ breadcrumb:
 ---
 # ADR-0007: The core domain owns Breadcrumb's rules
 
-Status: Accepted
+Status: Accepted, amended by ADR-0013
 Date: 2026-10-02
 
 ## Context

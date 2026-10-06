@@ -2,7 +2,8 @@
 breadcrumb:
   id: ADR-0012
   type: ADR
-  links: []
+  links:
+    - amends ADR-0002
 ---
 # ADR-0012: A link entry is read as two words
 

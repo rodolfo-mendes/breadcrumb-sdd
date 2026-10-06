@@ -2,7 +2,8 @@
 breadcrumb:
   id: ADR-0015
   type: ADR
-  links: []
+  links:
+    - follows ADR-0011
 ---
 # ADR-0015: bcr verify reads the records bcr extract prints
 
