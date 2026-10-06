@@ -50,6 +50,7 @@ This repository is developed with ASDLC
 ## Context Map
 
 ```yaml
+ARCHITECTURE.md: describes the high-level design of Breadcrumb and the `bcr` command
 docs/breadcrumb-sdd.md: describes Breadcrumb as bcr carries it out; not a feature spec
 docs/bcr.md: the user documentation of bcr; docs/bcr.1 is generated from it
 internal/breadcrumb: the model of Breadcrumb in bcr
