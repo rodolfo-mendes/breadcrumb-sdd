@@ -9,11 +9,11 @@ page only links them. Read it before adding a command.
 `bcr` is the reference implementation of Breadcrumb. Only its core
 domain is part of the method: the rules about what a breadcrumb holds
 and what a set of breadcrumbs must satisfy
-([ADR-0007](adrs/ADR-0007-core-domain.md)). Everything else, from
+([ADR-0007](docs/adrs/ADR-0007-core-domain.md)). Everything else, from
 reading files to parsing flags, is infrastructure around that core,
 and another implementation could do it differently. A file format
 belongs to infrastructure too: the core holds meaning, not format
-([ADR-0013](adrs/ADR-0013-core-holds-meaning-not-format.md)).
+([ADR-0013](docs/adrs/ADR-0013-core-holds-meaning-not-format.md)).
 
 ## Layers
 
@@ -29,11 +29,11 @@ flowchart TD
 
 | Layer | Package | Kind |
 |---|---|---|
-| Which files to read | `internal/fileset` | Infrastructure ([ADR-0014](adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md)) |
-| Front matter | `internal/frontmatter` | Infrastructure ([ADR-0010](adrs/ADR-0010-read-front-matter-with-go-yaml-v3.md)) |
-| Records | `internal/records` | Infrastructure ([ADR-0011](adrs/ADR-0011-breadcrumbs-printed-as-tagged-records.md)) |
-| Core | `internal/crumb` | Core domain ([ADR-0007](adrs/ADR-0007-core-domain.md)) |
-| Commands | `cmd/bcr`, `internal/cli` | Infrastructure ([ADR-0006](adrs/ADR-0006-bcr-follows-posix-conventions.md)) |
+| Which files to read | `internal/fileset` | Infrastructure ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md)) |
+| Front matter | `internal/frontmatter` | Infrastructure ([ADR-0010](docs/adrs/ADR-0010-read-front-matter-with-go-yaml-v3.md)) |
+| Records | `internal/records` | Infrastructure ([ADR-0011](docs/adrs/ADR-0011-breadcrumbs-printed-as-tagged-records.md)) |
+| Core | `internal/crumb` | Core domain ([ADR-0007](docs/adrs/ADR-0007-core-domain.md)) |
+| Commands | `cmd/bcr`, `internal/cli` | Infrastructure ([ADR-0006](docs/adrs/ADR-0006-bcr-follows-posix-conventions.md)) |
 
 The core imports only the standard library and reads no file. It is
 given breadcrumbs, and each breadcrumb's place as text it only repeats
@@ -46,13 +46,13 @@ bcr extract | bcr verify
 ```
 
 - `.breadcrumbs` names, by pattern, the files that carry breadcrumbs
-  ([ADR-0014](adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md)).
+  ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md)).
 - `bcr extract` reads those files, or the files given as operands,
   checks each breadcrumb on its own, and prints it as tagged records
-  ([`specs/extract`](../specs/extract/spec.md)).
+  ([`specs/extract`](specs/extract/spec.md)).
 - `bcr verify` reads those records and checks the rules about the whole
-  set ([ADR-0015](adrs/ADR-0015-verify-reads-extract-records.md),
-  [`specs/verify`](../specs/verify/spec.md)).
+  set ([ADR-0015](docs/adrs/ADR-0015-verify-reads-extract-records.md),
+  [`specs/verify`](specs/verify/spec.md)).
 
 Records are the common language of the commands: one record per line,
 its kind in the first field, and only `internal/records` knows their
@@ -82,25 +82,25 @@ reused while it runs.
 ## Rules every command follows
 
 - One static Go binary per operating system
-  ([ADR-0004](adrs/ADR-0004-one-go-binary.md)).
+  ([ADR-0004](docs/adrs/ADR-0004-one-go-binary.md)).
 - Each module `bcr` requires directly enters through an ADR
-  ([ADR-0005](adrs/ADR-0005-dependencies-enter-through-adr.md)).
+  ([ADR-0005](docs/adrs/ADR-0005-dependencies-enter-through-adr.md)).
 - POSIX command-line conventions: getopt flags, results on standard
   output, problems as `PATH:LINE: MESSAGE` on standard error, exit
   status 0, 1 or 2
-  ([ADR-0006](adrs/ADR-0006-bcr-follows-posix-conventions.md)).
+  ([ADR-0006](docs/adrs/ADR-0006-bcr-follows-posix-conventions.md)).
 - A format's rules live in its reader; a breadcrumb's meaning lives in
-  the core ([ADR-0013](adrs/ADR-0013-core-holds-meaning-not-format.md)).
+  the core ([ADR-0013](docs/adrs/ADR-0013-core-holds-meaning-not-format.md)).
 - Files come from operands, or from `.breadcrumbs`; a command that
   judges the whole set reads records, not files
-  ([ADR-0014](adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md),
-  [ADR-0015](adrs/ADR-0015-verify-reads-extract-records.md)).
+  ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md),
+  [ADR-0015](docs/adrs/ADR-0015-verify-reads-extract-records.md)).
 
 ## Adding a command
 
 1. Place it in a family, and name it from what the family does.
 2. Write its spec in `specs/<command>/spec.md`
-   ([`specs/asdlc`](../specs/asdlc/spec.md), Architecture).
+   ([`specs/asdlc`](specs/asdlc/spec.md), Architecture).
 3. Decide whether it reads files, through `internal/fileset` and a
    format reader, or records, through `internal/records`.
 4. Put every new rule about breadcrumbs in `internal/crumb`, and
@@ -109,8 +109,8 @@ reused while it runs.
    per ADR.
 6. Describe it under `### <command>` in `docs/bcr.md`, and generate
    `docs/bcr.1` again
-   ([ADR-0008](adrs/ADR-0008-user-documentation-in-docs-bcr-md.md),
-   [ADR-0009](adrs/ADR-0009-man-page-generated-from-user-documentation.md)).
+   ([ADR-0008](docs/adrs/ADR-0008-user-documentation-in-docs-bcr-md.md),
+   [ADR-0009](docs/adrs/ADR-0009-man-page-generated-from-user-documentation.md)).
 
 ## Deferred, and what brings it back
 
@@ -123,7 +123,7 @@ reused while it runs.
 ## The old model
 
 `breadcrumbs/` holds the intakes, requirements, decisions and tasks
-from before [ADR-0001](adrs/ADR-0001-adopt-asdlc.md), and the old
+from before [ADR-0001](docs/adrs/ADR-0001-adopt-asdlc.md), and the old
 commands still read it. They are kept until a freeze ADR says what
 happens to the folder and to its audit. Their names stay taken until
 then, which is why the new set check is `verify`, not `check`.
