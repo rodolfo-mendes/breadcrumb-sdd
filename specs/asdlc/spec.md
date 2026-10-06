@@ -76,6 +76,7 @@ Where this repository goes beyond ASDLC, it is listed here.
 - [ ] Each spec the change touches describes the new state, in the
       same commit.
 - [ ] Each claim in `specs/` holds.
+- [ ] `bcr extract | bcr verify` exits 0 under `set -o pipefail`.
 
 ### Regression Guardrails
 

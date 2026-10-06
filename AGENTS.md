@@ -15,6 +15,7 @@ This repository is developed with ASDLC
 | Action | Command | Authority |
 |---|---|---|
 | Test | `go test ./...` | Go version in `go.mod` |
+| Verify breadcrumbs | `set -o pipefail; go run ./cmd/bcr extract \| go run ./cmd/bcr verify` | `specs/extract/spec.md`, `specs/verify/spec.md` |
 | Check breadcrumbs | `go run ./cmd/bcr check` | `docs/bcr.md` |
 | Audit claims | `go run ./cmd/bcr verdict` | `docs/bcr.md` |
 | Report | `go run ./cmd/bcr audit-report --html` | `docs/bcr.md` |
