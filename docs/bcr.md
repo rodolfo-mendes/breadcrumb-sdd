@@ -10,6 +10,7 @@ bcr - audit the breadcrumbs of a repository
 bcr audit-report --html [-o FILE]
 bcr check
 bcr extract [FILE...]
+bcr verify
 bcr verdict [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
 bcr new TYPE TITLE [PARENT|-]...
@@ -273,6 +274,82 @@ Examples:
 bcr extract
 git ls-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut -f2,4
+```
+
+### verify
+
+```
+bcr verify
+```
+
+Reads the records `bcr extract` prints, and checks the rules about the
+whole set of breadcrumbs they describe:
+
+```
+bcr extract | bcr verify
+```
+
+Flags: none.
+
+Operands: none. `bcr verify` reads no file: which files make up the
+set is decided by `bcr extract`, from its operands or from
+`.breadcrumbs`.
+
+Standard input: the records, as `bcr extract` prints them, read to the
+end. A line may end in `\n` or `\r\n`. A record of a kind other than
+`breadcrumb` and `link` is ignored, and so are fields after the ones
+`bcr extract` prints today. With no input, there is no problem.
+
+Output: nothing on standard output. Each problem is written to
+standard error, in order of `PATH` compared as bytes, and then of
+`LINE`:
+
+```
+PATH:LINE: MESSAGE
+```
+
+`PATH` and `LINE` are the ones of the record the problem is about.
+What is a problem:
+
+- Two or more breadcrumbs with the same id, or with ids that differ
+  only in letter case, such as `ADR-0001` and `adr-0001`. Each of them
+  is a problem, at its `breadcrumb` record, and its message names
+  where the others are. Case is compared with Unicode simple case
+  folding.
+- A link whose `OBJECT` is not the id of any breadcrumb in the set, at
+  its `link` record. When `OBJECT` differs only in case from an id,
+  the message names that id.
+
+A link to an id that two breadcrumbs share is not a problem of its
+own; the duplicate is.
+
+A line of input that is not a record `bcr extract` could print, an
+empty line included, stops `bcr verify`: it writes a message starting
+`bcr: `, which gives the line's number in the input, and prints no
+problem.
+
+A breadcrumb `bcr extract` could not read has no record, so links to
+its id are reported as pointing to no breadcrumb. Fix the problem
+`bcr extract` printed first.
+
+Exit status:
+
+- 0: no problem was found.
+- 1: at least one problem was found.
+- 2: `bcr verify` was given an operand, its input could not be read,
+  or a line of its input was not a record.
+
+In a pipe, the shell returns the exit status of `bcr verify`, so a
+problem `bcr extract` found is seen only on standard error. A script
+that needs both runs with `set -o pipefail`, or saves the records
+first.
+
+Examples:
+
+```
+bcr extract | bcr verify
+set -o pipefail; bcr extract | bcr verify
+bcr extract > records.tsv && bcr verify < records.tsv
 ```
 
 ### verdict

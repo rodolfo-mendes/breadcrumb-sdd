@@ -70,10 +70,16 @@ link	ID	VERB	OBJECT	PATH	LINE
 - A record of a kind it does not know is ignored (ADR-0011).
 - Fields after the ones above are ignored, since new fields may be
   added at the end of a record.
-- A line of input may end in `\n` or `\r\n` (ADR-0015).
+- A line of input may end in `\n` or `\r\n` (ADR-0015). The last
+  line need not end.
+- A `breadcrumb` record has at least five fields and a `link` record
+  at least six. None of the fields above is empty, and `LINE` is a
+  whole number from 1, written in digits only.
+- A line whose first field is empty has no kind, and is not a record.
 - A line that is not a record `bcr extract` could print, an empty line
   included, stops `bcr verify`: it writes a message starting `bcr: `
-  that gives the line's number in the input, and exits 2.
+  that gives the line's number in the input, prints no problem, and
+  exits 2.
 
 Rules:
 
@@ -115,13 +121,13 @@ Exit status:
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
-- [ ] `docs/bcr.md` describes `bcr verify` under `### verify`;
+- [x] Each Scenario below has a test.
+- [x] `docs/bcr.md` describes `bcr verify` under `### verify`;
       `docs/bcr.1` is generated again.
-- [ ] The old `bcr check` and its tests are unchanged.
-- [ ] `go list -f '{{.Imports}}'` on the core's packages lists only
+- [x] The old `bcr check` and its tests are unchanged.
+- [x] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
-- [ ] In this repository, `bcr extract | bcr verify` prints nothing
+- [x] In this repository, `bcr extract | bcr verify` prints nothing
       and exits 0.
 
 ### Regression Guardrails

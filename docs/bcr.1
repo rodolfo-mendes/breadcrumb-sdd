@@ -9,6 +9,7 @@ bcr \- audit the breadcrumbs of a repository
 bcr audit\-report \-\-html [\-o FILE]
 bcr check
 bcr extract [FILE...]
+bcr verify
 bcr verdict [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
 bcr new TYPE TITLE [PARENT|\-]...
@@ -184,6 +185,67 @@ Examples:
 bcr extract
 git ls\-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut \-f2,4
+.fi
+.RE
+.SS "verify"
+.PP
+.RS 4
+.nf
+bcr verify
+.fi
+.RE
+.PP
+Reads the records \fBbcr extract\fR prints, and checks the rules about the whole set of breadcrumbs they describe:
+.PP
+.RS 4
+.nf
+bcr extract | bcr verify
+.fi
+.RE
+.PP
+Flags: none.
+.PP
+Operands: none. \fBbcr verify\fR reads no file: which files make up the set is decided by \fBbcr extract\fR, from its operands or from \fB.breadcrumbs\fR.
+.PP
+Standard input: the records, as \fBbcr extract\fR prints them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. A record of a kind other than \fBbreadcrumb\fR and \fBlink\fR is ignored, and so are fields after the ones \fBbcr extract\fR prints today. With no input, there is no problem.
+.PP
+Output: nothing on standard output. Each problem is written to standard error, in order of \fBPATH\fR compared as bytes, and then of \fBLINE\fR:
+.PP
+.RS 4
+.nf
+PATH:LINE: MESSAGE
+.fi
+.RE
+.PP
+\fBPATH\fR and \fBLINE\fR are the ones of the record the problem is about. What is a problem:
+.IP \(bu 2
+Two or more breadcrumbs with the same id, or with ids that differ only in letter case, such as \fBADR\-0001\fR and \fBadr\-0001\fR. Each of them is a problem, at its \fBbreadcrumb\fR record, and its message names where the others are. Case is compared with Unicode simple case folding.
+.IP \(bu 2
+A link whose \fBOBJECT\fR is not the id of any breadcrumb in the set, at its \fBlink\fR record. When \fBOBJECT\fR differs only in case from an id, the message names that id.
+.PP
+A link to an id that two breadcrumbs share is not a problem of its own; the duplicate is.
+.PP
+A line of input that is not a record \fBbcr extract\fR could print, an empty line included, stops \fBbcr verify\fR: it writes a message starting \fBbcr: \fR, which gives the line's number in the input, and prints no problem.
+.PP
+A breadcrumb \fBbcr extract\fR could not read has no record, so links to its id are reported as pointing to no breadcrumb. Fix the problem \fBbcr extract\fR printed first.
+.PP
+Exit status:
+.IP \(bu 2
+0: no problem was found.
+.IP \(bu 2
+1: at least one problem was found.
+.IP \(bu 2
+2: \fBbcr verify\fR was given an operand, its input could not be read, or a line of its input was not a record.
+.PP
+In a pipe, the shell returns the exit status of \fBbcr verify\fR, so a problem \fBbcr extract\fR found is seen only on standard error. A script that needs both runs with \fBset \-o pipefail\fR, or saves the records first.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+bcr extract | bcr verify
+set \-o pipefail; bcr extract | bcr verify
+bcr extract > records.tsv && bcr verify < records.tsv
 .fi
 .RE
 .SS "verdict"
