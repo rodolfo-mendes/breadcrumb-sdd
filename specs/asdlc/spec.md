@@ -5,6 +5,9 @@ breadcrumb:
   links:
     - follows ADR-0001
     - follows ADR-0002
+  claims:
+    - 'AGENTS.md has-line This repository is developed with ASDLC'
+    - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'
 ---
 # Feature: ASDLC
 
@@ -54,10 +57,16 @@ Where this repository goes beyond ASDLC, it is listed here.
 - **Claims.** An item of a spec's Contract may carry claims: statements
   about the repository's files that a tool can check. They come from
   Breadcrumb, not from ASDLC. Each is
-  written below the item it checks, under `Claims:`, in the form
-  ``- `path` contains `text` ``. A claim may quote a line of code:
+  written in the front matter of its spec, under the `claims` key of
+  the breadcrumb, in the form `'TARGET KIND ARGUMENT'`
+  ([ADR-0017](../../docs/adrs/ADR-0017-claims-written-under-breadcrumb-key.md)).
+  The only kind is `has-line`: a line of the target, without the
+  spaces and tabs at its start and end, equals the argument
+  ([ADR-0019](../../docs/adrs/ADR-0019-has-line-claim-matches-a-trimmed-line.md)).
+  A claim may quote a line of code:
   unlike a copied sample, it turns Refuted when the code moves on.
-  Until `bcr` reads claims from specs, they are checked by hand.
+  Until `bcr audit` checks claims, they are checked by hand, with the
+  command ADR-0019 gives.
 - **PBIs reach the main branch with their change.** A PBI reaches the
   main branch in the same merge as the change it directs, so every PBI
   on the main branch is closed. A PBI has no status.
@@ -82,13 +91,7 @@ Where this repository goes beyond ASDLC, it is listed here.
 
 - `AGENTS.md` tells agents the repository is developed with ASDLC.
 
-  Claims:
-  - `AGENTS.md` contains `This repository is developed with ASDLC`
-
 - ADR-0001 is in force.
-
-  Claims:
-  - `docs/adrs/ADR-0001-adopt-asdlc.md` contains `Status: Accepted`
 
 - An Accepted ADR keeps its Context, Decision, Consequences and
   Alternatives Considered; only its Status, its breadcrumb and

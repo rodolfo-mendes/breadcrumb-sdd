@@ -16,6 +16,8 @@ breadcrumb:
     - follows ADR-0017
     - follows ADR-0018
     - follows ADR-0019
+  claims:
+    - 'docs/bcr.md has-line ### extract'
 ---
 # Feature: extract
 
@@ -216,9 +218,6 @@ Exit status:
 ### Regression Guardrails
 
 - `docs/bcr.md` documents `bcr extract`.
-
-  Claims:
-  - `docs/bcr.md` contains `### extract`
 
 - `go.yaml.in/yaml/v3` is the only module `bcr` requires directly
   (ADR-0005, ADR-0010). Checked by hand: the `require` block of

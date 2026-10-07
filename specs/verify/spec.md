@@ -11,6 +11,9 @@ breadcrumb:
     - follows ADR-0013
     - follows ADR-0015
     - follows ADR-0016
+  claims:
+    - 'docs/bcr.md has-line ### verify'
+    - 'docs/bcr.md has-line Output: standard input, copied to standard output byte for byte.'
 ---
 # Feature: verify
 
@@ -155,13 +158,7 @@ Exit status:
 
 - `docs/bcr.md` documents `bcr verify`.
 
-  Claims:
-  - `docs/bcr.md` contains `### verify`
-
 - `docs/bcr.md` says that `bcr verify` passes its input on.
-
-  Claims:
-  - `docs/bcr.md` contains `Output: standard input, copied to standard output byte for byte.`
 
 ### Scenarios
 
