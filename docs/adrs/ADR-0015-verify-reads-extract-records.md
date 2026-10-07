@@ -7,7 +7,7 @@ breadcrumb:
 ---
 # ADR-0015: bcr verify reads the records bcr extract prints
 
-Status: Accepted
+Status: Accepted, amended by ADR-0016
 Date: 2026-10-04
 
 ## Context
