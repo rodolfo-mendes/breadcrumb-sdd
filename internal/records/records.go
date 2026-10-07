@@ -35,8 +35,9 @@ const (
 	claimFields      = 7
 	problemKind      = "problem" // skipped by Read
 	problemFields    = 4
-	claimVerdictKind = "claim-verdict" // written only
-	verdictKind      = "verdict"       // written only
+	claimVerdictKind = "claim-verdict" // read only by ReadReport
+	verdictKind      = "verdict"       // read only by ReadReport
+	verdictFields    = 5               // of both; a verdict record may have a reason after them
 )
 
 // Write writes the records of b, the breadcrumb of the file at path:
@@ -108,6 +109,15 @@ func ReadAudit(r io.Reader) (crumb.Set, error) {
 	return readWith(r, addAudit)
 }
 
+// ReadReport reads records as Read does, for bcr report: it returns
+// the breadcrumbs with their types, the links with their verbs, the
+// claims, the problems, and the verdicts bcr audit gave, when it ran.
+// A claim record is checked as ReadAudit checks it, and the VERDICT of
+// a verdict record is one of the three the core knows.
+func ReadReport(r io.Reader) (crumb.Set, error) {
+	return readWith(r, addReport)
+}
+
 // readWith reads the records of r into a set with addLine, which returns why
 // a line is not a record, or "".
 func readWith(r io.Reader, addLine func(*crumb.Set, string) string) (crumb.Set, error) {
@@ -175,6 +185,51 @@ func addAudit(set *crumb.Set, line string) string {
 		return "its claim " + why
 	}
 	set.Claims = append(set.Claims, crumb.SetClaim{ID: fields[1], Claim: c, At: at})
+	return ""
+}
+
+// addReport adds the record in line to set when it is of a kind bcr
+// extract, bcr verify or bcr audit prints, or returns why line is not
+// a record.
+func addReport(set *crumb.Set, line string) string {
+	fields, why := split(line, map[string]int{
+		breadcrumbKind: breadcrumbFields, linkKind: linkFields, claimKind: claimFields,
+		problemKind: problemFields, claimVerdictKind: verdictFields, verdictKind: verdictFields,
+	})
+	if fields == nil {
+		return why
+	}
+	switch fields[0] {
+	case claimKind, problemKind:
+		return addAudit(set, line)
+	}
+	at, why := place(fields[len(fields)-2], fields[len(fields)-1])
+	if why != "" {
+		return why
+	}
+	switch fields[0] {
+	case breadcrumbKind:
+		set.Breadcrumbs = append(set.Breadcrumbs, crumb.SetBreadcrumb{ID: fields[1], Type: fields[2], At: at})
+		return ""
+	case linkKind:
+		set.Links = append(set.Links, crumb.SetLink{Verb: fields[2], Object: fields[3], At: at})
+		return ""
+	}
+	v, ok := crumb.ParseVerdict(fields[2])
+	if !ok {
+		return fmt.Sprintf("its VERDICT is %q, not Confirmed, Refuted or Undecided", fields[2])
+	}
+	if fields[0] == claimVerdictKind {
+		set.ClaimVerdicts = append(set.ClaimVerdicts, crumb.SetVerdict{At: at, Verdict: v})
+		return ""
+	}
+	// The reason of a verdict is the one field read after those every
+	// verdict record has.
+	reason := ""
+	if all := strings.Split(line, "\t"); len(all) > verdictFields {
+		reason = all[verdictFields]
+	}
+	set.Verdicts = append(set.Verdicts, crumb.SetVerdict{At: at, Verdict: v, Reason: reason})
 	return ""
 }
 

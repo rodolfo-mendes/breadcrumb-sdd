@@ -19,15 +19,17 @@ type Place struct {
 func (p Place) String() string { return fmt.Sprintf("%s:%d", p.Text, p.Line) }
 
 // SetBreadcrumb is a breadcrumb of a set: its id, and where it was
-// written.
+// written. Type is its type, when the set was read for Views.
 type SetBreadcrumb struct {
-	ID string
-	At Place
+	ID   string
+	Type string
+	At   Place
 }
 
 // SetLink is a link of a set: the id it points to, and where it was
-// written.
+// written. Verb is its verb, when the set was read for Views.
 type SetLink struct {
+	Verb   string
 	Object string
 	At     Place
 }
@@ -43,12 +45,26 @@ type SetClaim struct {
 // Set is the breadcrumbs of one state of a repository, with their
 // links, their claims, and the problems found in them before. Its
 // rules need every breadcrumb at once. Check reads the breadcrumbs
-// and the links; Audit the breadcrumbs, the claims and the problems.
+// and the links; Audit the breadcrumbs, the claims and the problems;
+// Views and Given all of it, with the verdicts given before.
 type Set struct {
 	Breadcrumbs []SetBreadcrumb
 	Links       []SetLink
 	Claims      []SetClaim
 	Problems    []SetProblem
+	// ClaimVerdicts and Verdicts hold the verdicts given to the claims
+	// and to the breadcrumbs of the set before, each at the place of
+	// what it is about (ADR-0023).
+	ClaimVerdicts []SetVerdict
+	Verdicts      []SetVerdict
+}
+
+// SetVerdict is a verdict given before to a claim or to a breadcrumb
+// of a set, written at At, with its reason when it has one.
+type SetVerdict struct {
+	At      Place
+	Verdict Verdict
+	Reason  string
 }
 
 // SetProblem is a rule a set breaks, at the place where it does.

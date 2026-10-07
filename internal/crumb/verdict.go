@@ -25,6 +25,17 @@ func (v Verdict) String() string {
 	return "Undecided"
 }
 
+// ParseVerdict returns the verdict whose name is s, as String writes
+// it, and whether s names one.
+func ParseVerdict(s string) (Verdict, bool) {
+	for _, v := range []Verdict{Undecided, Confirmed, Refuted} {
+		if v.String() == s {
+			return v, true
+		}
+	}
+	return Undecided, false
+}
+
 // NoClaims is the reason a breadcrumb with no claim and no problem is
 // Undecided.
 const NoClaims = "no claims"

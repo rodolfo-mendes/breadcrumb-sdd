@@ -335,3 +335,114 @@ func TestReadStillSkipsClaimsAndProblems(t *testing.T) {
 		t.Errorf("got %+v, want an empty set: bcr verify does not read these kinds", set)
 	}
 }
+
+const reportInput = "breadcrumb\tverify\tspec\tspecs/verify/spec.md\t3\n" +
+	"link\tverify\tfollows\tADR-0015\tspecs/verify/spec.md\t6\n" +
+	"claim\tverify\thas-line\tdocs/bcr.md\t### verify\tspecs/verify/spec.md\t8\n" +
+	"breadcrumb\tADR-0015\tADR\tdocs/adrs/a.md\t3\n" +
+	"note\tanything\n" +
+	"problem\tspecs/verify/spec.md\t9\tclaim must be written in single quotes\n" +
+	"claim-verdict\tverify\tConfirmed\tspecs/verify/spec.md\t8\n" +
+	"verdict\tverify\tUndecided\tspecs/verify/spec.md\t3\n" +
+	"verdict\tADR-0015\tUndecided\tdocs/adrs/a.md\t3\tno claims\n"
+
+func TestReadReportEveryKindOfThePipe(t *testing.T) {
+	spec, adr := crumb.Place{Text: "specs/verify/spec.md", Line: 3}, crumb.Place{Text: "docs/adrs/a.md", Line: 3}
+	want := crumb.Set{
+		Breadcrumbs: []crumb.SetBreadcrumb{{ID: "verify", Type: "spec", At: spec}, {ID: "ADR-0015", Type: "ADR", At: adr}},
+		Links:       []crumb.SetLink{{Verb: "follows", Object: "ADR-0015", At: crumb.Place{Text: "specs/verify/spec.md", Line: 6}}},
+		Claims: []crumb.SetClaim{{
+			ID:    "verify",
+			Claim: crumb.Claim{Target: "docs/bcr.md", Kind: "has-line", Argument: "### verify", Line: 8},
+			At:    crumb.Place{Text: "specs/verify/spec.md", Line: 8},
+		}},
+		Problems: []crumb.SetProblem{{
+			At:      crumb.Place{Text: "specs/verify/spec.md", Line: 9},
+			Message: "claim must be written in single quotes",
+		}},
+		ClaimVerdicts: []crumb.SetVerdict{{At: crumb.Place{Text: "specs/verify/spec.md", Line: 8}, Verdict: crumb.Confirmed}},
+		Verdicts: []crumb.SetVerdict{
+			{At: spec, Verdict: crumb.Undecided},
+			{At: adr, Verdict: crumb.Undecided, Reason: crumb.NoClaims},
+		},
+	}
+	for _, input := range []string{reportInput, strings.ReplaceAll(reportInput, "\n", "\r\n"), strings.TrimSuffix(reportInput, "\n")} {
+		got, err := ReadReport(strings.NewReader(input))
+		if err != nil || !reflect.DeepEqual(got, want) {
+			t.Errorf("%q: got %+v, %v; want %+v", input, got, err, want)
+		}
+	}
+}
+
+func TestReadReportReadsWhatTheWritersWrite(t *testing.T) {
+	var b strings.Builder
+	at := crumb.Place{Text: "a.md", Line: 3}
+	for _, err := range []error{
+		WriteClaimVerdict(&b, "A", crumb.Refuted, crumb.Place{Text: "a.md", Line: 8}),
+		WriteVerdict(&b, "A", crumb.BreadcrumbVerdict{Verdict: crumb.Undecided, Reason: crumb.NoClaims}, at),
+	} {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := ReadReport(strings.NewReader(b.String()))
+	want := crumb.Set{
+		ClaimVerdicts: []crumb.SetVerdict{{At: crumb.Place{Text: "a.md", Line: 8}, Verdict: crumb.Refuted}},
+		Verdicts:      []crumb.SetVerdict{{At: at, Verdict: crumb.Undecided, Reason: crumb.NoClaims}},
+	}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, %v; want %+v", got, err, want)
+	}
+}
+
+func TestReadReportFieldsAddedAtTheEnd(t *testing.T) {
+	input := "breadcrumb\tA\tspec\ta.md\t3\tmore\n" +
+		"link\tA\tfollows\tB\ta.md\t6\tmore\n" +
+		"claim-verdict\tA\tConfirmed\ta.md\t8\tmore\n" +
+		"verdict\tA\tUndecided\ta.md\t3\tno claims\tmore\n"
+	got, err := ReadReport(strings.NewReader(input))
+	if err != nil || len(got.Breadcrumbs) != 1 || len(got.Links) != 1 || len(got.ClaimVerdicts) != 1 || len(got.Verdicts) != 1 {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+	if got.Links[0].At.Line != 6 || got.ClaimVerdicts[0].At.Line != 8 || got.Verdicts[0].Reason != "no claims" {
+		t.Errorf("got %+v", got)
+	}
+}
+
+func TestReadReportALineThatIsNotARecord(t *testing.T) {
+	const valid = "breadcrumb\tA\tspec\ta.md\t3\n"
+	for _, line := range []string{
+		"",
+		"\tA\tspec\ta.md\t3",
+		"breadcrumb\tA\tspec\ta.md\tx",
+		"link\tA\tfollows\tB\ta.md", // no LINE
+		"link\tA\t\tB\ta.md\t6",     // an empty VERB
+		"claim\tverify\tcontains\tdocs/bcr.md\tx\ta.md\t8", // a kind bcr does not know
+		"claim\tverify\thas-line\t../x.md\tx\ta.md\t8",     // a target outside the repository
+		"problem\ta.md\t3",                              // no MESSAGE
+		"claim-verdict\tA\tConfirmed\ta.md",             // no LINE
+		"claim-verdict\tA\tPassed\ta.md\t8",             // no such verdict
+		"claim-verdict\tA\tConfirmed\ta.md\t0",          // LINE is not from 1
+		"verdict\tA\tconfirmed\ta.md\t3",                // letter case
+		"verdict\tA\t\ta.md\t3",                         // an empty VERDICT
+		"verdict\tA\tUndecided\ta.md\tthree\tno claims", // LINE is not a number
+	} {
+		set, err := ReadReport(strings.NewReader(valid + line + "\n" + valid))
+		if err == nil || !strings.Contains(err.Error(), "line 2 ") {
+			t.Errorf("%q: got error %v, want one that gives line 2", line, err)
+		}
+		if !reflect.DeepEqual(set, crumb.Set{}) {
+			t.Errorf("%q: got set %+v with an error, want none", line, set)
+		}
+	}
+}
+
+func TestReadAndReadAuditStillSkipVerdicts(t *testing.T) {
+	const input = "claim-verdict\tA\tPassed\n" + "verdict\tA\n"
+	if set := read(t, input); !reflect.DeepEqual(set, crumb.Set{}) {
+		t.Errorf("Read got %+v, want an empty set", set)
+	}
+	if set, err := ReadAudit(strings.NewReader(input)); err != nil || !reflect.DeepEqual(set, crumb.Set{}) {
+		t.Errorf("ReadAudit got %+v, %v; want an empty set", set, err)
+	}
+}
