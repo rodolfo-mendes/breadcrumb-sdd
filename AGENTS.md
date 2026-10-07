@@ -58,7 +58,8 @@ internal/breadcrumb: the model of Breadcrumb in bcr
 internal/crumb: the core of the front matter breadcrumbs; knows no file format (ADR-0013)
 internal/frontmatter: reads a breadcrumb from a file's YAML front matter for internal/crumb
 internal/fileset: reads .breadcrumbs and finds the files it names; infrastructure (ADR-0014)
-internal/records: writes and reads the records bcr extract prints; the only package that knows their format (ADR-0011)
+internal/records: writes and reads the records the commands of the pipe print; the only package that knows their format (ADR-0011)
+internal/target: reads the file a claim is about from the working tree; infrastructure (ADR-0023)
 .breadcrumbs: names by pattern the files bcr extract reads when given none
 specs/: feature specs, one directory per feature; each command of bcr is a feature
 tasks/: PBIs, closed after merge and kept

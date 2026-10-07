@@ -1,6 +1,9 @@
 package crumb
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func hasLineClaim(text string) Claim {
 	return Claim{Target: "docs/bcr.md", Kind: "has-line", Argument: text, Line: 8}
@@ -100,5 +103,65 @@ func TestVerdictsAsText(t *testing.T) {
 		if v.String() != want {
 			t.Errorf("got %q, want %q", v.String(), want)
 		}
+	}
+}
+
+func auditSet() Set {
+	claim := func(id, target, text, path string, line int) SetClaim {
+		return SetClaim{ID: id, Claim: Claim{Target: target, Kind: "has-line", Argument: text, Line: line}, At: Place{Text: path, Line: line}}
+	}
+	return Set{
+		Breadcrumbs: []SetBreadcrumb{
+			{ID: "verify", At: Place{Text: "specs/verify/spec.md", Line: 3}},
+			{ID: "ADR-0001", At: Place{Text: "docs/adrs/a.md", Line: 3}},
+			{ID: "extract", At: Place{Text: "specs/extract/spec.md", Line: 3}},
+			{ID: "asdlc", At: Place{Text: "specs/asdlc/spec.md", Line: 3}},
+		},
+		Claims: []SetClaim{
+			claim("verify", "docs/bcr.md", "### verify", "specs/verify/spec.md", 8),
+			claim("extract", "docs/bcr.md", "### extract", "specs/extract/spec.md", 8),
+			claim("verify", "docs/none.md", "x", "specs/verify/spec.md", 9),
+			claim("asdlc", "docs/bcr.md", "### verify", "specs/asdlc/spec.md", 8),
+			claim("gone", "docs/bcr.md", "### verify", "specs/gone/spec.md", 8),
+		},
+		Problems: []SetProblem{
+			{At: Place{Text: "specs/asdlc/spec.md", Line: 9}, Message: "claim must be written in single quotes"},
+			{At: Place{Text: "tasks/broken.md", Line: 2}, Message: "breadcrumb has no type"},
+		},
+	}
+}
+
+func TestTheTargetsOfASet(t *testing.T) {
+	if got, want := auditSet().Targets(), []string{"docs/bcr.md", "docs/none.md"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestAuditASet(t *testing.T) {
+	claims, breadcrumbs := auditSet().Audit(map[string]Target{
+		"docs/bcr.md": {File: true, Content: []byte("### verify\n")},
+	})
+	if want := []Verdict{Confirmed, Refuted, Refuted, Confirmed, Confirmed}; !reflect.DeepEqual(claims, want) {
+		t.Errorf("claims %v, want %v", claims, want)
+	}
+	want := []BreadcrumbVerdict{
+		{Refuted, ""},         // a claim that holds, and one about no file
+		{Undecided, NoClaims}, // no claim and no problem
+		{Refuted, ""},         // its one claim does not hold
+		{Undecided, ""},       // its claim holds, and one was dropped
+	}
+	if !reflect.DeepEqual(breadcrumbs, want) {
+		t.Errorf("breadcrumbs %v, want %v", breadcrumbs, want)
+	}
+}
+
+func TestAuditTwoBreadcrumbsWithTheSameID(t *testing.T) {
+	s := Set{
+		Breadcrumbs: []SetBreadcrumb{{ID: "ADR-0003", At: Place{Text: "a.md", Line: 3}}, {ID: "ADR-0003", At: Place{Text: "b.md", Line: 3}}},
+		Claims:      []SetClaim{{ID: "ADR-0003", Claim: Claim{Target: "x.md", Kind: "has-line", Argument: "x"}, At: Place{Text: "a.md", Line: 8}}},
+	}
+	_, breadcrumbs := s.Audit(map[string]Target{"x.md": {File: true, Content: []byte("x")}})
+	if want := []BreadcrumbVerdict{{Confirmed, ""}, {Undecided, NoClaims}}; !reflect.DeepEqual(breadcrumbs, want) {
+		t.Errorf("got %v, want %v", breadcrumbs, want)
 	}
 }

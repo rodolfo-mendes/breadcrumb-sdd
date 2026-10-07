@@ -248,3 +248,90 @@ func TestReadSkipsTheProblemsWriteProblemWrites(t *testing.T) {
 		t.Errorf("got %+v, want an empty set", set)
 	}
 }
+
+// The records of a spec with two claims, one dropped, as bcr extract
+// and bcr verify print them.
+const auditInput = "breadcrumb\tverify\tspec\tspecs/verify/spec.md\t3\n" +
+	"link\tverify\tfollows\tADR-0016\tspecs/verify/spec.md\t6\n" +
+	"claim\tverify\thas-line\tdocs/bcr.md\t### verify\tspecs/verify/spec.md\t8\n" +
+	"problem\tspecs/verify/spec.md\t9\tclaim must be written in single quotes\n" +
+	"note\tanything\n"
+
+func TestReadAuditBreadcrumbsClaimsAndProblems(t *testing.T) {
+	want := crumb.Set{
+		Breadcrumbs: []crumb.SetBreadcrumb{{ID: "verify", At: crumb.Place{Text: "specs/verify/spec.md", Line: 3}}},
+		Claims: []crumb.SetClaim{{
+			ID:    "verify",
+			Claim: crumb.Claim{Target: "docs/bcr.md", Kind: "has-line", Argument: "### verify", Line: 8},
+			At:    crumb.Place{Text: "specs/verify/spec.md", Line: 8},
+		}},
+		Problems: []crumb.SetProblem{{
+			At:      crumb.Place{Text: "specs/verify/spec.md", Line: 9},
+			Message: "claim must be written in single quotes",
+		}},
+	}
+	for _, input := range []string{auditInput, strings.ReplaceAll(auditInput, "\n", "\r\n"), strings.TrimSuffix(auditInput, "\n")} {
+		got, err := ReadAudit(strings.NewReader(input))
+		if err != nil || !reflect.DeepEqual(got, want) {
+			t.Errorf("%q: got %+v, %v; want %+v", input, got, err, want)
+		}
+	}
+}
+
+func TestReadAuditFieldsAddedAtTheEnd(t *testing.T) {
+	input := "breadcrumb\tA\tspec\ta.md\t3\tmore\n" +
+		"claim\tA\thas-line\tdocs/bcr.md\t### verify\ta.md\t8\tmore\n" +
+		"problem\ta.md\t9\tid has no value\tmore\n"
+	got, err := ReadAudit(strings.NewReader(input))
+	if err != nil || len(got.Breadcrumbs) != 1 || len(got.Claims) != 1 || len(got.Problems) != 1 {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+	if got.Claims[0].At.Line != 8 || got.Problems[0].Message != "id has no value" {
+		t.Errorf("got %+v", got)
+	}
+}
+
+func TestReadAuditSkipsALinkThatIsNotARecord(t *testing.T) {
+	if _, err := ReadAudit(strings.NewReader("link\tPBI-00001\n")); err != nil {
+		t.Errorf("got error %v, want none: bcr audit does not read links", err)
+	}
+}
+
+func TestReadAuditALineThatIsNotARecord(t *testing.T) {
+	const valid = "breadcrumb\tA\tspec\ta.md\t3\n"
+	for _, line := range []string{
+		"",
+		"\tA\tspec\ta.md\t3",
+		"breadcrumb\tA\tspec",
+		"breadcrumb\tA\tspec\ta.md\tx",
+		"claim\tverify\thas-line\tdocs/bcr.md", // too few fields
+		"claim\tverify\thas-line\tdocs/bcr.md\t### verify\ta.md",     // no LINE
+		"claim\tverify\thas-line\tdocs/bcr.md\t\ta.md\t8",            // an empty ARGUMENT
+		"claim\tverify\thas-line\tdocs/bcr.md\tx\ta.md\t0",           // LINE is not from 1
+		"claim\tverify\thas-line\t/etc/passwd\tx\ta.md\t8",           // a target from the root of the machine
+		"claim\tverify\thas-line\t../x.md\tx\ta.md\t8",               // a target outside the repository
+		"claim\tverify\thas-line\tdocs/../../x.md\tx\ta.md\t8",       // a target outside the repository
+		"claim\tverify\thas-line\tdocs/a b.md\tx\ta.md\t8",           // a target with white space
+		"claim\tverify\tcontains\tdocs/bcr.md\tx\ta.md\t8",           // a kind bcr does not know
+		"claim\tverify\thas-line\tdocs/bcr.md\t### verify \ta.md\t8", // a text no line can equal
+		"problem\ta.md\t3",                      // no MESSAGE
+		"problem\ta.md\t3\t",                    // an empty MESSAGE
+		"problem\t\t3\tid has no value",         // an empty PATH
+		"problem\ta.md\tthree\tid has no value", // LINE is not a number
+	} {
+		set, err := ReadAudit(strings.NewReader(valid + line + "\n" + valid))
+		if err == nil || !strings.Contains(err.Error(), "line 2 ") {
+			t.Errorf("%q: got error %v, want one that gives line 2", line, err)
+		}
+		if !reflect.DeepEqual(set, crumb.Set{}) {
+			t.Errorf("%q: got set %+v with an error, want none", line, set)
+		}
+	}
+}
+
+func TestReadStillSkipsClaimsAndProblems(t *testing.T) {
+	set := read(t, "claim\tverify\tcontains\t/etc/passwd\n"+"problem\ta.md\n")
+	if !reflect.DeepEqual(set, crumb.Set{}) {
+		t.Errorf("got %+v, want an empty set: bcr verify does not read these kinds", set)
+	}
+}

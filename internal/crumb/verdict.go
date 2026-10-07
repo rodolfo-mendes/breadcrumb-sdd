@@ -89,3 +89,56 @@ func Judge(claims []Verdict, problems int) (verdict Verdict, reason string) {
 	}
 	return Undecided, NoClaims
 }
+
+// Target is the file a claim is about, as it was found: whether it is
+// a regular file, and then its content.
+type Target struct {
+	File    bool
+	Content []byte
+}
+
+// BreadcrumbVerdict is the verdict of a breadcrumb of a set, with the
+// reason Judge gives.
+type BreadcrumbVerdict struct {
+	Verdict Verdict
+	Reason  string
+}
+
+// Targets returns the target of each claim of the set, once each, in
+// the order first written.
+func (s Set) Targets() []string {
+	var targets []string
+	seen := map[string]bool{}
+	for _, c := range s.Claims {
+		if !seen[c.Claim.Target] {
+			seen[c.Claim.Target] = true
+			targets = append(targets, c.Claim.Target)
+		}
+	}
+	return targets
+}
+
+// Audit returns the verdict of each claim of the set and of each of
+// its breadcrumbs, each in the order of the set. targets holds what
+// was found at each of Targets; a target it does not hold is not a
+// file. A claim and a problem belong to the breadcrumb written in the
+// same text of their place, such as the same path (ADR-0021,
+// ADR-0022); one that has no such breadcrumb belongs to none.
+func (s Set) Audit(targets map[string]Target) (claims []Verdict, breadcrumbs []BreadcrumbVerdict) {
+	of := map[string][]Verdict{} // the verdicts of the claims written in each text
+	for _, c := range s.Claims {
+		t := targets[c.Claim.Target]
+		v := c.Claim.Verdict(t.File, t.Content)
+		claims = append(claims, v)
+		of[c.At.Text] = append(of[c.At.Text], v)
+	}
+	problems := map[string]int{}
+	for _, p := range s.Problems {
+		problems[p.At.Text]++
+	}
+	for _, b := range s.Breadcrumbs {
+		v, reason := Judge(of[b.At.Text], problems[b.At.Text])
+		breadcrumbs = append(breadcrumbs, BreadcrumbVerdict{Verdict: v, Reason: reason})
+	}
+	return claims, breadcrumbs
+}

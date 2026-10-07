@@ -7,9 +7,10 @@ import (
 	"unicode"
 )
 
-// Place is where a breadcrumb or a link was written: a text the caller
-// gives, such as a path, and a line. The core never reads the text: it
-// only repeats it.
+// Place is where a breadcrumb, a link, a claim or a problem was
+// written: a text the caller gives, such as a path, and a line. The
+// core never reads the text: it repeats it, and compares it with the
+// text of other places.
 type Place struct {
 	Text string
 	Line int // counted from 1
@@ -31,11 +32,23 @@ type SetLink struct {
 	At     Place
 }
 
-// Set is the breadcrumbs of one state of a repository, and their
-// links. Its rules need every breadcrumb at once.
+// SetClaim is a claim of a set: the id of its breadcrumb, the claim,
+// and where it was written.
+type SetClaim struct {
+	ID    string
+	Claim Claim
+	At    Place
+}
+
+// Set is the breadcrumbs of one state of a repository, with their
+// links, their claims, and the problems found in them before. Its
+// rules need every breadcrumb at once. Check reads the breadcrumbs
+// and the links; Audit the breadcrumbs, the claims and the problems.
 type Set struct {
 	Breadcrumbs []SetBreadcrumb
 	Links       []SetLink
+	Claims      []SetClaim
+	Problems    []SetProblem
 }
 
 // SetProblem is a rule a set breaks, at the place where it does.
