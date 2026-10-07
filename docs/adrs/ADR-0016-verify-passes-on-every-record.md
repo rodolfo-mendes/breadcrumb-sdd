@@ -8,7 +8,7 @@ breadcrumb:
 ---
 # ADR-0016: bcr verify passes on every record it reads
 
-Status: Accepted
+Status: Accepted, amended by ADR-0021
 Date: 2026-10-07
 
 ## Context
