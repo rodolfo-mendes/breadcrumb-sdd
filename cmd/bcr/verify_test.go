@@ -43,14 +43,21 @@ func passes(t *testing.T, input string) {
 }
 
 // verifyProblems runs bcr verify on input, and fails unless it copies
-// input to standard output unchanged, prints a problem at each of
+// input to standard output unchanged, then a problem record for each
+// line of standard error (ADR-0021), prints a problem at each of
 // want, in that order, and exits 1. It returns the problems, one line
 // each.
 func verifyProblems(t *testing.T, input string, want ...string) []string {
 	t.Helper()
 	stdout, stderr, code := verifyRun(input)
-	if stdout != input {
-		t.Errorf("wrote %q to standard output, want the input %q", stdout, input)
+	added := ""
+	for _, l := range strings.SplitAfter(stderr, "\n") {
+		if m := problemLine.FindStringSubmatch(strings.TrimSuffix(l, "\n")); m != nil {
+			added += "problem\t" + m[1] + "\t" + m[2] + "\t" + m[3] + "\n"
+		}
+	}
+	if stdout != input+added {
+		t.Errorf("wrote %q to standard output, want the input and its problems %q", stdout, input+added)
 	}
 	lines := strings.Split(strings.TrimSuffix(stderr, "\n"), "\n")
 	ok := len(lines) == len(want)
@@ -200,8 +207,8 @@ func TestVerifyABreadcrumbExtractCouldNotRead(t *testing.T) {
 		"a.md": fm("breadcrumb:", "  id: ADR-0005", "  type: ADR"),
 		"b.md": crumbOf("PBI-00001", "implements ADR-0005"),
 	})
-	records, stderr, code := extractRun("a.md", "b.md")
-	if !strings.HasPrefix(stderr, "a.md:2: ") || code != 1 {
+	records, stderr, code := extractAll("a.md", "b.md")
+	if !strings.HasPrefix(stderr, "a.md:2: ") || !strings.HasPrefix(records, "problem\ta.md\t2\t") || code != 1 {
 		t.Errorf("bcr extract wrote %q, exit %d; want the problem of a.md, exit 1", stderr, code)
 	}
 	ps := verifyProblems(t, records, "b.md:6")
@@ -232,4 +239,34 @@ func TestVerifyInputThatCannotBeRead(t *testing.T) {
 	if stdout.String() != "" || stderr.String() != "bcr: input is closed\n" || code != 2 {
 		t.Errorf("got %q, %q, exit %d", stdout.String(), stderr.String(), code)
 	}
+}
+
+func TestVerifyAProblemIsAlsoARecord(t *testing.T) {
+	input := recordsOf(
+		"breadcrumb\tPBI-00001\tPBI\ttasks/PBI-00001.md\t3",
+		"link\tPBI-00001\timplements\tADR-0099\ttasks/PBI-00001.md\t6",
+	)
+	stdout, stderr, code := verifyRun(input)
+	message := `link points to "ADR-0099", which is no breadcrumb's id`
+	if stderr != "tasks/PBI-00001.md:6: "+message+"\n" {
+		t.Errorf("standard error %q", stderr)
+	}
+	if want := input + "problem\ttasks/PBI-00001.md\t6\t" + message + "\n"; stdout != want {
+		t.Errorf("standard output %q, want %q", stdout, want)
+	}
+	if code != 1 {
+		t.Errorf("exit %d, want 1", code)
+	}
+}
+
+func TestVerifyAProblemAfterALastLineWithNoLineEnding(t *testing.T) {
+	input := "breadcrumb\tPBI-00001\tPBI\ta.md\t3\nlink\tPBI-00001\timplements\tADR-0099\ta.md\t6"
+	stdout, _, _ := verifyRun(input)
+	if !strings.HasPrefix(stdout, input+"\nproblem\ta.md\t6\t") || strings.Count(stdout, "\n") != 3 {
+		t.Errorf("standard output %q", stdout)
+	}
+}
+
+func TestVerifyAProblemRecordInTheInput(t *testing.T) {
+	passes(t, recordsOf(append(validRecords, "problem\ta.md\t3\tid has no value")...))
 }

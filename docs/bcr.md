@@ -350,7 +350,8 @@ bcr verify
 ```
 
 Reads the records `bcr extract` prints, checks the rules about the
-whole set of breadcrumbs they describe, and passes every record on:
+whole set of breadcrumbs they describe, and passes every record on,
+with a record for each problem it found:
 
 ```
 bcr extract | bcr verify
@@ -364,7 +365,8 @@ set is decided by `bcr extract`, from its operands or from
 
 Standard input: the records, as `bcr extract` prints them, read to the
 end. A line may end in `\n` or `\r\n`. A record of a kind other than
-`breadcrumb` and `link` is not checked, and neither are fields after
+`breadcrumb` and `link` is not checked, a `problem` record included,
+and neither are fields after
 the ones `bcr extract` prints today; both are still copied. With no input, there is no problem.
 
 Output: standard input, copied to standard output byte for byte.
@@ -381,6 +383,18 @@ as bytes, and then of `LINE`:
 ```
 PATH:LINE: MESSAGE
 ```
+
+After the copy, each problem is also written to standard output, in
+the same order, as a record like the one `bcr extract` prints for its
+own problems:
+
+```
+problem	PATH	LINE	MESSAGE
+```
+
+So the output is equal to the input when no problem is found, and
+starts with the input when one is. When the last line of the input has
+no line ending, a `\n` is written before the first record added.
 
 `PATH` and `LINE` are the ones of the record the problem is about.
 What is a problem:

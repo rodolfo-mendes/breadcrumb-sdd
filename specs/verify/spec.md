@@ -11,6 +11,7 @@ breadcrumb:
     - follows ADR-0013
     - follows ADR-0015
     - follows ADR-0016
+    - follows ADR-0021
   claims:
     - 'docs/bcr.md has-line ### verify'
     - 'docs/bcr.md has-line Output: standard input, copied to standard output byte for byte.'
@@ -19,7 +20,8 @@ breadcrumb:
 
 `bcr verify` reads the records `bcr extract` prints, checks the rules
 about the whole set of breadcrumbs they describe, and passes every
-record on to the next stage of the pipe.
+record on to the next stage of the pipe, with a record for each
+problem it found.
 
 ## Blueprint
 
@@ -41,6 +43,9 @@ them (ADR-0016):
 bcr extract | bcr verify | bcr audit
 ```
 
+A problem it finds is printed to standard error, and after the copy
+as a `problem` record, so the stages after it can see it (ADR-0021).
+
 Which files make up the set is decided before it, by `bcr extract`'s
 operands or by `.breadcrumbs` (ADR-0014). `bcr verify` checks only the
 integrity of the set; it checks no claim and computes no verdict.
@@ -51,7 +56,7 @@ The old `bcr check` stays as it is, for `breadcrumbs/`.
 
 | Part | Does | Kind (ADR-0007) |
 |---|---|---|
-| Command | Reads standard input, prints problems, sets the exit status | Infrastructure |
+| Command | Reads standard input, copies it, prints problems, each also as a record, sets the exit status | Infrastructure |
 | Record reader | Turns each line of input into a breadcrumb or a link of the core, with its path and line; reports a line that is not a record | Infrastructure |
 | Core, `internal/crumb` | Checks the set: duplicate ids and links that point nowhere | Core domain |
 
@@ -76,7 +81,8 @@ link	ID	VERB	OBJECT	PATH	LINE
 ```
 
 - A record of a kind it does not know is not checked (ADR-0011), and
-  is copied like any other (ADR-0016).
+  is copied like any other (ADR-0016). A `problem` record
+  `bcr extract` printed is one of them.
 - Fields after the ones above are not checked, since new fields may be
   added at the end of a record.
 - A line of input may end in `\n` or `\r\n` (ADR-0015). The last
@@ -107,8 +113,8 @@ Rules:
 
 `bcr verify` copies its input to standard output, byte for byte: every
 line in the order read, with its line ending as read, records of kinds
-it does not know included (ADR-0016). It adds no record and changes
-none. It reads its whole input before it writes.
+it does not know included (ADR-0016). It changes no record. It reads
+its whole input before it writes.
 
 - When it finds a problem, it still copies its whole input.
 - When a line of its input is not a record, it prints nothing to
@@ -116,6 +122,22 @@ none. It reads its whole input before it writes.
 
 A problem is printed to standard error as `PATH:LINE: MESSAGE`
 (ADR-0006), in order of `PATH` compared as bytes, then of `LINE`.
+
+After the copy, each problem is also printed to standard output, as a
+record (ADR-0021), in the same order:
+
+```
+problem	PATH	LINE	MESSAGE
+```
+
+- `PATH`, `LINE` and `MESSAGE` are those of the line written to
+  standard error, as in `bcr extract`'s `problem` record
+  (`specs/extract/spec.md`).
+- Each added record ends in `\n`. When the last line of the input has
+  no line ending and a record is added, a `\n` is written before the
+  first one, so that no two records share a line.
+- When no problem is found, nothing is added: the output is equal to
+  the input.
 
 Exit status:
 
@@ -135,7 +157,10 @@ Exit status:
   `set -o pipefail`, or in `bcr extract`'s own standard error
   (ADR-0015).
 - A breadcrumb with a problem reaches the next stage as a valid
-  record; its problem is only on standard error (ADR-0016).
+  record; what says it has a problem is the `problem` record with its
+  `PATH` (ADR-0021).
+- When `bcr verify` finds a problem, its output is no longer equal to
+  its input: the input is the start of the output.
 - A stage after `bcr verify` starts only once `bcr verify`'s input has
   ended (ADR-0016).
 
@@ -153,6 +178,8 @@ Exit status:
       prints nothing and exits 0.
 - [x] In this repository, `bcr extract > a.tsv; bcr verify < a.tsv | cmp - a.tsv`
       exits 0.
+- [x] `docs/bcr.md` describes the `problem` records `bcr verify` adds;
+      `docs/bcr.1` is generated again.
 
 ### Regression Guardrails
 
@@ -189,6 +216,8 @@ Scenario: Two breadcrumbs with the same id
   And a problem is printed at "docs/adrs/b.md:3" that names
     "docs/adrs/a.md:3"
   And the two records are printed to standard output, unchanged
+  And after them a problem record for each of the two problems, in the
+    order of standard error
   And the exit status is 1
 
 Scenario: Three breadcrumbs with the same id
@@ -287,7 +316,9 @@ Scenario: A breadcrumb extract could not read
   When I run "bcr extract a.md b.md | bcr verify"
   Then bcr extract prints the problem of the first file
   And bcr verify reports the link to ADR-0005 as pointing nowhere
-  And bcr verify prints the records of the second file, unchanged
+  And bcr verify prints the problem record of the first file and the
+    records of the second, unchanged
+  And after them a problem record for the link
 
 Scenario: Output that cannot be written
   Given a valid set of records, and a standard output that cannot be
@@ -295,4 +326,35 @@ Scenario: Output that cannot be written
   When I pipe them to "bcr verify"
   Then a message starting "bcr: " is printed to standard error
   And the exit status is 2
+
+Scenario: A problem is also a record
+  Given the records
+    """
+    breadcrumb	PBI-00001	PBI	tasks/PBI-00001.md	3
+    link	PBI-00001	implements	ADR-0099	tasks/PBI-00001.md	6
+    """
+  When I pipe them to "bcr verify"
+  Then standard error is
+    """
+    tasks/PBI-00001.md:6: link points to "ADR-0099", which is no breadcrumb's id
+    """
+  And standard output is the two records, then
+    """
+    problem	tasks/PBI-00001.md	6	link points to "ADR-0099", which is no breadcrumb's id
+    """
+  And the exit status is 1
+
+Scenario: A problem after a last line with no line ending
+  Given records with a link that points nowhere, whose last line does
+    not end in "\n"
+  When I pipe them to "bcr verify"
+  Then standard output is the input, then "\n", then the problem
+    record
+
+Scenario: A problem record in the input
+  Given a valid set of records, and a record "problem	a.md	3	id has no value"
+  When I pipe them to "bcr verify"
+  Then the records are printed to standard output, unchanged
+  And nothing is printed to standard error
+  And the exit status is 0
 ```

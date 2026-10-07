@@ -240,7 +240,7 @@ bcr verify
 .fi
 .RE
 .PP
-Reads the records \fBbcr extract\fR prints, checks the rules about the whole set of breadcrumbs they describe, and passes every record on:
+Reads the records \fBbcr extract\fR prints, checks the rules about the whole set of breadcrumbs they describe, and passes every record on, with a record for each problem it found:
 .PP
 .RS 4
 .nf
@@ -252,7 +252,7 @@ Flags: none.
 .PP
 Operands: none. \fBbcr verify\fR reads no file: which files make up the set is decided by \fBbcr extract\fR, from its operands or from \fB.breadcrumbs\fR.
 .PP
-Standard input: the records, as \fBbcr extract\fR prints them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. A record of a kind other than \fBbreadcrumb\fR and \fBlink\fR is not checked, and neither are fields after the ones \fBbcr extract\fR prints today; both are still copied. With no input, there is no problem.
+Standard input: the records, as \fBbcr extract\fR prints them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. A record of a kind other than \fBbreadcrumb\fR and \fBlink\fR is not checked, a \fBproblem\fR record included, and neither are fields after the ones \fBbcr extract\fR prints today; both are still copied. With no input, there is no problem.
 .PP
 Output: standard input, copied to standard output byte for byte. Every line comes out in the order read, with its line ending as read, records of any kind included, so a later command in the pipe gets what \fBbcr extract\fR printed. \fBbcr verify\fR reads its whole input before it writes. It copies the input even when it finds a problem, and prints nothing to standard output when a line is not a record. To see only the problems, send standard output to \fB/dev/null\fR.
 .PP
@@ -263,6 +263,16 @@ Each problem is written to standard error, in order of \fBPATH\fR compared as by
 PATH:LINE: MESSAGE
 .fi
 .RE
+.PP
+After the copy, each problem is also written to standard output, in the same order, as a record like the one \fBbcr extract\fR prints for its own problems:
+.PP
+.RS 4
+.nf
+problem	PATH	LINE	MESSAGE
+.fi
+.RE
+.PP
+So the output is equal to the input when no problem is found, and starts with the input when one is. When the last line of the input has no line ending, a \fB\en\fR is written before the first record added.
 .PP
 \fBPATH\fR and \fBLINE\fR are the ones of the record the problem is about. What is a problem:
 .IP \(bu 2
