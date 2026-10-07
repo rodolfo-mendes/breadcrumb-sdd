@@ -8,6 +8,7 @@ breadcrumb:
   claims:
     - 'AGENTS.md has-line This repository is developed with ASDLC'
     - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'
+    - '.github/workflows/check.yml has-line "$RUNNER_TEMP/bcr" extract | "$RUNNER_TEMP/bcr" verify | "$RUNNER_TEMP/bcr" audit | "$RUNNER_TEMP/bcr" report > "$RUNNER_TEMP/report.md"'
 ---
 # Feature: ASDLC
 
@@ -44,6 +45,11 @@ does. `bcr`'s behavior defines Breadcrumb; it is not a feature spec.
   itself.
 - A PBI whose change is about how the repository is built names this
   spec in its Context.
+- `.github/workflows/check.yml` runs the whole pipe on every push,
+  with the `bcr` built from the commit, under `set -o pipefail`: a
+  problem or a Refuted claim fails it. The page `bcr report` writes
+  goes to the job's summary and is kept as an artifact of the run,
+  whether the job fails or not.
 
 ### Constraints
 
@@ -91,6 +97,8 @@ Where this repository goes beyond ASDLC, it is listed here.
 - `AGENTS.md` tells agents the repository is developed with ASDLC.
 
 - ADR-0001 is in force.
+
+- CI runs the whole pipe on every push, `bcr report` included.
 
 - An Accepted ADR keeps its Context, Decision, Consequences and
   Alternatives Considered; only its Status, its breadcrumb and
