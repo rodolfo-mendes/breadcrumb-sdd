@@ -6,7 +6,7 @@ breadcrumb:
 ---
 # ADR-0010: Front matter is read with go.yaml.in/yaml/v3
 
-Status: Accepted, amended by ADR-0013
+Status: Accepted, amended by ADR-0013 and ADR-0017
 Date: 2026-10-03
 
 ## Context
