@@ -60,7 +60,8 @@ type Link struct {
 
 // Claim is one entry of a breadcrumb's claims: a statement of a kind,
 // with its argument, about the file at Target (ADR-0017). Whether the
-// target supports it is not known here.
+// target supports it is not known here: Verdict says, given the
+// target's content.
 type Claim struct {
 	Target   string // a path from the root of the repository, with / between its parts
 	Kind     string
@@ -167,11 +168,22 @@ func (r *reader) links(line int, props map[string]Property, id string, idOK bool
 	return links
 }
 
-// claimKinds holds the kinds of claim the core knows. Each checks an
-// argument, and returns what is wrong with it, or "". The only kind is
+// claimKind is the rule of one kind of claim, kept in one place for
+// the reading of a claim and for its verdict (ADR-0019).
+type claimKind struct {
+	// argument returns what is wrong with an argument, or "".
+	argument func(argument string) string
+	// holds reports whether a claim with argument holds in content,
+	// the content of its target.
+	holds func(content []byte, argument string) bool
+	// lacks says what a target lacks when the claim does not hold.
+	lacks func(argument string) string
+}
+
+// claimKinds holds the kinds of claim the core knows. The only kind is
 // has-line (ADR-0019).
-var claimKinds = map[string]func(argument string) string{
-	"has-line": hasLineArgument,
+var claimKinds = map[string]claimKind{
+	"has-line": {argument: hasLineArgument, holds: hasLine, lacks: lacksLine},
 }
 
 // hasLineArgument checks the argument of a has-line claim: the text a
@@ -210,31 +222,36 @@ func (r *reader) claims(props map[string]Property) []Claim {
 	for _, e := range p.Entries {
 		target, rest, _ := strings.Cut(e.Text, " ")
 		kind, argument, three := strings.Cut(rest, " ")
-		check, known := claimKinds[kind]
-		switch {
-		case !three || target == "" || kind == "":
+		if !three || target == "" || kind == "" {
 			r.drop(e.Line, "claim %q must be a target, a kind and an argument, with one space between them", e.Text)
 			continue
-		case strings.HasPrefix(target, "/"):
-			r.drop(e.Line, "claim %q has a target that starts with /; it must be a path from the root of the repository", e.Text)
-			continue
-		case hasPart(target, ".."):
-			r.drop(e.Line, "claim %q has a target with a part that is ..", e.Text)
-			continue
-		case strings.IndexFunc(target, unicode.IsSpace) >= 0:
-			r.drop(e.Line, "claim %q has a target with white space", e.Text)
-			continue
-		case !known:
-			r.drop(e.Line, "claim %q has kind %q, which bcr does not know; the only kind is has-line", e.Text, kind)
-			continue
 		}
-		if why := check(argument); why != "" {
+		c := Claim{Target: target, Kind: kind, Argument: argument, Line: e.Line}
+		if why := c.Check(); why != "" {
 			r.drop(e.Line, "claim %q %s", e.Text, why)
 			continue
 		}
-		claims = append(claims, Claim{Target: target, Kind: kind, Argument: argument, Line: e.Line})
+		claims = append(claims, c)
 	}
 	return claims
+}
+
+// Check returns what is wrong with the target, the kind or the
+// argument of c, or "" (ADR-0017). It is the first rule c breaks, as
+// the words that follow "claim ...".
+func (c Claim) Check() string {
+	kind, known := claimKinds[c.Kind]
+	switch {
+	case strings.HasPrefix(c.Target, "/"):
+		return "has a target that starts with /; it must be a path from the root of the repository"
+	case hasPart(c.Target, ".."):
+		return "has a target with a part that is .."
+	case strings.IndexFunc(c.Target, unicode.IsSpace) >= 0:
+		return "has a target with white space"
+	case !known:
+		return fmt.Sprintf("has kind %q, which bcr does not know; the only kind is has-line", c.Kind)
+	}
+	return kind.argument(c.Argument)
 }
 
 // hasPart reports whether part is one of the parts of path, which has
