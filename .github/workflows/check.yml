@@ -1,5 +1,7 @@
-# Runs bcr extract | bcr verify on every push, with the bcr built from
-# the commit it checks (specs/extract, specs/verify).
+# Runs bcr extract | bcr verify | bcr audit on every push, with the
+# bcr built from the commit it checks (specs/extract, specs/verify,
+# specs/audit). The records go to /dev/null: the log shows the
+# problems and the Refuted claims, which are on standard error.
 name: Check
 
 on:
@@ -22,7 +24,7 @@ jobs:
       - name: Build
         run: go build -o "$RUNNER_TEMP/bcr" ./cmd/bcr
 
-      - name: Verify breadcrumbs
+      - name: Verify and audit breadcrumbs
         run: |
           set -o pipefail
-          "$RUNNER_TEMP/bcr" extract | "$RUNNER_TEMP/bcr" verify
+          "$RUNNER_TEMP/bcr" extract | "$RUNNER_TEMP/bcr" verify | "$RUNNER_TEMP/bcr" audit > /dev/null

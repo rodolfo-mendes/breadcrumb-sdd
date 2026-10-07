@@ -15,6 +15,8 @@ breadcrumb:
     - follows ADR-0021
     - follows ADR-0022
     - follows ADR-0023
+  claims:
+    - 'docs/bcr.md has-line ### audit'
 ---
 # Feature: audit
 
@@ -195,22 +197,22 @@ Exit status (ADR-0023):
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
-- [ ] `docs/bcr.md` describes `bcr audit` under `### audit`;
+- [x] Each Scenario below has a test.
+- [x] `docs/bcr.md` describes `bcr audit` under `### audit`;
       `docs/bcr.1` is generated again.
-- [ ] The old `bcr check`, `bcr verdict` and `bcr audit-report`, and
+- [x] The old `bcr check`, `bcr verdict` and `bcr audit-report`, and
       their tests, are unchanged.
-- [ ] `go list -f '{{.Imports}}'` on the core's packages lists only
+- [x] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
-- [ ] In this repository,
+- [x] In this repository,
       `set -o pipefail; bcr extract | bcr verify | bcr audit > /dev/null`
       prints nothing and exits 0.
-- [ ] In this repository, the pipe prints a `claim-verdict` record
+- [x] In this repository, the pipe prints a `claim-verdict` record
       with `Confirmed` for each claim written in `specs/`.
-- [ ] In this repository, with one claimed line changed by hand, the
+- [x] In this repository, with one claimed line changed by hand, the
       pipe exits 1 and prints its claim and its breadcrumb as
       `Refuted`.
-- [ ] CI and `AGENTS.md`'s Toolchain run the pipe with `bcr audit`.
+- [x] CI and `AGENTS.md`'s Toolchain run the pipe with `bcr audit`.
 
 ### Regression Guardrails
 

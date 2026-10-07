@@ -6,6 +6,7 @@
 //	bcr check
 //	bcr extract [FILE...]
 //	bcr verify
+//	bcr audit
 //	bcr verdict [ID|PATH|-]...
 //	bcr links [-r] [ID|PATH|-]...
 //	bcr new TYPE TITLE [PARENT|-]...
@@ -18,7 +19,8 @@
 // check prints each problem in the breadcrumbs, extract the breadcrumb
 // of each file it is given, or of each file .breadcrumbs names, as
 // records, verify each problem in the set of breadcrumbs whose records
-// it reads from standard input, verdict the verdict of
+// it reads from standard input, audit the verdict of each claim and
+// breadcrumb whose records it reads from standard input, verdict the verdict of
 // each breadcrumb, links its links to its
 // parents, new creates a breadcrumb, spec prints the specification
 // bcr carries out, and init sets up Breadcrumb SDD in a repository. Its contract is docs/bcr.md.
@@ -49,12 +51,13 @@ const (
 	checkUsage       = "usage: bcr check\n"
 	extractUsage     = "usage: bcr extract [FILE...]\n"
 	verifyUsage      = "usage: bcr verify\n"
+	auditUsage       = "usage: bcr audit\n"
 	verdictUsage     = "usage: bcr verdict [ID|PATH|-]...\n"
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
 	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"
 	specUsage        = "usage: bcr spec\n"
 	initUsage        = "usage: bcr init [-a FILE]\n"
-	usage            = auditReportUsage + checkUsage + extractUsage + verifyUsage + verdictUsage + linksUsage + newUsage + specUsage + initUsage
+	usage            = auditReportUsage + checkUsage + extractUsage + verifyUsage + auditUsage + verdictUsage + linksUsage + newUsage + specUsage + initUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -85,6 +88,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runExtract(args, stdout, stderr)
 	case "verify":
 		return runVerify(args, stdin, stdout, stderr)
+	case "audit":
+		return runAudit(args, stdin, stdout, stderr)
 	case "verdict":
 		return runVerdict(args, stdin, stdout, stderr)
 	case "links":

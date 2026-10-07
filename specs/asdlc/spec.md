@@ -65,8 +65,9 @@ Where this repository goes beyond ASDLC, it is listed here.
   ([ADR-0019](../../docs/adrs/ADR-0019-has-line-claim-matches-a-trimmed-line.md)).
   A claim may quote a line of code:
   unlike a copied sample, it turns Refuted when the code moves on.
-  Until `bcr audit` checks claims, they are checked by hand, with the
-  command ADR-0019 gives.
+  `bcr audit` checks them: a claim that does not hold is Refuted, and
+  fails the pipe
+  ([ADR-0023](../../docs/adrs/ADR-0023-audit-checks-claims-against-the-working-tree.md)).
 - **PBIs reach the main branch with their change.** A PBI reaches the
   main branch in the same merge as the change it directs, so every PBI
   on the main branch is closed. A PBI has no status.
@@ -85,7 +86,8 @@ Where this repository goes beyond ASDLC, it is listed here.
 - [ ] Each spec the change touches describes the new state, in the
       same commit.
 - [ ] Each claim in `specs/` holds.
-- [ ] `bcr extract | bcr verify` exits 0 under `set -o pipefail`.
+- [ ] `bcr extract | bcr verify | bcr audit` exits 0 under
+      `set -o pipefail`.
 
 ### Regression Guardrails
 

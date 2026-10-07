@@ -1,14 +1,16 @@
-// Package records writes and reads the records bcr extract and bcr
-// verify print:
-// one line for each breadcrumb, each link, each claim and each
-// problem, its fields separated by a tab (ADR-0011, ADR-0021). It is
-// the only package that knows this format; the core does not use it
-// (ADR-0013).
+// Package records writes and reads the records the commands of the
+// pipe print: one line for each breadcrumb, each link, each claim,
+// each problem and each verdict, its fields separated by a tab
+// (ADR-0011, ADR-0021, ADR-0023). It is the only package that knows
+// this format; the core does not use it (ADR-0013).
 //
 //	breadcrumb	ID	TYPE	PATH	LINE
 //	link	ID	VERB	OBJECT	PATH	LINE
 //	claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 //	problem	PATH	LINE	MESSAGE
+//	claim-verdict	ID	VERDICT	PATH	LINE
+//	verdict	ID	VERDICT	PATH	LINE
+//	verdict	ID	Undecided	PATH	LINE	no claims
 package records
 
 import (
@@ -33,6 +35,8 @@ const (
 	claimFields      = 7
 	problemKind      = "problem" // skipped by Read
 	problemFields    = 4
+	claimVerdictKind = "claim-verdict" // written only
+	verdictKind      = "verdict"       // written only
 )
 
 // Write writes the records of b, the breadcrumb of the file at path:
@@ -63,6 +67,25 @@ var oneLine = strings.NewReplacer("\t", " ", "\n", " ", "\r", " ")
 // the file at path, as it is printed to standard error (ADR-0021).
 func WriteProblem(w io.Writer, path string, line int, message string) error {
 	_, err := fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", problemKind, path, line, oneLine.Replace(message))
+	return err
+}
+
+// WriteClaimVerdict writes the record of the verdict of the claim
+// written at at, in the breadcrumb whose id is id (ADR-0023).
+func WriteClaimVerdict(w io.Writer, id string, v crumb.Verdict, at crumb.Place) error {
+	_, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\n", claimVerdictKind, id, v, at.Text, at.Line)
+	return err
+}
+
+// WriteVerdict writes the record of the verdict of the breadcrumb
+// written at at, whose id is id. Its reason, when it has one, is one
+// more field at the end (ADR-0022, ADR-0023).
+func WriteVerdict(w io.Writer, id string, v crumb.BreadcrumbVerdict, at crumb.Place) error {
+	reason := ""
+	if v.Reason != "" {
+		reason = "\t" + v.Reason
+	}
+	_, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d%s\n", verdictKind, id, v.Verdict, at.Text, at.Line, reason)
 	return err
 }
 

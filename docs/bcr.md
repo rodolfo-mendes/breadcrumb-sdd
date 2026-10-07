@@ -11,6 +11,7 @@ bcr audit-report --html [-o FILE]
 bcr check
 bcr extract [FILE...]
 bcr verify
+bcr audit
 bcr verdict [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
 bcr new TYPE TITLE [PARENT|-]...
@@ -439,6 +440,110 @@ Examples:
 bcr extract | bcr verify > /dev/null
 set -o pipefail; bcr extract | bcr verify > /dev/null
 bcr extract > records.tsv && bcr verify < records.tsv | cmp - records.tsv
+```
+
+### audit
+
+```
+bcr audit
+```
+
+Reads the records `bcr extract` and `bcr verify` print, checks each
+claim against the file it is about, and passes every record on, with
+a verdict for each claim and each breadcrumb:
+
+```
+bcr extract | bcr verify | bcr audit
+```
+
+Flags: none.
+
+Operands: none. Run `bcr audit` from the root of the repository: the
+file a claim is about is found from the current directory.
+
+Standard input: the records, as `bcr extract` and `bcr verify` print
+them, read to the end. A line may end in `\n` or `\r\n`. `bcr audit`
+reads the `breadcrumb`, `claim` and `problem` records. A record of
+another kind, a `link` record included, is not checked, and neither
+are fields after the ones printed today; both are still copied. With
+no input, nothing is printed.
+
+A verdict is `Confirmed`, `Refuted` or `Undecided`.
+
+The verdict of a claim: a `has-line` claim is `Confirmed` when its
+`TARGET` is a regular file and one of its lines, without its line
+ending and without the spaces and tabs at its start and end, is equal
+to the claim's text, byte for byte. Otherwise it is `Refuted`: so is a
+claim whose `TARGET` does not exist, or is a directory, a symbolic
+link, or anything else that is not a regular file. A symbolic link is
+not followed. The files are read as they are on disk, uncommitted
+changes included.
+
+The verdict of a breadcrumb comes from its own claims, and from its
+problems, the `problem` records with its `PATH`:
+
+- `Refuted`, when at least one of its claims is `Refuted`;
+- otherwise `Undecided`, when it has a problem, such as a claim
+  `bcr extract` dropped;
+- otherwise `Confirmed`, when it has at least one claim;
+- `Undecided`, with the reason `no claims`, when it has no claim and
+  no problem: nothing was checked, so nothing is confirmed.
+
+No link carries a verdict from one breadcrumb to another.
+
+Output: standard input, copied to standard output byte for byte, as
+`bcr verify` does. After it, one `claim-verdict` record for each
+`claim` record, in the order read, then one `verdict` record for each
+`breadcrumb` record, in the order read. Fields are separated by a tab:
+
+```
+claim-verdict	ID	VERDICT	PATH	LINE
+verdict	ID	VERDICT	PATH	LINE
+verdict	ID	Undecided	PATH	LINE	no claims
+```
+
+`ID`, `PATH` and `LINE` are those of the `claim` or `breadcrumb`
+record the verdict is about, so two breadcrumbs with the same id each
+get their own. A `verdict` record has a sixth field only for a
+breadcrumb with no claims. `bcr audit` reads its whole input, and
+every file the claims are about, before it writes. When the last line
+of the input has no line ending, a `\n` is written before the first
+record added.
+
+Each `Refuted` claim is written to standard error, in the order read,
+at the `PATH` and `LINE` of its `claim` record. The message names the
+file and what it lacks:
+
+```
+PATH:LINE: MESSAGE
+```
+
+A line of input that is not a record `bcr extract` could print stops
+`bcr audit`: it writes a message starting `bcr: `, which gives the
+line's number in the input, and prints nothing to standard output. So
+does a `claim` record whose `TARGET` starts with `/` or has a part
+that is `..`, whose `KIND` is not `has-line`, or whose text no line
+can equal. A regular file that cannot be read stops it in the same
+way.
+
+Exit status:
+
+- 0: no claim is `Refuted`.
+- 1: at least one claim is `Refuted`.
+- 2: `bcr audit` was given an operand, its input could not be read, a
+  line of its input was not a record, a file a claim is about could
+  not be read, or its output could not be written.
+
+An `Undecided` breadcrumb does not change the exit status. A problem
+`bcr extract` or `bcr verify` found fails the pipe only with
+`set -o pipefail`.
+
+Examples:
+
+```
+set -o pipefail; bcr extract | bcr verify | bcr audit > /dev/null
+bcr extract | bcr verify | bcr audit 2>/dev/null | grep '^verdict' | cut -f2,3
+bcr extract | bcr audit | grep -w Refuted
 ```
 
 ### verdict

@@ -10,6 +10,7 @@ bcr audit\-report \-\-html [\-o FILE]
 bcr check
 bcr extract [FILE...]
 bcr verify
+bcr audit
 bcr verdict [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
 bcr new TYPE TITLE [PARENT|\-]...
@@ -303,6 +304,85 @@ Examples:
 bcr extract | bcr verify > /dev/null
 set \-o pipefail; bcr extract | bcr verify > /dev/null
 bcr extract > records.tsv && bcr verify < records.tsv | cmp \- records.tsv
+.fi
+.RE
+.SS "audit"
+.PP
+.RS 4
+.nf
+bcr audit
+.fi
+.RE
+.PP
+Reads the records \fBbcr extract\fR and \fBbcr verify\fR print, checks each claim against the file it is about, and passes every record on, with a verdict for each claim and each breadcrumb:
+.PP
+.RS 4
+.nf
+bcr extract | bcr verify | bcr audit
+.fi
+.RE
+.PP
+Flags: none.
+.PP
+Operands: none. Run \fBbcr audit\fR from the root of the repository: the file a claim is about is found from the current directory.
+.PP
+Standard input: the records, as \fBbcr extract\fR and \fBbcr verify\fR print them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. \fBbcr audit\fR reads the \fBbreadcrumb\fR, \fBclaim\fR and \fBproblem\fR records. A record of another kind, a \fBlink\fR record included, is not checked, and neither are fields after the ones printed today; both are still copied. With no input, nothing is printed.
+.PP
+A verdict is \fBConfirmed\fR, \fBRefuted\fR or \fBUndecided\fR.
+.PP
+The verdict of a claim: a \fBhas\-line\fR claim is \fBConfirmed\fR when its \fBTARGET\fR is a regular file and one of its lines, without its line ending and without the spaces and tabs at its start and end, is equal to the claim's text, byte for byte. Otherwise it is \fBRefuted\fR: so is a claim whose \fBTARGET\fR does not exist, or is a directory, a symbolic link, or anything else that is not a regular file. A symbolic link is not followed. The files are read as they are on disk, uncommitted changes included.
+.PP
+The verdict of a breadcrumb comes from its own claims, and from its problems, the \fBproblem\fR records with its \fBPATH\fR:
+.IP \(bu 2
+\fBRefuted\fR, when at least one of its claims is \fBRefuted\fR;
+.IP \(bu 2
+otherwise \fBUndecided\fR, when it has a problem, such as a claim \fBbcr extract\fR dropped;
+.IP \(bu 2
+otherwise \fBConfirmed\fR, when it has at least one claim;
+.IP \(bu 2
+\fBUndecided\fR, with the reason \fBno claims\fR, when it has no claim and no problem: nothing was checked, so nothing is confirmed.
+.PP
+No link carries a verdict from one breadcrumb to another.
+.PP
+Output: standard input, copied to standard output byte for byte, as \fBbcr verify\fR does. After it, one \fBclaim\-verdict\fR record for each \fBclaim\fR record, in the order read, then one \fBverdict\fR record for each \fBbreadcrumb\fR record, in the order read. Fields are separated by a tab:
+.PP
+.RS 4
+.nf
+claim\-verdict	ID	VERDICT	PATH	LINE
+verdict	ID	VERDICT	PATH	LINE
+verdict	ID	Undecided	PATH	LINE	no claims
+.fi
+.RE
+.PP
+\fBID\fR, \fBPATH\fR and \fBLINE\fR are those of the \fBclaim\fR or \fBbreadcrumb\fR record the verdict is about, so two breadcrumbs with the same id each get their own. A \fBverdict\fR record has a sixth field only for a breadcrumb with no claims. \fBbcr audit\fR reads its whole input, and every file the claims are about, before it writes. When the last line of the input has no line ending, a \fB\en\fR is written before the first record added.
+.PP
+Each \fBRefuted\fR claim is written to standard error, in the order read, at the \fBPATH\fR and \fBLINE\fR of its \fBclaim\fR record. The message names the file and what it lacks:
+.PP
+.RS 4
+.nf
+PATH:LINE: MESSAGE
+.fi
+.RE
+.PP
+A line of input that is not a record \fBbcr extract\fR could print stops \fBbcr audit\fR: it writes a message starting \fBbcr: \fR, which gives the line's number in the input, and prints nothing to standard output. So does a \fBclaim\fR record whose \fBTARGET\fR starts with \fB/\fR or has a part that is \fB..\fR, whose \fBKIND\fR is not \fBhas\-line\fR, or whose text no line can equal. A regular file that cannot be read stops it in the same way.
+.PP
+Exit status:
+.IP \(bu 2
+0: no claim is \fBRefuted\fR.
+.IP \(bu 2
+1: at least one claim is \fBRefuted\fR.
+.IP \(bu 2
+2: \fBbcr audit\fR was given an operand, its input could not be read, a line of its input was not a record, a file a claim is about could not be read, or its output could not be written.
+.PP
+An \fBUndecided\fR breadcrumb does not change the exit status. A problem \fBbcr extract\fR or \fBbcr verify\fR found fails the pipe only with \fBset \-o pipefail\fR.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+set \-o pipefail; bcr extract | bcr verify | bcr audit > /dev/null
+bcr extract | bcr verify | bcr audit 2>/dev/null | grep '^verdict' | cut \-f2,3
+bcr extract | bcr audit | grep \-w Refuted
 .fi
 .RE
 .SS "verdict"
