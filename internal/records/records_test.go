@@ -222,3 +222,29 @@ func TestReadReturnsTheErrorOfItsReader(t *testing.T) {
 		t.Errorf("got %+v and error %v, want no set and the reader's error", set, err)
 	}
 }
+
+func TestWriteProblem(t *testing.T) {
+	var out strings.Builder
+	if err := WriteProblem(&out, "tasks/PBI-00001.md", 2, "breadcrumb has no type"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := out.String(), "problem\ttasks/PBI-00001.md\t2\tbreadcrumb has no type\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestWriteAProblemsMessageOnOneLine(t *testing.T) {
+	var out strings.Builder
+	WriteProblem(&out, "a.md", 3, "a\tb\r\nc")
+	if got, want := out.String(), "problem\ta.md\t3\ta b  c\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestReadSkipsTheProblemsWriteProblemWrites(t *testing.T) {
+	var out strings.Builder
+	WriteProblem(&out, "a.md", 3, "id has no value")
+	if set := read(t, out.String()); len(set.Breadcrumbs) != 0 || len(set.Links) != 0 {
+		t.Errorf("got %+v, want an empty set", set)
+	}
+}

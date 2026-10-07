@@ -1,11 +1,13 @@
 // Package records writes and reads the records bcr extract prints:
-// one line for each breadcrumb, each link and each claim, its fields
-// separated by a tab (ADR-0011). It is the only package that knows
-// this format; the core does not use it (ADR-0013).
+// one line for each breadcrumb, each link, each claim and each
+// problem, its fields separated by a tab (ADR-0011, ADR-0021). It is
+// the only package that knows this format; the core does not use it
+// (ADR-0013).
 //
 //	breadcrumb	ID	TYPE	PATH	LINE
 //	link	ID	VERB	OBJECT	PATH	LINE
 //	claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
+//	problem	PATH	LINE	MESSAGE
 package records
 
 import (
@@ -26,7 +28,8 @@ const (
 	breadcrumbFields = 5
 	linkKind         = "link"
 	linkFields       = 6
-	claimKind        = "claim" // written, and skipped by Read
+	claimKind        = "claim"   // written, and skipped by Read
+	problemKind      = "problem" // written, and skipped by Read
 )
 
 // Write writes the records of b, the breadcrumb of the file at path:
@@ -47,6 +50,17 @@ func Write(w io.Writer, path string, b crumb.Breadcrumb) error {
 		}
 	}
 	return nil
+}
+
+// oneLine writes a tab or a line ending as a space, so that a message
+// stays one field of one line.
+var oneLine = strings.NewReplacer("\t", " ", "\n", " ", "\r", " ")
+
+// WriteProblem writes the record of a problem: message, about line of
+// the file at path, as it is printed to standard error (ADR-0021).
+func WriteProblem(w io.Writer, path string, line int, message string) error {
+	_, err := fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", problemKind, path, line, oneLine.Replace(message))
+	return err
 }
 
 // Read reads records from r until it ends, and returns the set of

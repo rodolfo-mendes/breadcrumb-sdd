@@ -217,7 +217,8 @@ matches is not read.
 A pattern may not use `**`, start or end with `/`, be empty after `!`,
 or be malformed, such as with a `[` that does not close. Such a line
 is a problem, written to standard error as `.breadcrumbs:LINE:
-MESSAGE`, and then no file is read.
+MESSAGE` and to standard output as a `problem` record, and then no
+file is read.
 
 Standard input: not read.
 
@@ -259,12 +260,25 @@ A breadcrumb is written under the `breadcrumb` key of the front
 matter, in a small part of YAML: plain one-line values, lists of them,
 and `[]`. It has an `id` and a `type`, each one word, and `links`, a
 list of entries of a verb and an id. A file whose breadcrumb breaks a
-rule prints no records; each problem is written to standard error, in
-order of line:
+rule prints no `breadcrumb`, `link` or `claim` record; each problem is
+written to standard error, in order of line:
 
 ```
 PATH:LINE: MESSAGE
 ```
+
+Each problem is also written to standard output, as a record, so that
+the commands after `bcr extract` in a pipe can see it:
+
+```
+problem	PATH	LINE	MESSAGE
+```
+
+`PATH`, `LINE` and `MESSAGE` are those written to standard error, with
+a space in place of any tab or line ending in `MESSAGE`. A file's
+`problem` records come after its other records, in order of line. A
+`problem` record has no id: it belongs to the breadcrumb whose record
+has the same `PATH`, when there is one.
 
 A breadcrumb may also have `claims`, a list of statements about the
 repository's files. `claims` may be left out, and `claims: []` means
@@ -289,8 +303,9 @@ start and end are removed.
 
 A problem in an entry of `claims` drops only that claim: it is written
 to standard error, the breadcrumb's record, its links and its other
-claims are still printed, and the exit status is 1. No record says a
-claim was dropped. An entry has a problem when:
+claims are still printed, and the exit status is 1. The dropped claim
+prints no `claim` record, only its `problem` record. An entry has a
+problem when:
 
 - it is not in single quotes, has a comment after it on its line, or
   is written in any other way the breadcrumb's part of YAML does not
@@ -306,7 +321,8 @@ claim was dropped. An entry has a problem when:
 One problem is written for each such entry.
 
 A file or a directory that cannot be read is written to standard
-error as a message starting `bcr: `. The other files are still read.
+error as a message starting `bcr: `, and prints no record. The other
+files are still read.
 
 Exit status:
 
@@ -324,6 +340,7 @@ bcr extract
 git ls-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut -f2,4
 bcr extract | grep '^claim' | cut -f4,5
+bcr extract 2>/dev/null | grep '^problem' | cut -f2-
 ```
 
 ### verify

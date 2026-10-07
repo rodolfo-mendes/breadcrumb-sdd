@@ -141,7 +141,7 @@ tasks/*.md
 .PP
 A pattern is matched against the whole path of a file from the current directory, with \fB/\fR between its parts. \fB*\fR matches any characters except \fB/\fR, \fB?\fR one character except \fB/\fR, and \fB[...]\fR one character from a set. Unlike in \fB.gitignore\fR, a pattern with no \fB/\fR names only files at the root: \fB*.md\fR does not name \fBdocs/bcr.md\fR. A pattern that starts with \fB!\fR excludes the files it matches. When several lines match a file, the last one decides; a file no line matches is not read.
 .PP
-A pattern may not use \fB**\fR, start or end with \fB/\fR, be empty after \fB!\fR, or be malformed, such as with a \fB[\fR that does not close. Such a line is a problem, written to standard error as \fB.breadcrumbs:LINE: MESSAGE\fR, and then no file is read.
+A pattern may not use \fB**\fR, start or end with \fB/\fR, be empty after \fB!\fR, or be malformed, such as with a \fB[\fR that does not close. Such a line is a problem, written to standard error as \fB.breadcrumbs:LINE: MESSAGE\fR and to standard output as a \fBproblem\fR record, and then no file is read.
 .PP
 Standard input: not read.
 .PP
@@ -163,13 +163,23 @@ Select records by their first field, and read their fields by position: new kind
 .PP
 A file whose first line is not \fB\-\-\-\fR has no front matter, and prints nothing; so does front matter with no \fBbreadcrumb\fR key. A line may end in \fB\en\fR or \fB\er\en\fR.
 .PP
-A breadcrumb is written under the \fBbreadcrumb\fR key of the front matter, in a small part of YAML: plain one\-line values, lists of them, and \fB[]\fR. It has an \fBid\fR and a \fBtype\fR, each one word, and \fBlinks\fR, a list of entries of a verb and an id. A file whose breadcrumb breaks a rule prints no records; each problem is written to standard error, in order of line:
+A breadcrumb is written under the \fBbreadcrumb\fR key of the front matter, in a small part of YAML: plain one\-line values, lists of them, and \fB[]\fR. It has an \fBid\fR and a \fBtype\fR, each one word, and \fBlinks\fR, a list of entries of a verb and an id. A file whose breadcrumb breaks a rule prints no \fBbreadcrumb\fR, \fBlink\fR or \fBclaim\fR record; each problem is written to standard error, in order of line:
 .PP
 .RS 4
 .nf
 PATH:LINE: MESSAGE
 .fi
 .RE
+.PP
+Each problem is also written to standard output, as a record, so that the commands after \fBbcr extract\fR in a pipe can see it:
+.PP
+.RS 4
+.nf
+problem	PATH	LINE	MESSAGE
+.fi
+.RE
+.PP
+\fBPATH\fR, \fBLINE\fR and \fBMESSAGE\fR are those written to standard error, with a space in place of any tab or line ending in \fBMESSAGE\fR. A file's \fBproblem\fR records come after its other records, in order of line. A \fBproblem\fR record has no id: it belongs to the breadcrumb whose record has the same \fBPATH\fR, when there is one.
 .PP
 A breadcrumb may also have \fBclaims\fR, a list of statements about the repository's files. \fBclaims\fR may be left out, and \fBclaims: []\fR means the same; a \fBclaims\fR with no list is a problem like any other, and the file prints no records. Each entry is written on one line, in single quotes, as \fBTARGET KIND ARGUMENT\fR, with a \fB'\fR inside it written \fB''\fR:
 .PP
@@ -187,7 +197,7 @@ breadcrumb:
 .PP
 \fBTARGET\fR is a path from the root of the repository, with \fB/\fR between its parts. The only \fBKIND\fR is \fBhas\-line\fR: its \fBARGUMENT\fR is the text a line of \fBTARGET\fR must equal, once the spaces and tabs at the line's start and end are removed.
 .PP
-A problem in an entry of \fBclaims\fR drops only that claim: it is written to standard error, the breadcrumb's record, its links and its other claims are still printed, and the exit status is 1. No record says a claim was dropped. An entry has a problem when:
+A problem in an entry of \fBclaims\fR drops only that claim: it is written to standard error, the breadcrumb's record, its links and its other claims are still printed, and the exit status is 1. The dropped claim prints no \fBclaim\fR record, only its \fBproblem\fR record. An entry has a problem when:
 .IP \(bu 2
 it is not in single quotes, has a comment after it on its line, or is written in any other way the breadcrumb's part of YAML does not allow, such as over several lines;
 .IP \(bu 2
@@ -201,7 +211,7 @@ its \fBhas\-line\fR text is empty, starts or ends with a space or a tab, or hold
 .PP
 One problem is written for each such entry.
 .PP
-A file or a directory that cannot be read is written to standard error as a message starting \fBbcr: \fR. The other files are still read.
+A file or a directory that cannot be read is written to standard error as a message starting \fBbcr: \fR, and prints no record. The other files are still read.
 .PP
 Exit status:
 .IP \(bu 2
@@ -219,6 +229,7 @@ bcr extract
 git ls\-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut \-f2,4
 bcr extract | grep '^claim' | cut \-f4,5
+bcr extract 2>/dev/null | grep '^problem' | cut \-f2\-
 .fi
 .RE
 .SS "verify"

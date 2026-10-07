@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -29,12 +31,40 @@ func files(t *testing.T, contents map[string]string) {
 	chdir(t, root)
 }
 
-// extractRun runs bcr extract with operands, and returns what it
+// extractAll runs bcr extract with operands, and returns what it
 // writes to standard output and standard error, and its exit status.
-func extractRun(operands ...string) (string, string, int) {
+func extractAll(operands ...string) (string, string, int) {
 	var stdout, stderr bytes.Buffer
 	code := run(append([]string{"extract"}, operands...), nil, &stdout, &stderr)
 	return stdout.String(), stderr.String(), code
+}
+
+// problemLine reads a PATH:LINE: MESSAGE of standard error.
+var problemLine = regexp.MustCompile(`^(.*?):([0-9]+): (.*)$`)
+
+// extractRun is extractAll without the problem records of standard
+// output, so that a test can read the other records alone. Every
+// problem of standard error must also be a problem record, in the same
+// order (ADR-0021): extractRun panics when they differ.
+func extractRun(operands ...string) (string, string, int) {
+	stdout, stderr, code := extractAll(operands...)
+	var records, got, want []string
+	for _, l := range strings.SplitAfter(stdout, "\n") {
+		if strings.HasPrefix(l, "problem\t") {
+			got = append(got, l)
+		} else {
+			records = append(records, l)
+		}
+	}
+	for _, l := range strings.Split(stderr, "\n") {
+		if m := problemLine.FindStringSubmatch(l); m != nil && !strings.HasPrefix(l, "bcr: ") {
+			want = append(want, "problem\t"+m[1]+"\t"+m[2]+"\t"+m[3]+"\n")
+		}
+	}
+	if !reflect.DeepEqual(got, want) {
+		panic(fmt.Sprintf("problem records %q, want %q, as standard error has", got, want))
+	}
+	return strings.Join(records, ""), stderr, code
 }
 
 // fm returns a file whose front matter holds lines.
@@ -510,5 +540,56 @@ func TestExtractAClaimWhoseTargetDoesNotExist(t *testing.T) {
 	stdout, stderr, code := extractRun("a.md")
 	if want := claimsOfRecords + "claim\tA\thas-line\tno/such/file.md\tx\ta.md\t8\n"; stdout != want || stderr != "" || code != 0 {
 		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractAProblemIsAlsoARecord(t *testing.T) {
+	files(t, map[string]string{"tasks/PBI-00001.md": fm("breadcrumb:", "  id: PBI-00001", "  links: []")})
+	stdout, stderr, code := extractAll("tasks/PBI-00001.md")
+	if stderr != "tasks/PBI-00001.md:2: breadcrumb has no type\n" {
+		t.Errorf("standard error %q", stderr)
+	}
+	if stdout != "problem\ttasks/PBI-00001.md\t2\tbreadcrumb has no type\n" {
+		t.Errorf("standard output %q", stdout)
+	}
+	if code != 1 {
+		t.Errorf("exit %d, want 1", code)
+	}
+}
+
+func TestExtractTheRecordOfADroppedClaim(t *testing.T) {
+	files(t, map[string]string{"a.md": fm("breadcrumb:", "  id: A", "  type: spec", "  links:", "    - follows ADR-0016",
+		"  claims:", "    - 'docs/bcr.md contains ### verify'", "    - 'docs/bcr.md has-line ### verify'")})
+	stdout, _, code := extractAll("a.md")
+	want := "breadcrumb\tA\tspec\ta.md\t3\n" +
+		"link\tA\tfollows\tADR-0016\ta.md\t6\n" +
+		"claim\tA\thas-line\tdocs/bcr.md\t### verify\ta.md\t9\n" +
+		"problem\ta.md\t8\t"
+	if !strings.HasPrefix(stdout, want) || strings.Count(stdout, "\n") != 4 {
+		t.Errorf("got %q, want %q and a message", stdout, want)
+	}
+	if code != 1 {
+		t.Errorf("exit %d, want 1", code)
+	}
+}
+
+func TestExtractProblemRecordsAmongSeveralFiles(t *testing.T) {
+	files(t, map[string]string{
+		"a.md": fm("breadcrumb:", "  id: a b", "  type: PBI", "  links: x"),
+		"b.md": crumbOf("B"),
+	})
+	stdout, _, _ := extractAll("a.md", "b.md")
+	lines := strings.Split(stdout, "\n")
+	if len(lines) != 4 || !strings.HasPrefix(lines[0], "problem\ta.md\t3\t") ||
+		!strings.HasPrefix(lines[1], "problem\ta.md\t5\t") || lines[2] != "breadcrumb\tB\tPBI\tb.md\t3" {
+		t.Errorf("got %q", stdout)
+	}
+}
+
+func TestExtractAMessageThatIsNotAProblem(t *testing.T) {
+	files(t, map[string]string{"a.md": crumbOf("A")})
+	stdout, stderr, code := extractAll("none.md", "a.md")
+	if !strings.HasPrefix(stderr, "bcr: ") || strings.Contains(stdout, "problem") || code != 2 {
+		t.Errorf("got %q, %q, exit %d; want a message, no problem record, exit 2", stdout, stderr, code)
 	}
 }

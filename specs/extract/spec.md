@@ -16,6 +16,7 @@ breadcrumb:
     - follows ADR-0017
     - follows ADR-0018
     - follows ADR-0019
+    - follows ADR-0021
   claims:
     - 'docs/bcr.md has-line ### extract'
 ---
@@ -49,13 +50,17 @@ and is the job of a later stage. A rule about the whole set, such as unique ids 
 or links that point to an existing breadcrumb, is checked by
 `bcr verify`, which reads the records this command prints (ADR-0015).
 
+Standard error does not travel down a pipe, so each problem this
+command finds is printed as a record too, for the stages after it
+(ADR-0021).
+
 `bcr extract` replaces the old `bcr list`, which read `breadcrumbs/`.
 
 ### Architecture
 
 | Part | Does | Kind (ADR-0007) |
 |---|---|---|
-| Command | Reads the operands, opens the files, prints records and problems, sets the exit status | Infrastructure |
+| Command | Reads the operands, opens the files, prints records and problems, each problem also as a record (ADR-0021), sets the exit status | Infrastructure |
 | File set reader | With no operand: reads `.breadcrumbs`, checks its patterns, and finds the files they name from the root of the repository (ADR-0014) | Infrastructure |
 | Front matter reader, `internal/frontmatter` | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); allows single quotes only in the entries of `claims`, and reports an entry of `claims` that is not single-quoted or has a comment after it (ADR-0017); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
 | Core, `internal/crumb` | Holds the breadcrumb, the link, the claim and the problem; checks the breadcrumb's properties (ADR-0002, ADR-0018), its link entries (ADR-0012) and its claim entries, with the kinds it knows (ADR-0017, ADR-0019); builds the breadcrumb or reports what is wrong | Core domain |
@@ -139,8 +144,26 @@ key, prints nothing.
 
 A problem is printed to standard error as `PATH:LINE: MESSAGE`
 (ADR-0006). A file's problems are printed in order of line. A file
-with a problem in its id, type or links prints no records; the other
-files are still read.
+with a problem in its id, type or links prints no `breadcrumb`, `link`
+or `claim` record; the other files are still read.
+
+Each problem is also printed to standard output, as a record
+(ADR-0021):
+
+```
+problem	PATH	LINE	MESSAGE
+```
+
+- `PATH`, `LINE` and `MESSAGE` are those of the line written to
+  standard error. A tab, a `\n` or a `\r` inside `MESSAGE` is written
+  as a space, so that the record stays one line of four fields.
+- A file's `problem` records come after its other records, in order of
+  line.
+- A `problem` record has no id: a problem can be found before an id is
+  read. It belongs to the breadcrumb whose record has the same `PATH`,
+  when there is one.
+- A message that starts `bcr: `, such as for a file that cannot be
+  read, is not a problem, and prints no record.
 
 A problem in a claim entry drops only that claim (ADR-0017). The
 breadcrumb's record, its links and its other claims are still printed,
@@ -170,6 +193,7 @@ no records, as with `links`. `claims: []` is the same as no `claims`.
 A pattern may not use `**`, start or end with `/`, be empty after
 `!`, or be malformed, such as with a `[` that does not close.
 A pattern `.breadcrumbs` does not allow is a problem at its line in
+`.breadcrumbs`, printed as a `problem` record too, whose `PATH` is
 `.breadcrumbs`. When `.breadcrumbs` has a problem, no file is read,
 since the set it names is not known.
 
@@ -186,9 +210,12 @@ Exit status:
 
 - Keys under `breadcrumb` other than `id`, `type`, `links` and
   `claims` are not read.
-- A dropped claim is visible only on standard error and in the exit
-  status: no record says it was there (ADR-0017). In a pipe, it shows
-  only with `set -o pipefail`.
+- A dropped claim prints no `claim` record. Its `problem` record says
+  a problem was found at its line, not what the claim was (ADR-0017,
+  ADR-0021).
+- A file that cannot be read prints no record: it shows only on
+  standard error and in the exit status. In a pipe, the exit status
+  shows only with `set -o pipefail`.
 - `bcr extract` does not open a claim's target, so a claim about a file
   that does not exist is printed like any other.
 
@@ -214,6 +241,9 @@ Exit status:
       claim entry a problem; `docs/bcr.1` is generated again.
 - [x] `go.yaml.in/yaml/v3` is still the only module `bcr` requires
       directly: reading claims adds no library.
+- [x] `docs/bcr.md` describes the `problem` record; `docs/bcr.1` is
+      generated again.
+- [x] In this repository, `bcr extract` prints no `problem` record.
 
 ### Regression Guardrails
 
@@ -267,7 +297,7 @@ Scenario: A missing property
   Given a file whose breadcrumb key has no id, no type or no links
   When I extract it
   Then a problem is printed at the line of the breadcrumb key
-  And the file prints no records
+  And the file prints no breadcrumb, link or claim record
   And the exit status is 1
 
 Scenario: An id or a type that is not one word
@@ -371,6 +401,8 @@ Scenario: A pattern .breadcrumbs does not allow
   Given a .breadcrumbs whose line 2 is "docs/**/*.md"
   When I run "bcr extract" with no operand
   Then a problem is printed at ".breadcrumbs:2"
+  And a problem record is printed whose PATH is ".breadcrumbs" and
+    whose LINE is 2
   And no file is read
   And the exit status is 1
 
@@ -444,7 +476,7 @@ Scenario: Claims with no list
     text on the same line
   When I extract it
   Then a problem is printed at the line of "claims:"
-  And the file prints no records
+  And the file prints no breadcrumb, link or claim record
   And the exit status is 1
 
 Scenario: A quote inside a claim
@@ -503,4 +535,46 @@ Scenario: A claim whose target does not exist
   When I extract it
   Then its claim record is printed
   And the exit status is 0
+
+Scenario: A problem is also a record
+  Given tasks/PBI-00001.md whose breadcrumb has no type, at line 2
+  When I run "bcr extract tasks/PBI-00001.md"
+  Then standard error is
+    """
+    tasks/PBI-00001.md:2: breadcrumb has no type
+    """
+  And standard output is
+    """
+    problem	tasks/PBI-00001.md	2	breadcrumb has no type
+    """
+  And the exit status is 1
+
+Scenario: The record of a dropped claim
+  Given a.md whose breadcrumb has one link and two claims, the first of
+    which, at line 8, has a kind bcr does not know
+  When I run "bcr extract a.md"
+  Then standard output has its breadcrumb record, its link record and
+    the claim record of the second claim
+  And after them a problem record whose PATH is "a.md" and whose LINE
+    is 8
+  And the exit status is 1
+
+Scenario: Problem records among several files
+  Given a.md with two problems, at lines 3 and 5, and b.md with a
+    valid breadcrumb
+  When I run "bcr extract a.md b.md"
+  Then the problem records of a.md are printed in order of line
+  And the records of b.md come after them
+
+Scenario: A message that is not a problem
+  Given an operand that names no readable file
+  When I extract it
+  Then a message starting "bcr: " is printed to standard error
+  And no problem record is printed
+
+Scenario: A problem's message on one line
+  Given a problem whose message holds a tab or a line ending
+  When its record is printed
+  Then the record is one line of four fields, with a space in place of
+    each
 ```

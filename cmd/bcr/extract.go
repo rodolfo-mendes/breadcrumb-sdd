@@ -18,7 +18,7 @@ import (
 
 // runExtract runs bcr extract; args starts with the command. For each
 // file, in the order given, it prints the records of its breadcrumb,
-// or its problems (ADR-0011). Which files to read is the caller's
+// and its problems, each also as a record (ADR-0011, ADR-0021). Which files to read is the caller's
 // choice: their names and paths are not checked. Given no file, it
 // reads the files .breadcrumbs names (ADR-0014).
 func runExtract(args []string, stdout, stderr io.Writer) int {
@@ -28,7 +28,7 @@ func runExtract(args []string, stdout, stderr io.Writer) int {
 	}
 	code := exitOK
 	if len(operands) == 0 {
-		if operands, code = namedFiles(stderr); code != exitOK && operands == nil {
+		if operands, code = namedFiles(stdout, stderr); code != exitOK && operands == nil {
 			return code
 		}
 	}
@@ -50,8 +50,9 @@ func runExtract(args []string, stdout, stderr io.Writer) int {
 // directory names, each as its path from there with / between its
 // parts, in order of path. With no .breadcrumbs, or a problem in it,
 // it returns no file and the exit status; when only a directory could
-// not be read, the files found and exitTrouble.
-func namedFiles(stderr io.Writer) ([]string, int) {
+// not be read, the files found and exitTrouble. A problem in
+// .breadcrumbs is printed to stderr, and to stdout as a record.
+func namedFiles(stdout, stderr io.Writer) ([]string, int) {
 	src, err := os.ReadFile(fileset.Name)
 	if errors.Is(err, fs.ErrNotExist) {
 		fmt.Fprintf(stderr, "bcr: no FILE given, and no %s in this directory\n", fileset.Name)
@@ -64,6 +65,7 @@ func namedFiles(stderr io.Writer) ([]string, int) {
 	set, problems := fileset.Parse(src)
 	for _, p := range problems {
 		fmt.Fprintf(stderr, "%s:%d: %s\n", fileset.Name, p.Line, p.Message)
+		records.WriteProblem(stdout, fileset.Name, p.Line, p.Message)
 	}
 	if len(problems) > 0 {
 		return nil, exitFound
@@ -84,8 +86,9 @@ func namedFiles(stderr io.Writer) ([]string, int) {
 // extract prints the records of the breadcrumb in src, the text of the
 // file at path, and its problems as PATH:LINE: MESSAGE, in order of
 // line. A problem in a claim drops only that claim: the other records
-// are still printed (ADR-0017). It reports whether the file has no
-// problem.
+// are still printed (ADR-0017). Each problem is also printed as a
+// record, after the file's other records (ADR-0021). It reports
+// whether the file has no problem.
 func extract(path string, src []byte, stdout, stderr io.Writer) bool {
 	fm, found, problems := frontmatter.Read(src)
 	if !found {
@@ -103,6 +106,9 @@ func extract(path string, src []byte, stdout, stderr io.Writer) bool {
 	}
 	if ok {
 		records.Write(stdout, path, b)
+	}
+	for _, p := range problems {
+		records.WriteProblem(stdout, path, p.Line, p.Message)
 	}
 	return len(problems) == 0
 }
