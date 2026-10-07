@@ -7,7 +7,7 @@ breadcrumb:
 ---
 # ADR-0020: A released kind of claim keeps its meaning
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-07
 
 ## Context

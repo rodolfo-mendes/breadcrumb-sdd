@@ -9,7 +9,7 @@ breadcrumb:
 ---
 # ADR-0017: Claims are written under the breadcrumb key
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-07
 
 ## Context

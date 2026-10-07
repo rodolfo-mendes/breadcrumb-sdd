@@ -7,7 +7,7 @@ breadcrumb:
 ---
 # ADR-0018: A key added under breadcrumb is optional
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-07
 
 ## Context
