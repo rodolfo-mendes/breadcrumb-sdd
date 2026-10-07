@@ -12,6 +12,7 @@ bcr check
 bcr extract [FILE...]
 bcr verify
 bcr audit
+bcr report
 bcr verdict [ID|PATH|-]...
 bcr links [-r] [ID|PATH|-]...
 bcr new TYPE TITLE [PARENT|-]...
@@ -544,6 +545,99 @@ Examples:
 set -o pipefail; bcr extract | bcr verify | bcr audit > /dev/null
 bcr extract | bcr verify | bcr audit 2>/dev/null | grep '^verdict' | cut -f2,3
 bcr extract | bcr audit | grep -w Refuted
+```
+
+### report
+
+```
+bcr report
+```
+
+Reads the records `bcr extract`, `bcr verify` and `bcr audit` print,
+and writes one page that shows them: every breadcrumb with its
+verdict, every problem, every claim, and one diagram for each spec. It
+is the last command of the pipe, and does not pass the records on:
+
+```
+bcr extract | bcr verify | bcr audit | bcr report > report.md
+```
+
+Flags: none.
+
+Operands: none. `bcr report` reads no file of the repository.
+
+Standard input: the records, read to the end. A line may end in `\n`
+or `\r\n`. `bcr report` reads the `breadcrumb`, `link`, `claim`,
+`problem`, `claim-verdict` and `verdict` records. A record of another
+kind is not read, and neither are fields after the ones printed today.
+
+Output: one page, in Markdown, on standard output. Its diagrams are
+Mermaid, in fenced blocks marked `mermaid`; GitHub draws them wherever
+it shows Markdown. The page has four sections, in this order:
+
+- `## Breadcrumbs`: a line of counts, then a table with one row for
+  each breadcrumb, with its verdict, its id, its type and where it is
+  written, as `PATH:LINE`. Rows are in order of verdict, `Refuted`
+  first, then `Undecided`, `Confirmed` and `not audited`, and then of
+  id.
+- `## Problems`: one item for each problem `bcr extract` and
+  `bcr verify` printed, as `PATH:LINE: MESSAGE`, in order of `PATH`
+  and then of `LINE`.
+- `## Claims`: a table with one row for each claim, with its verdict,
+  the id of its breadcrumb, the claim as it is written, and where it
+  is written. Rows are in the same order as the breadcrumbs.
+- `## Views`: one diagram for each breadcrumb whose type is `spec`,
+  under a heading with its id, in order of id.
+
+A section with nothing to show says so, as in `No problems.`.
+
+A view draws the spec, every breadcrumb with a link to it, every
+breadcrumb it has a link to, and the links among those. A breadcrumb
+two links away is not in it, and a breadcrumb in no view is still in
+the table. Each box shows a breadcrumb's id, its type and its verdict,
+and each of its claims after the claim's own verdict. Each arrow goes
+from the breadcrumb a link is written in to the one it points to, and
+is labelled with the link's verb.
+
+A verdict is shown as `bcr audit` printed it: `Confirmed`, `Refuted`,
+`Undecided`, or `Undecided, no claims`. `bcr report` judges nothing. A
+breadcrumb or a claim with no verdict in the input is shown as
+`not audited`, so the page can be made without `bcr audit`.
+
+The same records give the same page, byte for byte: it holds no date,
+and its rows, boxes and arrows are in order of id, whatever the order
+of the records.
+
+An id, a path, a verb, a claim or a message is written so that it
+cannot change the page around it. In the tables and lists, a `\` comes
+before each character Markdown reads as syntax, such as `|`, `` ` ``
+and `<`. In a diagram, a box is named `n1`, `n2` and so on, never by
+an id, and in its label every character Mermaid could read as syntax
+is written as a code, such as `#35;` for `#`. `bcr report` writes no
+`click`, no link and no directive into a diagram.
+
+A line of input that is not a record the pipe could print stops
+`bcr report`: it writes a message starting `bcr: `, which gives the
+line's number in the input, and prints no page. So does a `verdict` or
+`claim-verdict` record whose verdict is not `Confirmed`, `Refuted` or
+`Undecided`.
+
+Exit status:
+
+- 0: the page was written, whatever the verdicts and the problems.
+- 2: `bcr report` was given an operand, its input could not be read, a
+  line of its input was not a record, or its output could not be
+  written.
+
+A `Refuted` claim does not change the exit status of `bcr report`. It
+fails the pipe through `bcr audit`, under `set -o pipefail`.
+
+Examples:
+
+```
+bcr extract | bcr verify | bcr audit | bcr report > report.md
+set -o pipefail; bcr extract | bcr verify | bcr audit | bcr report > report.md
+bcr extract | bcr report
 ```
 
 ### verdict

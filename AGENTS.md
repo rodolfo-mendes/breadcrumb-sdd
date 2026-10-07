@@ -16,6 +16,7 @@ This repository is developed with ASDLC
 |---|---|---|
 | Test | `go test ./...` | Go version in `go.mod` |
 | Verify and audit breadcrumbs | `set -o pipefail; go run ./cmd/bcr extract \| go run ./cmd/bcr verify \| go run ./cmd/bcr audit > /dev/null` | `specs/extract/spec.md`, `specs/verify/spec.md`, `specs/audit/spec.md` |
+| Report the breadcrumbs | `go run ./cmd/bcr extract \| go run ./cmd/bcr verify \| go run ./cmd/bcr audit \| go run ./cmd/bcr report` | `specs/report/spec.md` |
 | Check breadcrumbs | `go run ./cmd/bcr check` | `docs/bcr.md` |
 | Audit claims | `go run ./cmd/bcr verdict` | `docs/bcr.md` |
 | Report | `go run ./cmd/bcr audit-report --html` | `docs/bcr.md` |
@@ -60,6 +61,7 @@ internal/frontmatter: reads a breadcrumb from a file's YAML front matter for int
 internal/fileset: reads .breadcrumbs and finds the files it names; infrastructure (ADR-0014)
 internal/records: writes and reads the records the commands of the pipe print; the only package that knows their format (ADR-0011)
 internal/target: reads the file a claim is about from the working tree; infrastructure (ADR-0023)
+internal/page: writes the page bcr report prints; the only package that knows its Markdown and Mermaid; infrastructure
 .breadcrumbs: names by pattern the files bcr extract reads when given none
 specs/: feature specs, one directory per feature; each command of bcr is a feature
 tasks/: PBIs, closed after merge and kept

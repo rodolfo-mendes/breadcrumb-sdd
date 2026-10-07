@@ -7,6 +7,7 @@
 //	bcr extract [FILE...]
 //	bcr verify
 //	bcr audit
+//	bcr report
 //	bcr verdict [ID|PATH|-]...
 //	bcr links [-r] [ID|PATH|-]...
 //	bcr new TYPE TITLE [PARENT|-]...
@@ -52,12 +53,13 @@ const (
 	extractUsage     = "usage: bcr extract [FILE...]\n"
 	verifyUsage      = "usage: bcr verify\n"
 	auditUsage       = "usage: bcr audit\n"
+	reportUsage      = "usage: bcr report\n"
 	verdictUsage     = "usage: bcr verdict [ID|PATH|-]...\n"
 	linksUsage       = "usage: bcr links [-r] [ID|PATH|-]...\n"
 	newUsage         = "usage: bcr new TYPE TITLE [PARENT|-]...\n"
 	specUsage        = "usage: bcr spec\n"
 	initUsage        = "usage: bcr init [-a FILE]\n"
-	usage            = auditReportUsage + checkUsage + extractUsage + verifyUsage + auditUsage + verdictUsage + linksUsage + newUsage + specUsage + initUsage
+	usage            = auditReportUsage + checkUsage + extractUsage + verifyUsage + auditUsage + reportUsage + verdictUsage + linksUsage + newUsage + specUsage + initUsage
 )
 
 // reportFile is where the report is written without -o, in the
@@ -90,6 +92,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runVerify(args, stdin, stdout, stderr)
 	case "audit":
 		return runAudit(args, stdin, stdout, stderr)
+	case "report":
+		return runReport(args, stdin, stdout, stderr)
 	case "verdict":
 		return runVerdict(args, stdin, stdout, stderr)
 	case "links":

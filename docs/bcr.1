@@ -11,6 +11,7 @@ bcr check
 bcr extract [FILE...]
 bcr verify
 bcr audit
+bcr report
 bcr verdict [ID|PATH|\-]...
 bcr links [\-r] [ID|PATH|\-]...
 bcr new TYPE TITLE [PARENT|\-]...
@@ -383,6 +384,67 @@ Examples:
 set \-o pipefail; bcr extract | bcr verify | bcr audit > /dev/null
 bcr extract | bcr verify | bcr audit 2>/dev/null | grep '^verdict' | cut \-f2,3
 bcr extract | bcr audit | grep \-w Refuted
+.fi
+.RE
+.SS "report"
+.PP
+.RS 4
+.nf
+bcr report
+.fi
+.RE
+.PP
+Reads the records \fBbcr extract\fR, \fBbcr verify\fR and \fBbcr audit\fR print, and writes one page that shows them: every breadcrumb with its verdict, every problem, every claim, and one diagram for each spec. It is the last command of the pipe, and does not pass the records on:
+.PP
+.RS 4
+.nf
+bcr extract | bcr verify | bcr audit | bcr report > report.md
+.fi
+.RE
+.PP
+Flags: none.
+.PP
+Operands: none. \fBbcr report\fR reads no file of the repository.
+.PP
+Standard input: the records, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. \fBbcr report\fR reads the \fBbreadcrumb\fR, \fBlink\fR, \fBclaim\fR, \fBproblem\fR, \fBclaim\-verdict\fR and \fBverdict\fR records. A record of another kind is not read, and neither are fields after the ones printed today.
+.PP
+Output: one page, in Markdown, on standard output. Its diagrams are Mermaid, in fenced blocks marked \fBmermaid\fR; GitHub draws them wherever it shows Markdown. The page has four sections, in this order:
+.IP \(bu 2
+\fB## Breadcrumbs\fR: a line of counts, then a table with one row for each breadcrumb, with its verdict, its id, its type and where it is written, as \fBPATH:LINE\fR. Rows are in order of verdict, \fBRefuted\fR first, then \fBUndecided\fR, \fBConfirmed\fR and \fBnot audited\fR, and then of id.
+.IP \(bu 2
+\fB## Problems\fR: one item for each problem \fBbcr extract\fR and \fBbcr verify\fR printed, as \fBPATH:LINE: MESSAGE\fR, in order of \fBPATH\fR and then of \fBLINE\fR.
+.IP \(bu 2
+\fB## Claims\fR: a table with one row for each claim, with its verdict, the id of its breadcrumb, the claim as it is written, and where it is written. Rows are in the same order as the breadcrumbs.
+.IP \(bu 2
+\fB## Views\fR: one diagram for each breadcrumb whose type is \fBspec\fR, under a heading with its id, in order of id.
+.PP
+A section with nothing to show says so, as in \fBNo problems.\fR.
+.PP
+A view draws the spec, every breadcrumb with a link to it, every breadcrumb it has a link to, and the links among those. A breadcrumb two links away is not in it, and a breadcrumb in no view is still in the table. Each box shows a breadcrumb's id, its type and its verdict, and each of its claims after the claim's own verdict. Each arrow goes from the breadcrumb a link is written in to the one it points to, and is labelled with the link's verb.
+.PP
+A verdict is shown as \fBbcr audit\fR printed it: \fBConfirmed\fR, \fBRefuted\fR, \fBUndecided\fR, or \fBUndecided, no claims\fR. \fBbcr report\fR judges nothing. A breadcrumb or a claim with no verdict in the input is shown as \fBnot audited\fR, so the page can be made without \fBbcr audit\fR.
+.PP
+The same records give the same page, byte for byte: it holds no date, and its rows, boxes and arrows are in order of id, whatever the order of the records.
+.PP
+An id, a path, a verb, a claim or a message is written so that it cannot change the page around it. In the tables and lists, a \fB\e\fR comes before each character Markdown reads as syntax, such as \fB|\fR, `\fB \fR `\fB and \fR<\fB. In a diagram, a box is named \fRn1\fB, \fRn2\fB and so on, never by an id, and in its label every character Mermaid could read as syntax is written as a code, such as \fR#35;\fB for \fR#\fB. \fRbcr report\fB writes no \fRclick`, no link and no directive into a diagram.
+.PP
+A line of input that is not a record the pipe could print stops \fBbcr report\fR: it writes a message starting \fBbcr: \fR, which gives the line's number in the input, and prints no page. So does a \fBverdict\fR or \fBclaim\-verdict\fR record whose verdict is not \fBConfirmed\fR, \fBRefuted\fR or \fBUndecided\fR.
+.PP
+Exit status:
+.IP \(bu 2
+0: the page was written, whatever the verdicts and the problems.
+.IP \(bu 2
+2: \fBbcr report\fR was given an operand, its input could not be read, a line of its input was not a record, or its output could not be written.
+.PP
+A \fBRefuted\fR claim does not change the exit status of \fBbcr report\fR. It fails the pipe through \fBbcr audit\fR, under \fBset \-o pipefail\fR.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+bcr extract | bcr verify | bcr audit | bcr report > report.md
+set \-o pipefail; bcr extract | bcr verify | bcr audit | bcr report > report.md
+bcr extract | bcr report
 .fi
 .RE
 .SS "verdict"

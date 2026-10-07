@@ -12,6 +12,8 @@ breadcrumb:
     - follows ADR-0021
     - follows ADR-0022
     - follows ADR-0023
+  claims:
+    - 'docs/bcr.md has-line ### report'
 ---
 # Feature: report
 
@@ -228,6 +230,10 @@ it:
   character other than a letter, a digit, a space and `- . / : ,` is
   written as `#N;`, where `N` is its code in decimal: `"` is `#34;`,
   `#` is `#35;`, `<` is `#60;`, `` ` `` is `#96;` and `|` is `#124;`.
+- Mermaid reads two `$` in a row as the start of a formula, and `\n`
+  as the end of a line, even when they are written as codes. So
+  `#8203;`, the code of U+200B, which shows nothing, is written
+  between two `$` in a row and after each `\`.
 - In both, a control character, and a byte that is not UTF-8, is
   written as U+FFFD.
 - The name of a box is made by `bcr`, never from an id.
@@ -262,24 +268,26 @@ Exit status:
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
-- [ ] A test compares the whole page for a small set of records with a
+- [x] Each Scenario below has a test.
+- [x] A test compares the whole page for a small set of records with a
       file.
-- [ ] `docs/bcr.md` describes `bcr report` under `### report`;
+- [x] `docs/bcr.md` describes `bcr report` under `### report`;
       `docs/bcr.1` is generated again.
-- [ ] The old `bcr check`, `bcr verdict` and `bcr audit-report`, and
+- [x] The old `bcr check`, `bcr verdict` and `bcr audit-report`, and
       their tests, are unchanged.
-- [ ] `go list -f '{{.Imports}}'` on the core's packages lists only
+- [x] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
-- [ ] In this repository,
+- [x] In this repository,
       `set -o pipefail; bcr extract | bcr verify | bcr audit | bcr report`
       exits 0, lists every breadcrumb, and draws one view for each
       spec.
-- [ ] Run twice in this repository, the pipe prints the same bytes.
-- [ ] In this repository, with one claimed line changed by hand, the
+- [x] Run twice in this repository, the pipe prints the same bytes.
+- [x] In this repository, with one claimed line changed by hand, the
       page shows its claim and its breadcrumb as `Refuted`.
 
 ### Regression Guardrails
+
+- `docs/bcr.md` documents `bcr report`.
 
 - `bcr report` writes no `click`, no link and no directive into a
   diagram.
@@ -406,20 +414,24 @@ Scenario: The order of the records
 
 Scenario: Values that look like syntax
   Given a spec whose id is a"b#c|d<e`f, at a path with the same
-    characters, with a link whose verb has them, a claim whose text has
-    them, and a problem whose message has them
-  When I report it
+    characters, with a verdict whose reason has them, a claim whose
+    text has them, a problem whose message has them, and a link whose
+    verb has them to ADR-1, whose type has them
+  When I report them
   Then every row of each table has five "|" that no "\" comes before
-  And each diagram opens and closes once
-  And no label holds a ", #, |, < or ` that came from a record
-  And the box is named n1
+  And the page has one diagram, which opens and closes once
+  And every line of the diagram is a box, an arrow or a class
+  And no label holds a ", #, |, <, > or ` that came from a record
+  And the boxes are named n1 and n2
 
 Scenario: A value that asks to navigate
-  Given a claim whose text is "click n1 href javascript:alert(1)" and
-    a spec whose id is "%%{init:{}}%%"
+  Given a spec whose id is "%%{init:{}}%%", with a link whose verb is
+    "click" to a breadcrumb whose id is "click", and a claim whose text
+    is "click n1 href "javascript:alert(1)""
   When I report them
-  Then no line of a diagram starts with "click"
-  And no line of a diagram holds "%%"
+  Then no line of the diagram starts with "click"
+  And no line of the diagram holds "%%"
+  And the breadcrumb whose id is "click" is the box n2
 
 Scenario: Records of a kind it does not read
   Given a valid set of records, and a record "note	..."
