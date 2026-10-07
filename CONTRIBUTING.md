@@ -18,12 +18,13 @@ You need the Go version named in `go.mod`.
 
 ```
 go test ./...
-go run ./cmd/bcr audit-report --html
+set -o pipefail; go run ./cmd/bcr extract | go run ./cmd/bcr verify | go run ./cmd/bcr audit > /dev/null
 ```
 
-The second command writes `audit-report.html` at the repository root:
-a graph of the breadcrumbs, each colored by its verdict. Green is
-Confirmed, red is Refuted, gray is Undecided.
+The second command checks the breadcrumbs of this repository and
+their claims. It prints each problem and each Refuted claim, and exits
+0 only when there are none. To see every breadcrumb with its verdict,
+replace `> /dev/null` with `| go run ./cmd/bcr report > report.md`.
 
 ## Artifacts
 
@@ -33,8 +34,9 @@ Confirmed, red is Refuted, gray is Undecided.
 | PBI | `tasks/PBI-NNNNN.md` | one change, and how to verify it |
 | ADR | `docs/adrs/ADR-NNNN-<slug>.md` | one decision about how the repository is built |
 
-`breadcrumbs/` holds the Intakes, Requirements, Technical Decisions
-and Tasks written before ADR-0001. `bcr` still audits them.
+Each of them carries a breadcrumb in its front matter
+([ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md)), and a spec
+may carry claims that `bcr audit` checks.
 
 ## Making a change
 
@@ -44,7 +46,7 @@ and Tasks written before ADR-0001. `bcr` still audits them.
    edited; a new ADR supersedes it.
 3. **Change the code and its spec together.** The spec describes the
    new state in the same commit. When the change touches a command,
-   flag, output or exit code of `bcr`, update its contract in
+   flag, output or exit code of `bcr`, update its user documentation in
    `docs/bcr.md` and write the man page again with
    `go test ./internal/manpage -update`.
 4. **Check.** Each item of the Definition of Done in
@@ -55,7 +57,7 @@ and Tasks written before ADR-0001. `bcr` still audits them.
 ## Commit messages
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
-(TD-0016), with three types:
+with three types:
 
 - `feat`: the change adds to or changes what the software does.
 - `fix`: the change corrects something that does not work as intended.
@@ -65,7 +67,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.
 The description says what the change does, in the imperative:
 
 ```
-feat: Audit Tasks and pass their verdicts up the breadcrumbs
+feat: Add bcr report
 ```
 
 The body says what changed, lists each breadcrumb the commit adds or
@@ -73,10 +75,9 @@ changes with a line on what it records, and ends with how to verify
 the change:
 
 ```
-- TD-0012: the contains claim, the only kind of claim.
-- TK-0002: this change.
+- PBI-00020: this change.
 
-Verify with: go test ./... and go run ./cmd/bcr audit-report --html
+Verify with: go test ./... and the pipe in AGENTS.md's Toolchain
 ```
 
 ## Agents
@@ -85,6 +86,6 @@ Coding agents learn how the repository is built from `AGENTS.md`.
 
 ## License
 
-This repository is licensed under the MIT License (TD-0014). By
+This repository is licensed under the MIT License. By
 contributing, you agree that your contribution is licensed under it
 too.

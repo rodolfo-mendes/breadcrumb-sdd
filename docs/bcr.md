@@ -29,16 +29,18 @@ repository's files, and `bcr report` writes a page of what the pipe
 found. Each stage reads the records of the one before it from
 standard input. Run it from the root of the repository.
 
-This document is the contract of the interface of `bcr`: its commands,
-flags, inputs, outputs and exit codes.
+This document is the user documentation of `bcr`: its commands,
+flags, inputs, outputs and exit codes. Where it and a command's spec
+disagree, the spec is right (ADR-0008).
 
 Every command follows the same conventions (ADR-0006):
 
 - It is run as `bcr COMMAND [FLAGS] [OPERANDS]`. Flags come before
   operands; the first operand, or `--`, ends them.
-- Flags are in getopt style: a short flag is one letter, such as `-a`,
-  and short flags can be combined, as in `-ab`; a long flag is a name,
-  such as `--html`. A flag's value follows it: `-x VALUE`, `-xVALUE`,
+- No command takes a flag yet. A flag a command takes will be in
+  getopt style: a short flag is one letter, such as `-a`, and short
+  flags can be combined, as in `-ab`; a long flag is a name, such as
+  `--output`. A flag's value follows it: `-x VALUE`, `-xVALUE`,
   `--name=VALUE` or `--name VALUE`.
 - Results go to standard output, and nothing else does. Messages go to
   standard error and start with `bcr: `. A usage error is followed by
@@ -522,6 +524,8 @@ Every command exits with (ADR-0006):
 - 0: it succeeded and found nothing wrong.
 - 1: it ran and found something wrong in the breadcrumbs.
 - 2: it was used wrongly, or could not run.
+
+`bcr report` judges nothing, so it exits only with 0 or 2.
 
 ## SEE ALSO
 

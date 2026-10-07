@@ -1,6 +1,7 @@
 # Breadcrumb SDD
 
-Breadcrumb SDD is a method for recording why a repository changed.
+Breadcrumb SDD makes drift between a repository's intent and its code
+visible.
 
 ## The problem
 
@@ -13,81 +14,96 @@ decision a piece of code was meant to carry out.
 
 ## The method
 
-Code stays the source of truth for what the repository does. Next to
-it, in `breadcrumbs/`, small Markdown files called breadcrumbs record
-intent, each linked to the breadcrumbs it derives from:
+Code stays the source of truth for what the repository does. The
+documents that hold its intent, such as decisions, specs and tasks,
+each carry a breadcrumb: a few lines of YAML front matter that say
+what the document is, which documents it links to, and what it claims
+about the repository's files.
 
-- an **Intake** (`IN-NNNN.md`) records an ask, in the words of whoever
-  made it;
-- a **Requirement** (`RQ-NNNN.md`) states one thing the software must
-  do;
-- a **Technical Decision** (`TD-NNNN.md`) records one decision about
-  how the repository is built;
-- a **Task** (`TK-NNNN.md`) records one change, as claims about the
-  files it left, such as ``- `cmd/bcr/main.go` contains `func run(` ``.
+```yaml
+---
+breadcrumb:
+  id: verify
+  type: spec
+  links:
+    - follows ADR-0016
+  claims:
+    - 'docs/bcr.md has-line ### verify'
+---
+```
 
-The toolkit, `bcr`, checks each Task's claims against the files and
-passes the verdict up the links. A Task whose claims all hold is
-Confirmed; one with a claim that fails is Refuted, and so is every
-breadcrumb above it. Drift between intent and code shows up as a
-broken chain, which a reader can follow from the ask down to the
-line of code that no longer matches.
+- `id` names the breadcrumb, and `type` says what kind of document
+  carries it.
+- Each entry of `links` is a verb and the id of another breadcrumb.
+- Each entry of `claims` is a file, a kind of claim and its argument.
+  The only kind is `has-line`: the file has a line equal to the text,
+  once the spaces and tabs at the line's start and end are removed.
+
+The toolkit, `bcr`, reads the breadcrumbs, checks that their ids are
+unique and their links point to a breadcrumb, and checks each claim
+against the files. A breadcrumb whose claims all hold is Confirmed,
+and one with a claim that fails is Refuted. One with no claims, or
+with a problem, is Undecided: nothing about it was checked. A Refuted
+claim is drift: the document says one thing, and the file another.
 
 The method makes drift visible after the fact; it does not prevent
-it.
+it. A repository records as much or as little as its owners choose,
+and a claim can be checked by hand, against the files, without `bcr`.
 
-This repository is developed with Breadcrumb SDD itself: its own
-breadcrumbs are in [`breadcrumbs/`](breadcrumbs/), and the audit
-report of its latest release is published at
-<https://rodolfo-mendes.github.io/breadcrumb-sdd/report/>.
+`bcr`'s behavior defines the method. Every command, record, output
+and exit code is documented in [`docs/bcr.md`](docs/bcr.md), also
+shipped as the man page `bcr.1`: `man ./bcr.1` in an unpacked release,
+or `man ./docs/bcr.1` in a clone.
 
-`bcr`'s behavior defines the method. Its specification,
-[`docs/breadcrumb-sdd.md`](docs/breadcrumb-sdd.md), describes it; it
-is also printed by `bcr spec`, shipped in each release, and published
-for each of its versions at <https://rodolfo-mendes.github.io/breadcrumb-sdd/>.
+This repository is developed with Breadcrumb SDD itself: its
+decisions in [`docs/adrs/`](docs/adrs/), its specs in
+[`specs/`](specs/) and its tasks in [`tasks/`](tasks/) each carry a
+breadcrumb, and every push audits them.
 
 ## Running bcr
 
-`bcr` is a single Go binary with no dependencies. Install it with Go
-1.22 or later:
+`bcr` is a single Go binary. Install it with Go 1.22 or later:
 
 ```
 go install github.com/rodolfo-mendes/breadcrumb-sdd/cmd/bcr@latest
 ```
 
-Then, from the root of a repository that has a `breadcrumbs/`
-directory:
+In the root of a repository, list the files that carry breadcrumbs in
+`.breadcrumbs`, one pattern per line:
 
 ```
-bcr audit-report --html
+docs/adrs/*.md
+specs/*/spec.md
+tasks/*.md
 ```
 
-It writes `audit-report.html` in the repository root: a graph of the
-breadcrumbs, each drawn as a box with its properties and an arrow to
-each of its parents. Open it in a browser. Boxes are green when
-Confirmed, red when Refuted and gray when Undecided.
-
-Every command, flag, output and exit code of `bcr` is documented in
-[`docs/bcr.md`](docs/bcr.md), also shipped as the man page `bcr.1`:
-`man ./bcr.1` in an unpacked release, or `man ./docs/bcr.1` in a
-clone.
-
-To adopt the method in a repository, run this from its root:
+Then run the four commands of `bcr` as a pipe:
 
 ```
-bcr init
+bcr extract | bcr verify | bcr audit | bcr report > report.md
 ```
 
-It creates `breadcrumbs/` with a first Technical Decision, points
-agents to the breadcrumbs from `AGENTS.md` (or `CLAUDE.md`, with
-`-a CLAUDE.md`), and adds a GitHub Actions workflow that runs
-`bcr check` and `bcr verdict` on each change.
+- `bcr extract` reads each breadcrumb and prints it as records.
+- `bcr verify` checks the whole set: unique ids, and links that point
+  to a breadcrumb.
+- `bcr audit` checks each claim against the files, and gives each
+  claim and each breadcrumb a verdict.
+- `bcr report` writes one Markdown page: every breadcrumb by verdict,
+  every problem, and a Mermaid diagram for each spec. GitHub draws it
+  wherever it shows Markdown.
 
-To run it from a clone of this repository instead:
+Each stage passes every record on, so a stage's output can also be
+read with `grep`, `cut` or `awk`. To check a repository in a script or
+in CI, keep only the problems and the Refuted claims, and let a
+Refuted claim fail the pipe:
 
 ```
-go run ./cmd/bcr audit-report --html
+set -o pipefail
+bcr extract | bcr verify | bcr audit > /dev/null
 ```
+
+To run it from a clone of this repository instead, replace `bcr` with
+`go run ./cmd/bcr`.
 
 ## Contributing
 

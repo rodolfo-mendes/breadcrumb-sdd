@@ -24,13 +24,13 @@ bcr extract | bcr verify | bcr audit | bcr report
 .PP
 \fBbcr extract\fR reads the breadcrumbs of a repository from the front matter of its files and prints them as records. \fBbcr verify\fR checks the set of breadcrumbs, \fBbcr audit\fR checks their claims against the repository's files, and \fBbcr report\fR writes a page of what the pipe found. Each stage reads the records of the one before it from standard input. Run it from the root of the repository.
 .PP
-This document is the contract of the interface of \fBbcr\fR: its commands, flags, inputs, outputs and exit codes.
+This document is the user documentation of \fBbcr\fR: its commands, flags, inputs, outputs and exit codes. Where it and a command's spec disagree, the spec is right (ADR\-0008).
 .PP
 Every command follows the same conventions (ADR\-0006):
 .IP \(bu 2
 It is run as \fBbcr COMMAND [FLAGS] [OPERANDS]\fR. Flags come before operands; the first operand, or \fB\-\-\fR, ends them.
 .IP \(bu 2
-Flags are in getopt style: a short flag is one letter, such as \fB\-a\fR, and short flags can be combined, as in \fB\-ab\fR; a long flag is a name, such as \fB\-\-html\fR. A flag's value follows it: \fB\-x VALUE\fR, \fB\-xVALUE\fR, \fB\-\-name=VALUE\fR or \fB\-\-name VALUE\fR.
+No command takes a flag yet. A flag a command takes will be in getopt style: a short flag is one letter, such as \fB\-a\fR, and short flags can be combined, as in \fB\-ab\fR; a long flag is a name, such as \fB\-\-output\fR. A flag's value follows it: \fB\-x VALUE\fR, \fB\-xVALUE\fR, \fB\-\-name=VALUE\fR or \fB\-\-name VALUE\fR.
 .IP \(bu 2
 Results go to standard output, and nothing else does. Messages go to standard error and start with \fBbcr: \fR. A usage error is followed by the usage line.
 .IP \(bu 2
@@ -379,6 +379,8 @@ Every command exits with (ADR\-0006):
 1: it ran and found something wrong in the breadcrumbs.
 .IP \(bu 2
 2: it was used wrongly, or could not run.
+.PP
+\fBbcr report\fR judges nothing, so it exits only with 0 or 2.
 .SH "SEE ALSO"
 .PP
 The method: \fBREADME.md\fR. How the repository is developed: \fBCONTRIBUTING.md\fR.

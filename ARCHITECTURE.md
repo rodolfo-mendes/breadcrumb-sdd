@@ -21,10 +21,15 @@ belongs to infrastructure too: the core holds meaning, not format
 flowchart TD
   A["Artifacts: ADRs, PBIs, specs"] --> S[".breadcrumbs: which files to read"]
   S --> R["Format reader: YAML front matter"]
-  R --> C["Core: breadcrumbs, links, rules"]
+  R --> C["Core: breadcrumbs, links, claims, verdicts, views"]
   C --> E["bcr extract"]
   E -- records --> V["bcr verify"]
+  V -- records --> U["bcr audit"]
+  U -- records --> P["bcr report"]
+  T["Targets: the files claims are about"] --> U
   V --> C
+  U --> C
+  P --> C
 ```
 
 | Layer | Package | Kind |
@@ -32,36 +37,54 @@ flowchart TD
 | Which files to read | `internal/fileset` | Infrastructure ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md)) |
 | Front matter | `internal/frontmatter` | Infrastructure ([ADR-0010](docs/adrs/ADR-0010-read-front-matter-with-go-yaml-v3.md)) |
 | Records | `internal/records` | Infrastructure ([ADR-0011](docs/adrs/ADR-0011-breadcrumbs-printed-as-tagged-records.md)) |
+| Targets | `internal/target` | Infrastructure ([ADR-0023](docs/adrs/ADR-0023-audit-checks-claims-against-the-working-tree.md)) |
+| The report's page | `internal/page` | Infrastructure ([`specs/report`](specs/report/spec.md)) |
 | Core | `internal/crumb` | Core domain ([ADR-0007](docs/adrs/ADR-0007-core-domain.md)) |
 | Commands | `cmd/bcr`, `internal/cli` | Infrastructure ([ADR-0006](docs/adrs/ADR-0006-bcr-follows-posix-conventions.md)) |
 
 The core imports only the standard library and reads no file. It is
-given breadcrumbs, and each breadcrumb's place as text it only repeats
+given breadcrumbs, their claims and the content of the files the
+claims are about, and each breadcrumb's place as text it only repeats
 in messages.
 
 ## The pipeline
 
 ```
-bcr extract | bcr verify
+bcr extract | bcr verify | bcr audit | bcr report
 ```
 
 - `.breadcrumbs` names, by pattern, the files that carry breadcrumbs
   ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md)).
 - `bcr extract` reads those files, or the files given as operands,
-  checks each breadcrumb on its own, and prints it as tagged records
-  ([`specs/extract`](specs/extract/spec.md)).
+  checks each breadcrumb on its own, and prints it, its links and its
+  claims as tagged records
+  ([`specs/extract`](specs/extract/spec.md),
+  [ADR-0017](docs/adrs/ADR-0017-claims-written-under-breadcrumb-key.md)).
 - `bcr verify` reads those records and checks the rules about the whole
   set ([ADR-0015](docs/adrs/ADR-0015-verify-reads-extract-records.md),
   [`specs/verify`](specs/verify/spec.md)).
+- `bcr audit` checks each claim against the working tree, and gives
+  each claim and each breadcrumb a verdict: a breadcrumb's verdict is
+  the AND of its own claims
+  ([ADR-0022](docs/adrs/ADR-0022-verdict-is-the-and-of-own-claims.md),
+  [ADR-0023](docs/adrs/ADR-0023-audit-checks-claims-against-the-working-tree.md),
+  [`specs/audit`](specs/audit/spec.md)).
+- `bcr report` ends the pipe with one Markdown page, its diagrams in
+  Mermaid ([`specs/report`](specs/report/spec.md)).
 
 Records are the common language of the commands: one record per line,
 its kind in the first field, and only `internal/records` knows their
 format. A consumer selects records by kind and reads their fields by
 position; new kinds, and new fields at the end of a record, may be
-added.
+added. Every stage but the last passes every record it reads on, byte
+for byte
+([ADR-0016](docs/adrs/ADR-0016-verify-passes-on-every-record.md)), and
+a problem travels down the pipe as a record as well as on standard
+error ([ADR-0021](docs/adrs/ADR-0021-problems-travel-as-records.md)).
 
-In a pipe, the shell returns the exit status of the last command, so a
-script that needs `bcr extract`'s status too runs with
+In a pipe, the shell returns the exit status of the last command, and
+`bcr report` exits 0 whatever the verdicts. A script that needs a
+stage's status, such as `bcr audit`'s 1 for a Refuted claim, runs with
 `set -o pipefail`.
 
 ## Command families
@@ -69,15 +92,14 @@ script that needs `bcr extract`'s status too runs with
 | Family | Purpose | Commands | Status |
 |---|---|---|---|
 | Data | Turn files into records | `extract` | Done |
-| Meaning | Judge the whole set of records | `verify` | Done, for the integrity of the graph |
+| Meaning | Judge the records | `verify`, `audit` | Done: the integrity of the graph, and claims |
+| Presentation | Show the records to a person | `report` | Done |
 | Feedback | Tell an author what is wrong, printing only problems | Not named | Reserved |
 | Queries | Answer questions about the records | Not named | Open: a filter over the records may be enough |
 | Cache | Store the records in `.bcr/` | `build` | Deferred |
-| Old model | Audit `breadcrumbs/` | `check`, `verdict`, `links`, `new`, `spec`, `init`, `audit-report` | Until the old model is frozen |
 
 A new command takes its name from what its family does: `extract`
-produces data, `verify` judges it. Names the old model uses are not
-reused while it runs.
+produces data, `verify` and `audit` judge it, `report` shows it.
 
 ## Rules every command follows
 
@@ -95,6 +117,11 @@ reused while it runs.
   judges the whole set reads records, not files
   ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md),
   [ADR-0015](docs/adrs/ADR-0015-verify-reads-extract-records.md)).
+- A key added under `breadcrumb` is optional
+  ([ADR-0018](docs/adrs/ADR-0018-new-breadcrumb-keys-are-optional.md)),
+  and a released kind of claim keeps its meaning: a new meaning is a
+  new kind
+  ([ADR-0020](docs/adrs/ADR-0020-a-released-kind-of-claim-keeps-its-meaning.md)).
 
 ## Adding a command
 
@@ -117,23 +144,14 @@ reused while it runs.
 | Deferred | Decided | Comes back when |
 |---|---|---|
 | The `.bcr/` cache: the records committed as tables | 2026-10-04 | A query is too slow over `bcr extract`'s records, or the graph's history is needed and running `bcr extract` on each past commit cannot give it |
-| Claims and verdicts in `bcr verify` | 2026-10-04 | The work on claims starts; until then `bcr verify` checks only the integrity of the graph |
-| Keys under `breadcrumb` other than `id`, `type` and `links` | 2026-10-03 | The first such key is proposed |
-
-## The old model
-
-`breadcrumbs/` holds the intakes, requirements, decisions and tasks
-from before [ADR-0001](docs/adrs/ADR-0001-adopt-asdlc.md), and the old
-commands still read it. They are kept until a freeze ADR says what
-happens to the folder and to its audit. Their names stay taken until
-then, which is why the new set check is `verify`, not `check`.
+| Verdicts that travel along links | 2026-10-07 | A real case needs a Refuted claim to reach the breadcrumbs that link to it ([ADR-0022](docs/adrs/ADR-0022-verdict-is-the-and-of-own-claims.md)) |
+| Kinds of claim other than `has-line` | 2026-10-07 | A spec needs a claim `has-line` cannot state; each new kind gets its own name and ADR ([ADR-0020](docs/adrs/ADR-0020-a-released-kind-of-claim-keeps-its-meaning.md)) |
 
 ## What comes next
 
-1. Run `bcr extract | bcr verify` where agents and pull requests run
-   checks.
-2. Freeze the old model, and decide what becomes of its commands.
-3. Read claims, the first check that can turn red because code moved
-   away from a spec.
+1. Write `bcr init` again for this model, so that a repository can
+   adopt it with one command.
+2. Run the whole pipe in CI, and keep the report of each run.
+3. Release the new model as v0.8.0.
 4. Queries, as a command only where a filter over the records is not
    enough.
