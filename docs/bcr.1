@@ -195,7 +195,7 @@ bcr verify
 .fi
 .RE
 .PP
-Reads the records \fBbcr extract\fR prints, and checks the rules about the whole set of breadcrumbs they describe:
+Reads the records \fBbcr extract\fR prints, checks the rules about the whole set of breadcrumbs they describe, and passes every record on:
 .PP
 .RS 4
 .nf
@@ -207,9 +207,11 @@ Flags: none.
 .PP
 Operands: none. \fBbcr verify\fR reads no file: which files make up the set is decided by \fBbcr extract\fR, from its operands or from \fB.breadcrumbs\fR.
 .PP
-Standard input: the records, as \fBbcr extract\fR prints them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. A record of a kind other than \fBbreadcrumb\fR and \fBlink\fR is ignored, and so are fields after the ones \fBbcr extract\fR prints today. With no input, there is no problem.
+Standard input: the records, as \fBbcr extract\fR prints them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. A record of a kind other than \fBbreadcrumb\fR and \fBlink\fR is not checked, and neither are fields after the ones \fBbcr extract\fR prints today; both are still copied. With no input, there is no problem.
 .PP
-Output: nothing on standard output. Each problem is written to standard error, in order of \fBPATH\fR compared as bytes, and then of \fBLINE\fR:
+Output: standard input, copied to standard output byte for byte. Every line comes out in the order read, with its line ending as read, records of any kind included, so a later command in the pipe gets what \fBbcr extract\fR printed. \fBbcr verify\fR reads its whole input before it writes. It copies the input even when it finds a problem, and prints nothing to standard output when a line is not a record. To see only the problems, send standard output to \fB/dev/null\fR.
+.PP
+Each problem is written to standard error, in order of \fBPATH\fR compared as bytes, and then of \fBLINE\fR:
 .PP
 .RS 4
 .nf
@@ -235,7 +237,7 @@ Exit status:
 .IP \(bu 2
 1: at least one problem was found.
 .IP \(bu 2
-2: \fBbcr verify\fR was given an operand, its input could not be read, or a line of its input was not a record.
+2: \fBbcr verify\fR was given an operand, its input could not be read, a line of its input was not a record, or its output could not be written.
 .PP
 In a pipe, the shell returns the exit status of \fBbcr verify\fR, so a problem \fBbcr extract\fR found is seen only on standard error. A script that needs both runs with \fBset \-o pipefail\fR, or saves the records first.
 .PP
@@ -243,9 +245,9 @@ Examples:
 .PP
 .RS 4
 .nf
-bcr extract | bcr verify
-set \-o pipefail; bcr extract | bcr verify
-bcr extract > records.tsv && bcr verify < records.tsv
+bcr extract | bcr verify > /dev/null
+set \-o pipefail; bcr extract | bcr verify > /dev/null
+bcr extract > records.tsv && bcr verify < records.tsv | cmp \- records.tsv
 .fi
 .RE
 .SS "verdict"

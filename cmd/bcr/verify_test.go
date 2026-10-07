@@ -32,23 +32,25 @@ var validRecords = []string{
 	"link\tPBI-00001\timplements\tADR-0001\ttasks/PBI-00001.md\t6",
 }
 
-// silent fails unless bcr verify, given input, prints nothing and
-// exits 0.
-func silent(t *testing.T, input string) {
+// passes fails unless bcr verify, given input, copies it to standard
+// output unchanged, prints nothing to standard error and exits 0
+// (ADR-0016).
+func passes(t *testing.T, input string) {
 	t.Helper()
-	if stdout, stderr, code := verifyRun(input); stdout != "" || stderr != "" || code != 0 {
-		t.Errorf("got %q, %q, exit %d; want nothing, exit 0", stdout, stderr, code)
+	if stdout, stderr, code := verifyRun(input); stdout != input || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want the input, no problem, exit 0", stdout, stderr, code)
 	}
 }
 
-// verifyProblems runs bcr verify on input, and fails unless it prints
-// nothing to standard output, a problem at each of want, in that
-// order, and exits 1. It returns the problems, one line each.
+// verifyProblems runs bcr verify on input, and fails unless it copies
+// input to standard output unchanged, prints a problem at each of
+// want, in that order, and exits 1. It returns the problems, one line
+// each.
 func verifyProblems(t *testing.T, input string, want ...string) []string {
 	t.Helper()
 	stdout, stderr, code := verifyRun(input)
-	if stdout != "" {
-		t.Errorf("wrote %q to standard output", stdout)
+	if stdout != input {
+		t.Errorf("wrote %q to standard output, want the input %q", stdout, input)
 	}
 	lines := strings.Split(strings.TrimSuffix(stderr, "\n"), "\n")
 	ok := len(lines) == len(want)
@@ -76,11 +78,11 @@ func naming(t *testing.T, problem string, want ...string) {
 }
 
 func TestVerifyASetWithNoProblem(t *testing.T) {
-	silent(t, recordsOf(validRecords...))
+	passes(t, recordsOf(validRecords...))
 }
 
 func TestVerifyNoInput(t *testing.T) {
-	silent(t, "")
+	passes(t, "")
 }
 
 func TestVerifyTwoBreadcrumbsWithTheSameID(t *testing.T) {
@@ -147,15 +149,19 @@ func TestVerifyALinkToADuplicatedID(t *testing.T) {
 }
 
 func TestVerifyRecordsOfAKindItDoesNotKnow(t *testing.T) {
-	silent(t, recordsOf(append([]string{"claim\tPBI-00001\tcontains\tdocs/bcr.md"}, validRecords...)...))
+	passes(t, recordsOf(append([]string{"claim\tPBI-00001\tcontains\tdocs/bcr.md"}, validRecords...)...))
 }
 
 func TestVerifyFieldsAddedAtTheEnd(t *testing.T) {
-	silent(t, strings.ReplaceAll(recordsOf(validRecords...), "\n", "\tAccepted\t2026\n"))
+	passes(t, strings.ReplaceAll(recordsOf(validRecords...), "\n", "\tAccepted\t2026\n"))
 }
 
 func TestVerifyWindowsLineEndings(t *testing.T) {
-	silent(t, strings.ReplaceAll(recordsOf(validRecords...), "\n", "\r\n"))
+	passes(t, strings.ReplaceAll(recordsOf(validRecords...), "\n", "\r\n"))
+}
+
+func TestVerifyALastLineWithNoLineEnding(t *testing.T) {
+	passes(t, strings.TrimSuffix(recordsOf(validRecords...), "\n"))
 }
 
 func TestVerifyALineThatIsNotARecord(t *testing.T) {
@@ -200,6 +206,19 @@ func TestVerifyABreadcrumbExtractCouldNotRead(t *testing.T) {
 	}
 	ps := verifyProblems(t, records, "b.md:6")
 	naming(t, ps[0], `"ADR-0005"`)
+}
+
+// unwritable is an output that cannot be written.
+type unwritable struct{}
+
+func (unwritable) Write([]byte) (int, error) { return 0, errors.New("output is closed") }
+
+func TestVerifyOutputThatCannotBeWritten(t *testing.T) {
+	var stderr bytes.Buffer
+	code := run([]string{"verify"}, strings.NewReader(recordsOf(validRecords...)), io.Writer(unwritable{}), &stderr)
+	if stderr.String() != "bcr: output is closed\n" || code != 2 {
+		t.Errorf("got %q, exit %d; want one message, exit 2", stderr.String(), code)
+	}
 }
 
 // unreadable is an input that cannot be read.

@@ -282,8 +282,8 @@ bcr extract tasks/*.md | grep '^link' | cut -f2,4
 bcr verify
 ```
 
-Reads the records `bcr extract` prints, and checks the rules about the
-whole set of breadcrumbs they describe:
+Reads the records `bcr extract` prints, checks the rules about the
+whole set of breadcrumbs they describe, and passes every record on:
 
 ```
 bcr extract | bcr verify
@@ -297,12 +297,19 @@ set is decided by `bcr extract`, from its operands or from
 
 Standard input: the records, as `bcr extract` prints them, read to the
 end. A line may end in `\n` or `\r\n`. A record of a kind other than
-`breadcrumb` and `link` is ignored, and so are fields after the ones
-`bcr extract` prints today. With no input, there is no problem.
+`breadcrumb` and `link` is not checked, and neither are fields after
+the ones `bcr extract` prints today; both are still copied. With no input, there is no problem.
 
-Output: nothing on standard output. Each problem is written to
-standard error, in order of `PATH` compared as bytes, and then of
-`LINE`:
+Output: standard input, copied to standard output byte for byte.
+Every line comes out in the order read, with its line ending as read,
+records of any kind included, so a later command in the pipe gets what
+`bcr extract` printed. `bcr verify` reads its whole input before it
+writes. It copies the input even when it finds a problem, and prints
+nothing to standard output when a line is not a record. To see only
+the problems, send standard output to `/dev/null`.
+
+Each problem is written to standard error, in order of `PATH` compared
+as bytes, and then of `LINE`:
 
 ```
 PATH:LINE: MESSAGE
@@ -337,7 +344,8 @@ Exit status:
 - 0: no problem was found.
 - 1: at least one problem was found.
 - 2: `bcr verify` was given an operand, its input could not be read,
-  or a line of its input was not a record.
+  a line of its input was not a record, or its output could not be
+  written.
 
 In a pipe, the shell returns the exit status of `bcr verify`, so a
 problem `bcr extract` found is seen only on standard error. A script
@@ -347,9 +355,9 @@ first.
 Examples:
 
 ```
-bcr extract | bcr verify
-set -o pipefail; bcr extract | bcr verify
-bcr extract > records.tsv && bcr verify < records.tsv
+bcr extract | bcr verify > /dev/null
+set -o pipefail; bcr extract | bcr verify > /dev/null
+bcr extract > records.tsv && bcr verify < records.tsv | cmp - records.tsv
 ```
 
 ### verdict

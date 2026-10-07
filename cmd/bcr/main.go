@@ -84,7 +84,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	case "extract":
 		return runExtract(args, stdout, stderr)
 	case "verify":
-		return runVerify(args, stdin, stderr)
+		return runVerify(args, stdin, stdout, stderr)
 	case "verdict":
 		return runVerdict(args, stdin, stdout, stderr)
 	case "links":
