@@ -1,5 +1,5 @@
 // Package manpage turns the Markdown contract of bcr into a man page in
-// roff (TD-0023). It reads the part of Markdown TD-0022 allows: a first
+// roff (ADR-0009). It reads the part of Markdown ADR-0008 allows: a first
 // heading `# name(section)`, `##` and `###` headings, paragraphs, `- `
 // lists, code spans, fenced code blocks and links.
 package manpage

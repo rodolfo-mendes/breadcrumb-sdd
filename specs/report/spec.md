@@ -48,8 +48,6 @@ out.
 printed; a breadcrumb that got none is shown as `not audited`, so the
 page can be made before `bcr audit` runs.
 
-The old `bcr audit-report` stays as it is, for `breadcrumbs/`.
-
 ### Architecture
 
 | Part | Does | Kind (ADR-0007) |
@@ -273,8 +271,6 @@ Exit status:
       file.
 - [x] `docs/bcr.md` describes `bcr report` under `### report`;
       `docs/bcr.1` is generated again.
-- [x] The old `bcr check`, `bcr verdict` and `bcr audit-report`, and
-      their tests, are unchanged.
 - [x] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
 - [x] In this repository,

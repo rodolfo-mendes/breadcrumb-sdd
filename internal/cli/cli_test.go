@@ -2,7 +2,6 @@ package cli
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -64,17 +63,5 @@ func TestParseErrors(t *testing.T) {
 		if _, _, err := Parse(tc.args, flags); err == nil || err.Error() != tc.err {
 			t.Errorf("%q: got error %v, want %q", tc.args, err, tc.err)
 		}
-	}
-}
-
-func TestIDsReadsTheFirstFieldOfEachLineForADash(t *testing.T) {
-	stdin := strings.NewReader("TK-0001\tRefuted\n\nRQ-0002\n  TD-0003  \tx\ty\n")
-	ids, err := IDs([]string{"IN-0001", "-", "IN-0002"}, stdin)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []string{"IN-0001", "TK-0001", "RQ-0002", "TD-0003", "IN-0002"}
-	if !reflect.DeepEqual(ids, want) {
-		t.Errorf("got %q, want %q", ids, want)
 	}
 }

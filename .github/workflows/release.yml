@@ -1,5 +1,5 @@
 # Builds bcr for each supported system and attaches the archives to the
-# GitHub release of a tag (TD-0017).
+# GitHub release of a tag.
 name: Release
 
 on:
@@ -46,10 +46,8 @@ jobs:
             CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
               go build -trimpath -ldflags "-s -w -X main.version=$version" -o "dist/$name/$exe" ./cmd/bcr
             cp LICENSE README.md "dist/$name/"
-            # The man page (TD-0023); tags before it have none.
+            # The man page; tags before it have none.
             if [ -f docs/bcr.1 ]; then cp docs/bcr.1 "dist/$name/"; fi
-            # The specification (RQ-0034); tags before it have none.
-            if [ -f docs/breadcrumb-sdd.md ]; then cp docs/breadcrumb-sdd.md "dist/$name/"; fi
             if [ "$os" = windows ]; then
               (cd dist && zip -qr "$name.zip" "$name")
             else

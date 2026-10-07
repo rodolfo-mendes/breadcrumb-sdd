@@ -50,8 +50,6 @@ Which files make up the set is decided before it, by `bcr extract`'s
 operands or by `.breadcrumbs` (ADR-0014). `bcr verify` checks only the
 integrity of the set; it checks no claim and computes no verdict.
 
-The old `bcr check` stays as it is, for `breadcrumbs/`.
-
 ### Architecture
 
 | Part | Does | Kind (ADR-0007) |
@@ -171,7 +169,6 @@ Exit status:
 - [x] Each Scenario below has a test.
 - [x] `docs/bcr.md` describes `bcr verify` under `### verify`;
       `docs/bcr.1` is generated again.
-- [x] The old `bcr check` and its tests are unchanged.
 - [x] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
 - [x] In this repository, `bcr extract | bcr verify > /dev/null`

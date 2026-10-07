@@ -22,8 +22,7 @@ uses, where their files live, and where it goes beyond ASDLC.
 for adopting ASDLC.
 
 This spec covers how the repository is built, not what Breadcrumb
-does. `bcr`'s behavior defines Breadcrumb, and `docs/breadcrumb-sdd.md`
-describes it. Neither is a feature spec.
+does. `bcr`'s behavior defines Breadcrumb; it is not a feature spec.
 
 ### Architecture
 
@@ -45,8 +44,6 @@ describes it. Neither is a feature spec.
   itself.
 - A PBI whose change is about how the repository is built names this
   spec in its Context.
-- `breadcrumbs/` holds the Intakes, Requirements, Technical Decisions
-  and Tasks written before ADR-0001. `bcr` audits them.
 
 ### Constraints
 

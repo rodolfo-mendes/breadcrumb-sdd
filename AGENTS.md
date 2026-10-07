@@ -17,9 +17,6 @@ This repository is developed with ASDLC
 | Test | `go test ./...` | Go version in `go.mod` |
 | Verify and audit breadcrumbs | `set -o pipefail; go run ./cmd/bcr extract \| go run ./cmd/bcr verify \| go run ./cmd/bcr audit > /dev/null` | `specs/extract/spec.md`, `specs/verify/spec.md`, `specs/audit/spec.md` |
 | Report the breadcrumbs | `go run ./cmd/bcr extract \| go run ./cmd/bcr verify \| go run ./cmd/bcr audit \| go run ./cmd/bcr report` | `specs/report/spec.md` |
-| Check breadcrumbs | `go run ./cmd/bcr check` | `docs/bcr.md` |
-| Audit claims | `go run ./cmd/bcr verdict` | `docs/bcr.md` |
-| Report | `go run ./cmd/bcr audit-report --html` | `docs/bcr.md` |
 | Man page | `go test ./internal/manpage -update` | Run after any change to `docs/bcr.md` |
 
 ## Judgment Boundaries
@@ -34,11 +31,9 @@ This repository is developed with ASDLC
 **ASK**
 - Before setting an ADR to Accepted.
 - Before changing a spec's Contract beyond what the PBI asks for.
-- Before changing the method specification.
 - Before adding a Go module outside the standard library. Each
   module `bcr` requires directly is introduced by its own ADR
   ([ADR-0005](docs/adrs/ADR-0005-dependencies-enter-through-adr.md)).
-- Before deleting a file in `breadcrumbs/`.
 
 **ALWAYS**
 - Read the feature's spec and the PBI before changing its code.
@@ -46,16 +41,12 @@ This repository is developed with ASDLC
   describes.
 - Give a new ADR, PBI or spec a breadcrumb in its front matter, as
   [ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md) describes.
-- When `docs/breadcrumb-sdd.md` and `bcr` disagree, report it as
-  drift; `bcr`'s behavior holds until one of them is fixed.
 
 ## Context Map
 
 ```yaml
 ARCHITECTURE.md: describes the high-level design of Breadcrumb and the `bcr` command
-docs/breadcrumb-sdd.md: describes Breadcrumb as bcr carries it out; not a feature spec
 docs/bcr.md: the user documentation of bcr; docs/bcr.1 is generated from it
-internal/breadcrumb: the model of Breadcrumb in bcr
 internal/crumb: the core of the front matter breadcrumbs; knows no file format (ADR-0013)
 internal/frontmatter: reads a breadcrumb from a file's YAML front matter for internal/crumb
 internal/fileset: reads .breadcrumbs and finds the files it names; infrastructure (ADR-0014)
@@ -66,5 +57,4 @@ internal/page: writes the page bcr report prints; the only package that knows it
 specs/: feature specs, one directory per feature; each command of bcr is a feature
 tasks/: PBIs, closed after merge and kept
 docs/adrs/: decisions, from ADR-0001 on
-breadcrumbs/: intakes, requirements, decisions and tasks from before ADR-0001; still audited by bcr
 ```

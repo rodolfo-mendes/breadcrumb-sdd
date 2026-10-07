@@ -54,8 +54,6 @@ Standard error does not travel down a pipe, so each problem this
 command finds is printed as a record too, for the stages after it
 (ADR-0021).
 
-`bcr extract` replaces the old `bcr list`, which read `breadcrumbs/`.
-
 ### Architecture
 
 | Part | Does | Kind (ADR-0007) |

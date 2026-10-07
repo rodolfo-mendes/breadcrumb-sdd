@@ -49,9 +49,6 @@ Claims are checked against the working tree, uncommitted changes
 included (ADR-0023). `bcr audit` runs no command and follows no link
 out of the repository: it only reads the files the claims name.
 
-The old `bcr verdict` and `bcr audit-report` stay as they are, for
-`breadcrumbs/`.
-
 ### Architecture
 
 | Part | Does | Kind (ADR-0007) |
@@ -200,8 +197,6 @@ Exit status (ADR-0023):
 - [x] Each Scenario below has a test.
 - [x] `docs/bcr.md` describes `bcr audit` under `### audit`;
       `docs/bcr.1` is generated again.
-- [x] The old `bcr check`, `bcr verdict` and `bcr audit-report`, and
-      their tests, are unchanged.
 - [x] `go list -f '{{.Imports}}'` on the core's packages lists only
       the standard library and other core packages.
 - [x] In this repository,

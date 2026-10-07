@@ -1,11 +1,9 @@
 // Package cli reads the command line of bcr: getopt-style flags
-// (RQ-0011, TD-0021) and breadcrumbs from standard input (RQ-0012).
+// (ADR-0006).
 package cli
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -26,7 +24,7 @@ func (f Flag) name() string {
 }
 
 // Parse reads the flags in args and returns them with the operands
-// that follow. Flags come before operands (TD-0020): the first operand,
+// that follow. Flags come before operands (ADR-0006): the first operand,
 // or `--`, ends them. A flag given more than once keeps its last value;
 // a flag with no value maps to "".
 func Parse(args []string, flags []Flag) (map[string]string, []string, error) {
@@ -98,28 +96,4 @@ func findShort(flags []Flag, c rune) (Flag, bool) {
 		}
 	}
 	return Flag{}, false
-}
-
-// IDs returns the breadcrumbs named by operands, reading them from stdin
-// where an operand is `-`: one per line, the id being the line's first
-// tab-separated field (RQ-0012). Blank lines are skipped.
-func IDs(operands []string, stdin io.Reader) ([]string, error) {
-	var ids []string
-	for _, op := range operands {
-		if op != "-" {
-			ids = append(ids, op)
-			continue
-		}
-		s := bufio.NewScanner(stdin)
-		for s.Scan() {
-			id, _, _ := strings.Cut(s.Text(), "\t")
-			if id = strings.TrimSpace(id); id != "" {
-				ids = append(ids, id)
-			}
-		}
-		if err := s.Err(); err != nil {
-			return nil, err
-		}
-	}
-	return ids, nil
 }

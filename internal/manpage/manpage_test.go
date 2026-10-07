@@ -10,7 +10,7 @@ import (
 var update = flag.Bool("update", false, "write docs/bcr.1 again from docs/bcr.md")
 
 // TestTheManPageIsUpToDate fails when docs/bcr.1 is not what docs/bcr.md
-// generates (TD-0023).
+// generates (ADR-0009).
 func TestTheManPageIsUpToDate(t *testing.T) {
 	md, err := os.ReadFile("../../docs/bcr.md")
 	if err != nil {
@@ -43,14 +43,14 @@ func TestConvert(t *testing.T) {
 		"bcr - the toolkit,",
 		"on two lines.",
 		"",
-		"### audit-report",
+		"### report",
 		"",
 		"- `--html`: write",
 		"  HTML.",
-		"- see [TD-0020](../breadcrumbs/TD-0020.md) and [spec](https://example.com/a-b)",
+		"- see [ADR-0006](../docs/adrs/ADR-0006-bcr-follows-posix-conventions.md) and [spec](https://example.com/a-b)",
 		"",
 		"```",
-		"bcr audit-report --html",
+		"bcr report",
 		".not a request",
 		"```",
 		"",
@@ -61,15 +61,15 @@ func TestConvert(t *testing.T) {
 		`.SH "NAME"`,
 		`.PP`,
 		`bcr \- the toolkit, on two lines.`,
-		`.SS "audit\-report"`,
+		`.SS "report"`,
 		`.IP \(bu 2`,
 		`\fB\-\-html\fR: write HTML.`,
 		`.IP \(bu 2`,
-		`see TD\-0020 and spec <https://example.com/a\-b>`,
+		`see ADR\-0006 and spec <https://example.com/a\-b>`,
 		`.PP`,
 		`.RS 4`,
 		`.nf`,
-		`bcr audit\-report \-\-html`,
+		`bcr report`,
 		`\&.not a request`,
 		`.fi`,
 		`.RE`,

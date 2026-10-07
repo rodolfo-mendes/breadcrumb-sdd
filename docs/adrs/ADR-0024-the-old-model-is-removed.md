@@ -9,7 +9,7 @@ breadcrumb:
 ---
 # ADR-0024: The old model is removed
 
-Status: Accept
+Status: Accepted
 Date: 2026-10-07
 
 ## Context
