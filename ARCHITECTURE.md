@@ -94,12 +94,15 @@ stage's status, such as `bcr audit`'s 1 for a Refuted claim, runs with
 | Data | Turn files into records | `extract` | Done |
 | Meaning | Judge the records | `verify`, `audit` | Done: the integrity of the graph, and claims |
 | Presentation | Show the records to a person | `report` | Done |
+| Setup | Set a repository up for the pipe | `init` | Done ([`specs/init`](specs/init/spec.md)) |
 | Feedback | Tell an author what is wrong, printing only problems | Not named | Reserved |
 | Queries | Answer questions about the records | Not named | Open: a filter over the records may be enough |
 | Cache | Store the records in `.bcr/` | `build` | Deferred |
 
 A new command takes its name from what its family does: `extract`
-produces data, `verify` and `audit` judge it, `report` shows it.
+produces data, `verify` and `audit` judge it, `report` shows it, and
+`init` sets the pipe up. `init` reads no breadcrumb and no record, so
+nothing of it is in the core.
 
 ## Rules every command follows
 
@@ -149,9 +152,6 @@ produces data, `verify` and `audit` judge it, `report` shows it.
 
 ## What comes next
 
-1. Write `bcr init` again for this model, so that a repository can
-   adopt it with one command.
-2. Run the whole pipe in CI, and keep the report of each run.
-3. Release the new model as v0.8.0.
-4. Queries, as a command only where a filter over the records is not
+1. Release the new model as v0.8.0.
+2. Queries, as a command only where a filter over the records is not
    enough.

@@ -33,7 +33,8 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		{[]string{"links"}, usage},
 		{[]string{"new", "PBI", "A title"}, usage},
 		{[]string{"spec"}, usage},
-		{[]string{"init"}, usage},
+		// bcr init came back, with its own usage (specs/init/spec.md).
+		{[]string{"init", "-x"}, initUsage},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {

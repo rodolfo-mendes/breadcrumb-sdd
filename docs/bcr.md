@@ -11,6 +11,7 @@ bcr extract [FILE...]
 bcr verify
 bcr audit
 bcr report
+bcr init [-a FILE]
 ```
 
 ## DESCRIPTION
@@ -27,7 +28,8 @@ matter of its files and prints them as records. `bcr verify` checks
 the set of breadcrumbs, `bcr audit` checks their claims against the
 repository's files, and `bcr report` writes a page of what the pipe
 found. Each stage reads the records of the one before it from
-standard input. Run it from the root of the repository.
+standard input. `bcr init` sets a repository up for the pipe. Run
+`bcr` from the root of the repository.
 
 This document is the user documentation of `bcr`: its commands,
 flags, inputs, outputs and exit codes. Where it and a command's spec
@@ -37,11 +39,10 @@ Every command follows the same conventions (ADR-0006):
 
 - It is run as `bcr COMMAND [FLAGS] [OPERANDS]`. Flags come before
   operands; the first operand, or `--`, ends them.
-- No command takes a flag yet. A flag a command takes will be in
-  getopt style: a short flag is one letter, such as `-a`, and short
-  flags can be combined, as in `-ab`; a long flag is a name, such as
-  `--output`. A flag's value follows it: `-x VALUE`, `-xVALUE`,
-  `--name=VALUE` or `--name VALUE`.
+- Flags are in getopt style: a short flag is one letter, such as
+  `-a`, and short flags can be combined, as in `-ab`; a long flag is a
+  name, such as `--agents-file`. A flag's value follows it:
+  `-x VALUE`, `-xVALUE`, `--name=VALUE` or `--name VALUE`.
 - Results go to standard output, and nothing else does. Messages go to
   standard error and start with `bcr: `. A usage error is followed by
   the usage line.
@@ -517,6 +518,74 @@ set -o pipefail; bcr extract | bcr verify | bcr audit | bcr report > report.md
 bcr extract | bcr report
 ```
 
+### init
+
+```
+bcr init [-a FILE]
+```
+
+Sets up the repository whose root is the current directory for the
+pipe. It writes no breadcrumb: which files carry breadcrumbs, and
+what they are, is the repository's choice. Each of three pieces is
+set up only when it is not there yet, found by its name:
+
+- `.breadcrumbs`, holding only comments: what a pattern is, and
+  example patterns, commented out. Until a pattern is written in it,
+  `bcr extract` reads no file, and the pipe exits 0 with a page that
+  says `No breadcrumbs.`.
+- A `## Breadcrumbs` section for agents in the agents file, saying
+  where breadcrumbs live, to run the pipe before committing, and never
+  to edit a claim to turn a `Refuted` verdict green. It is added at the
+  end of the file, after an empty line, when the file has no line
+  `## Breadcrumbs`; a file that is not there is written with the
+  section alone.
+- `.github/workflows/breadcrumbs.yml`, a GitHub Actions workflow that,
+  on each push and pull request, installs this release of `bcr` from
+  its Linux archive, checked against the release's checksums, runs
+  the pipe under `set -o pipefail`, and puts the page `bcr report`
+  writes in the job's summary and in an artifact of the run.
+
+Flags:
+
+- `-a FILE`, `--agents-file FILE`: the agents file, a path from the
+  root of the repository, such as `CLAUDE.md`. Without it,
+  `AGENTS.md`. A path that starts with `/` or has a part that is `..`
+  is a usage error.
+
+Operands: none.
+
+Standard input: not read.
+
+Output: on standard output, the path of each file written or added
+to, one per line, in the order above. On standard error, a message for
+each piece that was already there, and is left as it is.
+
+`bcr init` replaces no file, and changes no file but the agents file,
+by adding its section at the end. It finds what to write before it
+writes anything. The workflow installs the release of `bcr` that wrote
+it, so `bcr init` needs a released `bcr`: one built with `go run`, or
+with no release version, exits 2 and writes nothing.
+
+On a CI other than GitHub Actions, the same check is:
+
+```
+set -o pipefail; bcr extract | bcr verify | bcr audit > /dev/null
+```
+
+Exit status:
+
+- 0: every piece is in place, set up now or before.
+- 2: `bcr init` was used wrongly, this `bcr` has no release version,
+  the agents file is not a regular file, or a file could not be read
+  or written.
+
+Examples:
+
+```
+bcr init
+bcr init -a CLAUDE.md
+```
+
 ## EXIT STATUS
 
 Every command exits with (ADR-0006):
@@ -525,7 +594,8 @@ Every command exits with (ADR-0006):
 - 1: it ran and found something wrong in the breadcrumbs.
 - 2: it was used wrongly, or could not run.
 
-`bcr report` judges nothing, so it exits only with 0 or 2.
+`bcr report` and `bcr init` judge nothing, so they exit only with 0 or
+2.
 
 ## SEE ALSO
 

@@ -68,8 +68,18 @@ breadcrumb, and every push audits them.
 go install github.com/rodolfo-mendes/breadcrumb-sdd/cmd/bcr@latest
 ```
 
-In the root of a repository, list the files that carry breadcrumbs in
-`.breadcrumbs`, one pattern per line:
+In the root of a repository, set it up:
+
+```
+bcr init
+```
+
+It writes a `.breadcrumbs` file, a section for agents in `AGENTS.md`
+(or the file `-a` names), and a GitHub Actions workflow that runs the
+pipe on each change with the same release of `bcr`, so it needs a
+released `bcr`, not one run with `go run`. It replaces nothing, and
+writes no breadcrumb. Next, list the files that carry breadcrumbs in
+`.breadcrumbs`, one pattern per line, such as:
 
 ```
 docs/adrs/*.md

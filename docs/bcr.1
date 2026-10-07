@@ -10,6 +10,7 @@ bcr extract [FILE...]
 bcr verify
 bcr audit
 bcr report
+bcr init [\-a FILE]
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -22,7 +23,7 @@ bcr extract | bcr verify | bcr audit | bcr report
 .fi
 .RE
 .PP
-\fBbcr extract\fR reads the breadcrumbs of a repository from the front matter of its files and prints them as records. \fBbcr verify\fR checks the set of breadcrumbs, \fBbcr audit\fR checks their claims against the repository's files, and \fBbcr report\fR writes a page of what the pipe found. Each stage reads the records of the one before it from standard input. Run it from the root of the repository.
+\fBbcr extract\fR reads the breadcrumbs of a repository from the front matter of its files and prints them as records. \fBbcr verify\fR checks the set of breadcrumbs, \fBbcr audit\fR checks their claims against the repository's files, and \fBbcr report\fR writes a page of what the pipe found. Each stage reads the records of the one before it from standard input. \fBbcr init\fR sets a repository up for the pipe. Run \fBbcr\fR from the root of the repository.
 .PP
 This document is the user documentation of \fBbcr\fR: its commands, flags, inputs, outputs and exit codes. Where it and a command's spec disagree, the spec is right (ADR\-0008).
 .PP
@@ -30,7 +31,7 @@ Every command follows the same conventions (ADR\-0006):
 .IP \(bu 2
 It is run as \fBbcr COMMAND [FLAGS] [OPERANDS]\fR. Flags come before operands; the first operand, or \fB\-\-\fR, ends them.
 .IP \(bu 2
-No command takes a flag yet. A flag a command takes will be in getopt style: a short flag is one letter, such as \fB\-a\fR, and short flags can be combined, as in \fB\-ab\fR; a long flag is a name, such as \fB\-\-output\fR. A flag's value follows it: \fB\-x VALUE\fR, \fB\-xVALUE\fR, \fB\-\-name=VALUE\fR or \fB\-\-name VALUE\fR.
+Flags are in getopt style: a short flag is one letter, such as \fB\-a\fR, and short flags can be combined, as in \fB\-ab\fR; a long flag is a name, such as \fB\-\-agents\-file\fR. A flag's value follows it: \fB\-x VALUE\fR, \fB\-xVALUE\fR, \fB\-\-name=VALUE\fR or \fB\-\-name VALUE\fR.
 .IP \(bu 2
 Results go to standard output, and nothing else does. Messages go to standard error and start with \fBbcr: \fR. A usage error is followed by the usage line.
 .IP \(bu 2
@@ -370,6 +371,56 @@ set \-o pipefail; bcr extract | bcr verify | bcr audit | bcr report > report.md
 bcr extract | bcr report
 .fi
 .RE
+.SS "init"
+.PP
+.RS 4
+.nf
+bcr init [\-a FILE]
+.fi
+.RE
+.PP
+Sets up the repository whose root is the current directory for the pipe. It writes no breadcrumb: which files carry breadcrumbs, and what they are, is the repository's choice. Each of three pieces is set up only when it is not there yet, found by its name:
+.IP \(bu 2
+\fB.breadcrumbs\fR, holding only comments: what a pattern is, and example patterns, commented out. Until a pattern is written in it, \fBbcr extract\fR reads no file, and the pipe exits 0 with a page that says \fBNo breadcrumbs.\fR.
+.IP \(bu 2
+A \fB## Breadcrumbs\fR section for agents in the agents file, saying where breadcrumbs live, to run the pipe before committing, and never to edit a claim to turn a \fBRefuted\fR verdict green. It is added at the end of the file, after an empty line, when the file has no line \fB## Breadcrumbs\fR; a file that is not there is written with the section alone.
+.IP \(bu 2
+\fB.github/workflows/breadcrumbs.yml\fR, a GitHub Actions workflow that, on each push and pull request, installs this release of \fBbcr\fR from its Linux archive, checked against the release's checksums, runs the pipe under \fBset \-o pipefail\fR, and puts the page \fBbcr report\fR writes in the job's summary and in an artifact of the run.
+.PP
+Flags:
+.IP \(bu 2
+\fB\-a FILE\fR, \fB\-\-agents\-file FILE\fR: the agents file, a path from the root of the repository, such as \fBCLAUDE.md\fR. Without it, \fBAGENTS.md\fR. A path that starts with \fB/\fR or has a part that is \fB..\fR is a usage error.
+.PP
+Operands: none.
+.PP
+Standard input: not read.
+.PP
+Output: on standard output, the path of each file written or added to, one per line, in the order above. On standard error, a message for each piece that was already there, and is left as it is.
+.PP
+\fBbcr init\fR replaces no file, and changes no file but the agents file, by adding its section at the end. It finds what to write before it writes anything. The workflow installs the release of \fBbcr\fR that wrote it, so \fBbcr init\fR needs a released \fBbcr\fR: one built with \fBgo run\fR, or with no release version, exits 2 and writes nothing.
+.PP
+On a CI other than GitHub Actions, the same check is:
+.PP
+.RS 4
+.nf
+set \-o pipefail; bcr extract | bcr verify | bcr audit > /dev/null
+.fi
+.RE
+.PP
+Exit status:
+.IP \(bu 2
+0: every piece is in place, set up now or before.
+.IP \(bu 2
+2: \fBbcr init\fR was used wrongly, this \fBbcr\fR has no release version, the agents file is not a regular file, or a file could not be read or written.
+.PP
+Examples:
+.PP
+.RS 4
+.nf
+bcr init
+bcr init \-a CLAUDE.md
+.fi
+.RE
 .SH "EXIT STATUS"
 .PP
 Every command exits with (ADR\-0006):
@@ -380,7 +431,7 @@ Every command exits with (ADR\-0006):
 .IP \(bu 2
 2: it was used wrongly, or could not run.
 .PP
-\fBbcr report\fR judges nothing, so it exits only with 0 or 2.
+\fBbcr report\fR and \fBbcr init\fR judge nothing, so they exit only with 0 or 2.
 .SH "SEE ALSO"
 .PP
 The method: \fBREADME.md\fR. How the repository is developed: \fBCONTRIBUTING.md\fR.
