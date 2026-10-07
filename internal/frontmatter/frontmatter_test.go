@@ -189,3 +189,95 @@ func TestYAMLOutsideThePartADR0002Allows(t *testing.T) {
 	}
 	broken(t, file("---", "breadcrumb: &b", "  id: X", "---"), 2)
 }
+
+// claims returns a file whose breadcrumb has entries as its claims,
+// the first on line 6.
+func claims(entries ...string) []byte {
+	lines := []string{"---", "breadcrumb:", "  id: X", "  type: T", "  claims:"}
+	for _, e := range entries {
+		lines = append(lines, "    - "+e)
+	}
+	return file(append(lines, "---")...)
+}
+
+// droppedLines returns the line of each problem in b.Dropped.
+func droppedLines(b Breadcrumb) []int {
+	var got []int
+	for _, p := range b.Dropped {
+		got = append(got, p.Line)
+	}
+	return got
+}
+
+func TestAClaimIsReadWithoutItsQuotes(t *testing.T) {
+	b := read(t, claims(
+		"'docs/bcr.md has-line ### verify'",
+		"'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'  ",
+		"'cmd/bcr/main.go has-line return fmt.Sprintf(''%s'', id)'",
+		"''",
+	))
+	want := crumb.Property{Kind: crumb.ListValue, Line: 5, Entries: []crumb.Entry{
+		{Text: "docs/bcr.md has-line ### verify", Line: 6},
+		{Text: "docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted", Line: 7},
+		{Text: "cmd/bcr/main.go has-line return fmt.Sprintf('%s', id)", Line: 8},
+		{Text: "", Line: 9},
+	}}
+	if got := b.Properties["claims"]; !reflect.DeepEqual(got, want) || b.Dropped != nil {
+		t.Errorf("got %+v, dropped %v\nwant %+v", got, b.Dropped, want)
+	}
+}
+
+func TestAClaimOutsideTheFormatIsDroppedOnItsOwn(t *testing.T) {
+	for _, c := range []struct{ name, entry string }{
+		{"plain", "docs/bcr.md has-line verify"},
+		{"plain, cut by a comment", "docs/bcr.md has-line ### verify"},
+		{"plain, read as a map", "docs/bcr.md has-line Status: Accepted"},
+		{"double quotes", `"docs/bcr.md has-line ### verify"`},
+		{"comment", "'docs/bcr.md has-line ### verify' # why"},
+		{"empty", ""},
+		{"literal", "|\n      docs/bcr.md has-line x"},
+		{"over two lines", "'docs/bcr.md has-line\n      x'"},
+		{"anchor", "&a 'docs/bcr.md has-line x'"},
+		{"tag", "!!str 'docs/bcr.md has-line x'"},
+		{"list", "- 'docs/bcr.md has-line x'"},
+		{"flow list", "['docs/bcr.md has-line x']"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			b := read(t, claims("'a.md has-line first'", c.entry, "'a.md has-line last'"))
+			if got := droppedLines(b); !reflect.DeepEqual(got, []int{7}) {
+				t.Errorf("dropped at lines %v, want line 7: %v", got, b.Dropped)
+			}
+			var texts []string
+			for _, e := range b.Properties["claims"].Entries {
+				texts = append(texts, e.Text)
+			}
+			if want := []string{"a.md has-line first", "a.md has-line last"}; !reflect.DeepEqual(texts, want) {
+				t.Errorf("got entries %q, want %q", texts, want)
+			}
+			if b.Properties["id"].Text != "X" {
+				t.Errorf("got %+v, want the rest of the breadcrumb", b.Properties)
+			}
+		})
+	}
+}
+
+func TestSingleQuotesAreAllowedOnlyInTheEntriesOfClaims(t *testing.T) {
+	broken(t, file("---", "breadcrumb:", "  id: X", "  claims: 'a.md has-line x'", "---"), 4)
+	broken(t, file("---", "breadcrumb:", "  id: X", "  'claims':", "    - 'a.md has-line x'", "---"), 4)
+	broken(t, file("---", "breadcrumb:", "  id: X", "  links:", "    - 'implements Y'", "---"), 5)
+}
+
+func TestADroppedClaimIsAProblemWhenThereIsNoBreadcrumb(t *testing.T) {
+	broken(t, file("---", "breadcrumb:", "  id: X", "  claims:", "    - a.md has-line x", "  type: 'T'", "---"), 5, 6)
+}
+
+func TestAnEmptyListOfClaims(t *testing.T) {
+	b := read(t, file("---", "breadcrumb:", "  id: X", "  claims: []", "---"))
+	if want := (crumb.Property{Kind: crumb.ListValue, Line: 4}); !reflect.DeepEqual(b.Properties["claims"], want) {
+		t.Errorf("got %+v, want %+v", b.Properties["claims"], want)
+	}
+	b = read(t, file("---", "breadcrumb:", "  id: X", "  claims:", "---"))
+	if want := (crumb.Property{Kind: crumb.NoValue, Line: 4}); !reflect.DeepEqual(b.Properties["claims"], want) {
+		t.Errorf("got %+v, want %+v", b.Properties["claims"], want)
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/cli"
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/crumb"
@@ -81,23 +82,27 @@ func namedFiles(stderr io.Writer) ([]string, int) {
 }
 
 // extract prints the records of the breadcrumb in src, the text of the
-// file at path, or its problems as PATH:LINE: MESSAGE. It reports
-// whether the file has no problem.
+// file at path, and its problems as PATH:LINE: MESSAGE, in order of
+// line. A problem in a claim drops only that claim: the other records
+// are still printed (ADR-0017). It reports whether the file has no
+// problem.
 func extract(path string, src []byte, stdout, stderr io.Writer) bool {
 	fm, found, problems := frontmatter.Read(src)
 	if !found {
 		return true
 	}
 	var b crumb.Breadcrumb
-	if problems == nil {
-		b, problems = crumb.Read(fm.Line, fm.Properties)
+	ok := problems == nil
+	if ok {
+		b, ok, problems = crumb.Read(fm.Line, fm.Properties)
+		problems = append(fm.Dropped, problems...)
+		sort.SliceStable(problems, func(i, j int) bool { return problems[i].Line < problems[j].Line })
 	}
 	for _, p := range problems {
 		fmt.Fprintf(stderr, "%s:%d: %s\n", path, p.Line, p.Message)
 	}
-	if len(problems) > 0 {
-		return false
+	if ok {
+		records.Write(stdout, path, b)
 	}
-	records.Write(stdout, path, b)
-	return true
+	return len(problems) == 0
 }

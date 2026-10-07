@@ -1,10 +1,11 @@
 // Package records writes and reads the records bcr extract prints:
-// one line for each breadcrumb and each link, its fields separated by
-// a tab (ADR-0011). It is the only package that knows this format; the
-// core does not use it (ADR-0013).
+// one line for each breadcrumb, each link and each claim, its fields
+// separated by a tab (ADR-0011). It is the only package that knows
+// this format; the core does not use it (ADR-0013).
 //
 //	breadcrumb	ID	TYPE	PATH	LINE
 //	link	ID	VERB	OBJECT	PATH	LINE
+//	claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 package records
 
 import (
@@ -25,17 +26,23 @@ const (
 	breadcrumbFields = 5
 	linkKind         = "link"
 	linkFields       = 6
+	claimKind        = "claim" // written, and skipped by Read
 )
 
 // Write writes the records of b, the breadcrumb of the file at path:
-// its breadcrumb record, then a link record for each of its links, in
-// the order written.
+// its breadcrumb record, then a link record for each of its links and
+// a claim record for each of its claims, each in the order written.
 func Write(w io.Writer, path string, b crumb.Breadcrumb) error {
 	if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\n", breadcrumbKind, b.ID, b.Type, path, b.Line); err != nil {
 		return err
 	}
 	for _, l := range b.Links {
 		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\n", linkKind, b.ID, l.Verb, l.Object, path, l.Line); err != nil {
+			return err
+		}
+	}
+	for _, c := range b.Claims {
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%d\n", claimKind, b.ID, c.Kind, c.Target, c.Argument, path, c.Line); err != nil {
 			return err
 		}
 	}

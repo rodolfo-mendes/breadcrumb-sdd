@@ -223,11 +223,13 @@ Standard input: not read.
 
 Output: for a file with a valid breadcrumb, one `breadcrumb` record on
 standard output, then one `link` record for each entry of its
-`links`, in the order written. Fields are separated by a tab:
+`links`, then one `claim` record for each valid entry of its `claims`,
+each in the order written. Fields are separated by a tab:
 
 ```
 breadcrumb	ID	TYPE	PATH	LINE
 link	ID	VERB	OBJECT	PATH	LINE
+claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 ```
 
 `PATH` is the file as given, or, with no operand, its path from the
@@ -236,6 +238,14 @@ record was written, counted from 1: for a `breadcrumb` record, the
 line of its `id`; for a `link` record, the line of its entry. In a
 `link` record, `ID` is the id of the breadcrumb the link belongs to,
 and `VERB` and `OBJECT` are the two words of its entry.
+
+In a `claim` record, `ID` is the id of the breadcrumb the claim
+belongs to, and `LINE` the line of its entry. `TARGET`, `KIND` and
+`ARGUMENT` are the three parts of the entry, without its quotes:
+`TARGET` is the file the claim is about, and `PATH` the file the claim
+is written in. `ARGUMENT` may hold spaces, but no tab. `bcr extract`
+does not open `TARGET`: a claim about a file that does not exist is
+printed like any other.
 
 Select records by their first field, and read their fields by
 position: new kinds of record may be added, and new fields may be
@@ -256,6 +266,45 @@ order of line:
 PATH:LINE: MESSAGE
 ```
 
+A breadcrumb may also have `claims`, a list of statements about the
+repository's files. `claims` may be left out, and `claims: []` means
+the same; a `claims` with no list is a problem like any other, and the
+file prints no records. Each entry is written on one line, in single
+quotes, as `TARGET KIND ARGUMENT`, with a `'` inside it written `''`:
+
+```
+breadcrumb:
+  id: verify
+  type: spec
+  links:
+    - follows ADR-0016
+  claims:
+    - 'docs/bcr.md has-line ### verify'
+```
+
+`TARGET` is a path from the root of the repository, with `/` between
+its parts. The only `KIND` is `has-line`: its `ARGUMENT` is the text a
+line of `TARGET` must equal, once the spaces and tabs at the line's
+start and end are removed.
+
+A problem in an entry of `claims` drops only that claim: it is written
+to standard error, the breadcrumb's record, its links and its other
+claims are still printed, and the exit status is 1. No record says a
+claim was dropped. An entry has a problem when:
+
+- it is not in single quotes, has a comment after it on its line, or
+  is written in any other way the breadcrumb's part of YAML does not
+  allow, such as over several lines;
+- it has fewer than three parts, or a part is separated from the next
+  by anything other than one space;
+- its `TARGET` starts with `/`, has a part that is `..`, or holds
+  white space;
+- its `KIND` is not `has-line`;
+- its `has-line` text is empty, starts or ends with a space or a tab,
+  or holds a tab.
+
+One problem is written for each such entry.
+
 A file or a directory that cannot be read is written to standard
 error as a message starting `bcr: `. The other files are still read.
 
@@ -274,6 +323,7 @@ Examples:
 bcr extract
 git ls-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut -f2,4
+bcr extract | grep '^claim' | cut -f4,5
 ```
 
 ### verify

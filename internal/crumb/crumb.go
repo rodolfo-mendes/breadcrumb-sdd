@@ -4,7 +4,8 @@
 // Whatever reads a file gives the core a breadcrumb as it is written:
 // a Property for each name, holding text or a list of Entries, each
 // value as the text written, with its line. Read returns a Breadcrumb
-// that follows every rule, or the Problems that stop it.
+// that follows every rule, or the Problems that stop it. A claim that
+// breaks a rule is left out on its own (ADR-0017).
 package crumb
 
 import (
@@ -45,6 +46,8 @@ type Breadcrumb struct {
 	Type  string
 	Line  int    // the line of its id, counted from 1
 	Links []Link // in the order written
+	// Claims holds the claims that broke no rule, in the order written.
+	Claims []Claim
 }
 
 // Link is one entry of a breadcrumb's links: a verb and the id of the
@@ -55,6 +58,16 @@ type Link struct {
 	Line   int
 }
 
+// Claim is one entry of a breadcrumb's claims: a statement of a kind,
+// with its argument, about the file at Target (ADR-0017). Whether the
+// target supports it is not known here.
+type Claim struct {
+	Target   string // a path from the root of the repository, with / between its parts
+	Kind     string
+	Argument string // as written, byte for byte
+	Line     int
+}
+
 // Problem is a rule a breadcrumb breaks, at the line where it does.
 type Problem struct {
 	Line    int // counted from 1
@@ -62,28 +75,39 @@ type Problem struct {
 }
 
 // Read builds the breadcrumb whose properties are props, written at
-// line. It returns the breadcrumb, or, when a rule is broken, no
-// breadcrumb and every problem, in order of line. Properties other
-// than id, type and links are not read.
-func Read(line int, props map[string]Property) (Breadcrumb, []Problem) {
+// line. ok is false when id, type, links or the claims key breaks a
+// rule: there is then no breadcrumb. A claim that breaks a rule is
+// dropped, and the breadcrumb is built without it (ADR-0017). problems
+// holds every problem of both kinds, in order of line. Properties
+// other than id, type, links and claims are not read.
+func Read(line int, props map[string]Property) (b Breadcrumb, ok bool, problems []Problem) {
 	var r reader
 	id, idOK := r.word(line, props, "id")
 	typ, _ := r.word(line, props, "type")
 	links := r.links(line, props, id, idOK)
-	if len(r.problems) > 0 {
-		sort.SliceStable(r.problems, func(i, j int) bool { return r.problems[i].Line < r.problems[j].Line })
-		return Breadcrumb{}, r.problems
+	claims := r.claims(props)
+	ok = len(r.problems) == 0
+	problems = append(r.problems, r.dropped...)
+	sort.SliceStable(problems, func(i, j int) bool { return problems[i].Line < problems[j].Line })
+	if !ok {
+		return Breadcrumb{}, false, problems
 	}
-	return Breadcrumb{ID: id, Type: typ, Line: props["id"].Line, Links: links}, nil
+	return Breadcrumb{ID: id, Type: typ, Line: props["id"].Line, Links: links, Claims: claims}, true, problems
 }
 
 // reader gathers the problems of one breadcrumb.
 type reader struct {
-	problems []Problem
+	problems []Problem // those that leave no breadcrumb
+	dropped  []Problem // those of the claims left out
 }
 
 func (r *reader) report(line int, format string, args ...any) {
 	r.problems = append(r.problems, Problem{Line: line, Message: fmt.Sprintf(format, args...)})
+}
+
+// drop adds the problem of a claim that is left out.
+func (r *reader) drop(line int, format string, args ...any) {
+	r.dropped = append(r.dropped, Problem{Line: line, Message: fmt.Sprintf(format, args...)})
 }
 
 // word reads a property whose value is one word, such as id and type
@@ -141,4 +165,85 @@ func (r *reader) links(line int, props map[string]Property, id string, idOK bool
 		links = append(links, l)
 	}
 	return links
+}
+
+// claimKinds holds the kinds of claim the core knows. Each checks an
+// argument, and returns what is wrong with it, or "". The only kind is
+// has-line (ADR-0019).
+var claimKinds = map[string]func(argument string) string{
+	"has-line": hasLineArgument,
+}
+
+// hasLineArgument checks the argument of a has-line claim: the text a
+// line of the target must equal once the spaces and tabs at its start
+// and end are removed (ADR-0019). No line can equal a text that is
+// empty, or that starts or ends with a space or a tab; a tab would
+// also break the record the claim is printed as.
+func hasLineArgument(text string) string {
+	switch {
+	case text == "":
+		return "has no text after has-line"
+	case strings.ContainsRune(text, '\t'):
+		return "has a tab in its text; no has-line text may hold one"
+	case strings.HasPrefix(text, " ") || strings.HasSuffix(text, " "):
+		return "has a text that starts or ends with a space; no line can equal it"
+	}
+	return ""
+}
+
+// claims reads the claims of the breadcrumb. claims is optional
+// (ADR-0018). An entry is TARGET KIND ARGUMENT, one space apart, and
+// one that breaks a rule is dropped with one problem (ADR-0017).
+func (r *reader) claims(props map[string]Property) []Claim {
+	p, ok := props["claims"]
+	switch {
+	case !ok:
+		return nil
+	case p.Kind == NoValue:
+		r.report(p.Line, "claims has no list; leave it out, or write an empty list")
+		return nil
+	case p.Kind == TextValue:
+		r.report(p.Line, "claims is text; it must be a list")
+		return nil
+	}
+	var claims []Claim
+	for _, e := range p.Entries {
+		target, rest, _ := strings.Cut(e.Text, " ")
+		kind, argument, three := strings.Cut(rest, " ")
+		check, known := claimKinds[kind]
+		switch {
+		case !three || target == "" || kind == "":
+			r.drop(e.Line, "claim %q must be a target, a kind and an argument, with one space between them", e.Text)
+			continue
+		case strings.HasPrefix(target, "/"):
+			r.drop(e.Line, "claim %q has a target that starts with /; it must be a path from the root of the repository", e.Text)
+			continue
+		case hasPart(target, ".."):
+			r.drop(e.Line, "claim %q has a target with a part that is ..", e.Text)
+			continue
+		case strings.IndexFunc(target, unicode.IsSpace) >= 0:
+			r.drop(e.Line, "claim %q has a target with white space", e.Text)
+			continue
+		case !known:
+			r.drop(e.Line, "claim %q has kind %q, which bcr does not know; the only kind is has-line", e.Text, kind)
+			continue
+		}
+		if why := check(argument); why != "" {
+			r.drop(e.Line, "claim %q %s", e.Text, why)
+			continue
+		}
+		claims = append(claims, Claim{Target: target, Kind: kind, Argument: argument, Line: e.Line})
+	}
+	return claims
+}
+
+// hasPart reports whether part is one of the parts of path, which has
+// / between them.
+func hasPart(path, part string) bool {
+	for _, p := range strings.Split(path, "/") {
+		if p == part {
+			return true
+		}
+	}
+	return false
 }

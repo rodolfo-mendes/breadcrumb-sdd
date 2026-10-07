@@ -192,6 +192,8 @@ func TestExtractYAMLOutsideThePartADR0002Allows(t *testing.T) {
 		"  owner: [x]",
 	)})
 	problems(t, "a.md", "3", "4", "6", "7", "9")
+	files(t, map[string]string{"a.md": fm("breadcrumb:", "  id: 'A'", "  type: PBI", "  links:", "    - 'implements ADR-0001'")})
+	problems(t, "a.md", "3", "6")
 	files(t, map[string]string{"a.md": fm("base: &b X", "breadcrumb:", "  id: *b", "  type: PBI", "  links: []")})
 	problems(t, "a.md", "4")
 }
@@ -357,4 +359,156 @@ func TestExtractWindowsLineEndings(t *testing.T) {
 func TestExtractFrontMatterThatDoesNotClose(t *testing.T) {
 	files(t, map[string]string{"a.md": "---\nbreadcrumb:\n  id: A\n"})
 	problems(t, "a.md", "1")
+}
+
+// claimsOf returns a file with a valid breadcrumb, whose id is A, with
+// one link on line 6 and claims as the entries of its claims, the
+// first on line 8.
+func claimsOf(claims ...string) string {
+	lines := []string{"breadcrumb:", "  id: A", "  type: spec", "  links:", "    - follows ADR-0016", "  claims:"}
+	for _, c := range claims {
+		lines = append(lines, "    - "+c)
+	}
+	return fm(lines...)
+}
+
+// The records of the breadcrumb and the link of claimsOf, in a.md.
+const claimsOfRecords = "breadcrumb\tA\tspec\ta.md\t3\n" + "link\tA\tfollows\tADR-0016\ta.md\t6\n"
+
+// droppedClaims writes a.md with claims, runs bcr extract on it, and
+// fails unless it prints the breadcrumb and link records, then the
+// claim records wantClaims, problems at wantLines, and exits 1. It
+// returns standard error.
+func droppedClaims(t *testing.T, claims []string, wantLines []string, wantClaims ...string) string {
+	t.Helper()
+	files(t, map[string]string{"a.md": claimsOf(claims...)})
+	stdout, stderr, code := extractRun("a.md")
+	if want := claimsOfRecords + strings.Join(wantClaims, ""); stdout != want {
+		t.Errorf("got %q, want %q", stdout, want)
+	}
+	if got := problemLines(t, "a.md", stderr); !reflect.DeepEqual(got, wantLines) {
+		t.Errorf("problems at lines %q, want %q:\n%s", got, wantLines, stderr)
+	}
+	if code != 1 {
+		t.Errorf("exit %d, want 1", code)
+	}
+	return stderr
+}
+
+func TestExtractABreadcrumbWithClaims(t *testing.T) {
+	files(t, map[string]string{"specs/verify/spec.md": fm(
+		"breadcrumb:",
+		"  id: verify",
+		"  type: spec",
+		"  links:",
+		"    - follows ADR-0016",
+		"  claims:",
+		"    - 'docs/bcr.md has-line ### verify'",
+		"    - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'",
+	)})
+	stdout, stderr, code := extractRun("specs/verify/spec.md")
+	want := "breadcrumb\tverify\tspec\tspecs/verify/spec.md\t3\n" +
+		"link\tverify\tfollows\tADR-0016\tspecs/verify/spec.md\t6\n" +
+		"claim\tverify\thas-line\tdocs/bcr.md\t### verify\tspecs/verify/spec.md\t8\n" +
+		"claim\tverify\thas-line\tdocs/adrs/ADR-0001-adopt-asdlc.md\tStatus: Accepted\tspecs/verify/spec.md\t9\n"
+	if stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractNoClaims(t *testing.T) {
+	files(t, map[string]string{
+		"a.md": crumbOf("A", "follows ADR-0016"),
+		"b.md": fm("breadcrumb:", "  id: B", "  type: PBI", "  links:", "    - follows ADR-0016", "  claims: []"),
+	})
+	stdout, stderr, code := extractRun("a.md", "b.md")
+	want := "breadcrumb\tA\tPBI\ta.md\t3\n" + "link\tA\tfollows\tADR-0016\ta.md\t6\n" +
+		"breadcrumb\tB\tPBI\tb.md\t3\n" + "link\tB\tfollows\tADR-0016\tb.md\t6\n"
+	if stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractClaimsWithNoList(t *testing.T) {
+	for _, claims := range []string{"  claims:", "  claims: docs/bcr.md has-line x"} {
+		files(t, map[string]string{"a.md": fm("breadcrumb:", "  id: A", "  type: PBI", "  links: []", claims)})
+		problems(t, "a.md", "6")
+	}
+}
+
+func TestExtractAQuoteInsideAClaim(t *testing.T) {
+	files(t, map[string]string{"a.md": claimsOf("'cmd/bcr/main.go has-line return fmt.Sprintf(''%s'', id)'")})
+	stdout, stderr, code := extractRun("a.md")
+	want := claimsOfRecords + "claim\tA\thas-line\tcmd/bcr/main.go\treturn fmt.Sprintf('%s', id)\ta.md\t8\n"
+	if stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractAClaimEntryThatIsNotSingleQuoted(t *testing.T) {
+	droppedClaims(t, []string{"docs/bcr.md has-line verify", `"docs/bcr.md has-line ### verify"`}, []string{"8", "9"})
+}
+
+func TestExtractAClaimWithACommentAfterIt(t *testing.T) {
+	droppedClaims(t, []string{"docs/bcr.md has-line ### verify", "'docs/bcr.md has-line ### verify' # why"}, []string{"8", "9"})
+}
+
+func TestExtractAClaimEntryThatIsNotThreeParts(t *testing.T) {
+	droppedClaims(t, []string{"'docs/bcr.md'", "'docs/bcr.md has-line'", "'docs/bcr.md  has-line ### verify'"},
+		[]string{"8", "9", "10"})
+}
+
+func TestExtractATargetOutsideTheRules(t *testing.T) {
+	droppedClaims(t, []string{"'/etc/passwd has-line x'", "'../x.md has-line x'", "'docs/../x.md has-line x'"},
+		[]string{"8", "9", "10"})
+}
+
+func TestExtractAKindBcrDoesNotKnow(t *testing.T) {
+	stderr := droppedClaims(t, []string{"'docs/bcr.md contains ### verify'", "'docs/bcr.md has-lines ### verify'"},
+		[]string{"8", "9"})
+	for _, kind := range []string{`kind "contains"`, `kind "has-lines"`} {
+		if !strings.Contains(stderr, kind) {
+			t.Errorf("no problem names the %s:\n%s", kind, stderr)
+		}
+	}
+}
+
+func TestExtractAHasLineTextThatNoLineCanEqual(t *testing.T) {
+	droppedClaims(t, []string{"'docs/bcr.md has-line  ### verify'", "'docs/bcr.md has-line ### verify '", "'docs/bcr.md has-line a\tb'"},
+		[]string{"8", "9", "10"})
+}
+
+func TestExtractAnInvalidClaimDropsOnlyItself(t *testing.T) {
+	files(t, map[string]string{"a.md": fm(
+		"breadcrumb:",
+		"  id: A",
+		"  type: spec",
+		"  links:",
+		"    - follows ADR-0016",
+		"    - follows ADR-0017",
+		"  claims:",
+		"    - 'docs/bcr.md has-line ### extract'",
+		"    - 'docs/bcr.md contains ### verify'",
+		"    - 'docs/bcr.md has-line ### verify'",
+	)})
+	stdout, stderr, code := extractRun("a.md")
+	want := "breadcrumb\tA\tspec\ta.md\t3\n" +
+		"link\tA\tfollows\tADR-0016\ta.md\t6\n" +
+		"link\tA\tfollows\tADR-0017\ta.md\t7\n" +
+		"claim\tA\thas-line\tdocs/bcr.md\t### extract\ta.md\t9\n" +
+		"claim\tA\thas-line\tdocs/bcr.md\t### verify\ta.md\t11\n"
+	if stdout != want {
+		t.Errorf("got %q, want %q", stdout, want)
+	}
+	if got := problemLines(t, "a.md", stderr); !reflect.DeepEqual(got, []string{"10"}) || code != 1 {
+		t.Errorf("problems at lines %q, exit %d; want line 10, exit 1:\n%s", got, code, stderr)
+	}
+}
+
+func TestExtractAClaimWhoseTargetDoesNotExist(t *testing.T) {
+	files(t, map[string]string{"a.md": claimsOf("'no/such/file.md has-line x'")})
+	stdout, stderr, code := extractRun("a.md")
+	if want := claimsOfRecords + "claim\tA\thas-line\tno/such/file.md\tx\ta.md\t8\n"; stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
 }

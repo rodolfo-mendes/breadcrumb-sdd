@@ -145,6 +145,9 @@ breadcrumb's record, its links and its other claims are still printed,
 and the exit status is 1. A claim entry has a problem when:
 
 - it is not single-quoted, or has a comment after it on its line;
+- it is outside ADR-0002's part of YAML in another way: it has an
+  anchor, an alias or a tag, is a list or a map, or is written over
+  several lines;
 - it has fewer than three parts, or a part is separated from the next
   by anything other than one space;
 - its `TARGET` starts with `/`, has a part that is `..`, or holds
@@ -154,6 +157,9 @@ and the exit status is 1. A claim entry has a problem when:
 - its argument is one its kind does not allow. For `has-line`: an
   empty text, or a text that starts or ends with a space or a tab, or
   holds a tab.
+
+One problem is printed for each such entry: the first it has, in the
+order above.
 
 `claims` is optional (ADR-0018). A bare `claims:`, or `claims`
 written as text, is a problem at its line, and the breadcrumb prints
@@ -188,7 +194,7 @@ Exit status:
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
+- [x] Each Scenario below has a test.
 - [x] The old `bcr list` and its tests are removed.
 - [x] `docs/bcr.md` describes `bcr extract` under `### extract`,
       including the reading of `.breadcrumbs` and the `PATH` and
@@ -202,9 +208,9 @@ Exit status:
       nothing to standard error, and exits 0.
 - [x] In this repository, `git ls-files '*.md' | xargs bcr extract`
       prints the same records, in the order of its operands.
-- [ ] `docs/bcr.md` describes the `claim` record and what makes a
+- [x] `docs/bcr.md` describes the `claim` record and what makes a
       claim entry a problem; `docs/bcr.1` is generated again.
-- [ ] `go.yaml.in/yaml/v3` is still the only module `bcr` requires
+- [x] `go.yaml.in/yaml/v3` is still the only module `bcr` requires
       directly: reading claims adds no library.
 
 ### Regression Guardrails

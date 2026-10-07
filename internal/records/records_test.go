@@ -80,6 +80,37 @@ func TestWriteABreadcrumbWithNoLinks(t *testing.T) {
 	}
 }
 
+// spec is pbi with two claims, as a spec writes them.
+func spec() crumb.Breadcrumb {
+	b := pbi
+	b.Claims = []crumb.Claim{
+		{Target: "docs/bcr.md", Kind: "has-line", Argument: "### verify", Line: 9},
+		{Target: "cmd/bcr/main.go", Kind: "has-line", Argument: "return fmt.Sprintf('%s', id)", Line: 10},
+	}
+	return b
+}
+
+func TestWriteABreadcrumbWithClaims(t *testing.T) {
+	var out bytes.Buffer
+	if err := Write(&out, "tasks/PBI-00001.md", spec()); err != nil {
+		t.Fatal(err)
+	}
+	want := pbiRecords +
+		"claim\tPBI-00001\thas-line\tdocs/bcr.md\t### verify\ttasks/PBI-00001.md\t9\n" +
+		"claim\tPBI-00001\thas-line\tcmd/bcr/main.go\treturn fmt.Sprintf('%s', id)\ttasks/PBI-00001.md\t10\n"
+	if out.String() != want {
+		t.Errorf("got %q, want %q", out.String(), want)
+	}
+}
+
+func TestReadSkipsTheClaimsWriteWrites(t *testing.T) {
+	var out bytes.Buffer
+	Write(&out, "tasks/PBI-00001.md", spec())
+	if got := read(t, out.String()); !reflect.DeepEqual(got, pbiSet) {
+		t.Errorf("got %+v, want %+v", got, pbiSet)
+	}
+}
+
 // failing is a writer that cannot be written to.
 type failing struct{}
 

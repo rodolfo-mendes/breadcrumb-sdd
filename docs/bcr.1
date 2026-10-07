@@ -145,16 +145,19 @@ A pattern may not use \fB**\fR, start or end with \fB/\fR, be empty after \fB!\f
 .PP
 Standard input: not read.
 .PP
-Output: for a file with a valid breadcrumb, one \fBbreadcrumb\fR record on standard output, then one \fBlink\fR record for each entry of its \fBlinks\fR, in the order written. Fields are separated by a tab:
+Output: for a file with a valid breadcrumb, one \fBbreadcrumb\fR record on standard output, then one \fBlink\fR record for each entry of its \fBlinks\fR, then one \fBclaim\fR record for each valid entry of its \fBclaims\fR, each in the order written. Fields are separated by a tab:
 .PP
 .RS 4
 .nf
 breadcrumb	ID	TYPE	PATH	LINE
 link	ID	VERB	OBJECT	PATH	LINE
+claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 .fi
 .RE
 .PP
 \fBPATH\fR is the file as given, or, with no operand, its path from the current directory, with \fB/\fR between its parts. \fBLINE\fR is the line of the file where the record was written, counted from 1: for a \fBbreadcrumb\fR record, the line of its \fBid\fR; for a \fBlink\fR record, the line of its entry. In a \fBlink\fR record, \fBID\fR is the id of the breadcrumb the link belongs to, and \fBVERB\fR and \fBOBJECT\fR are the two words of its entry.
+.PP
+In a \fBclaim\fR record, \fBID\fR is the id of the breadcrumb the claim belongs to, and \fBLINE\fR the line of its entry. \fBTARGET\fR, \fBKIND\fR and \fBARGUMENT\fR are the three parts of the entry, without its quotes: \fBTARGET\fR is the file the claim is about, and \fBPATH\fR the file the claim is written in. \fBARGUMENT\fR may hold spaces, but no tab. \fBbcr extract\fR does not open \fBTARGET\fR: a claim about a file that does not exist is printed like any other.
 .PP
 Select records by their first field, and read their fields by position: new kinds of record may be added, and new fields may be added at the end of a record.
 .PP
@@ -167,6 +170,36 @@ A breadcrumb is written under the \fBbreadcrumb\fR key of the front matter, in a
 PATH:LINE: MESSAGE
 .fi
 .RE
+.PP
+A breadcrumb may also have \fBclaims\fR, a list of statements about the repository's files. \fBclaims\fR may be left out, and \fBclaims: []\fR means the same; a \fBclaims\fR with no list is a problem like any other, and the file prints no records. Each entry is written on one line, in single quotes, as \fBTARGET KIND ARGUMENT\fR, with a \fB'\fR inside it written \fB''\fR:
+.PP
+.RS 4
+.nf
+breadcrumb:
+  id: verify
+  type: spec
+  links:
+    \- follows ADR\-0016
+  claims:
+    \- 'docs/bcr.md has\-line ### verify'
+.fi
+.RE
+.PP
+\fBTARGET\fR is a path from the root of the repository, with \fB/\fR between its parts. The only \fBKIND\fR is \fBhas\-line\fR: its \fBARGUMENT\fR is the text a line of \fBTARGET\fR must equal, once the spaces and tabs at the line's start and end are removed.
+.PP
+A problem in an entry of \fBclaims\fR drops only that claim: it is written to standard error, the breadcrumb's record, its links and its other claims are still printed, and the exit status is 1. No record says a claim was dropped. An entry has a problem when:
+.IP \(bu 2
+it is not in single quotes, has a comment after it on its line, or is written in any other way the breadcrumb's part of YAML does not allow, such as over several lines;
+.IP \(bu 2
+it has fewer than three parts, or a part is separated from the next by anything other than one space;
+.IP \(bu 2
+its \fBTARGET\fR starts with \fB/\fR, has a part that is \fB..\fR, or holds white space;
+.IP \(bu 2
+its \fBKIND\fR is not \fBhas\-line\fR;
+.IP \(bu 2
+its \fBhas\-line\fR text is empty, starts or ends with a space or a tab, or holds a tab.
+.PP
+One problem is written for each such entry.
 .PP
 A file or a directory that cannot be read is written to standard error as a message starting \fBbcr: \fR. The other files are still read.
 .PP
@@ -185,6 +218,7 @@ Examples:
 bcr extract
 git ls\-files '*.md' | xargs bcr extract
 bcr extract tasks/*.md | grep '^link' | cut \-f2,4
+bcr extract | grep '^claim' | cut \-f4,5
 .fi
 .RE
 .SS "verify"

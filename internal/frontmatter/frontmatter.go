@@ -1,7 +1,9 @@
 // Package frontmatter reads a breadcrumb from the YAML front matter of
 // a file (ADR-0002, ADR-0010). It checks the rules of the format and
 // hands the core, internal/crumb, the breadcrumb's properties as
-// written, with the lines of the file (ADR-0013).
+// written, with the lines of the file (ADR-0013). An entry of claims
+// is written in single quotes, and one that breaks a rule is left out
+// on its own (ADR-0017).
 package frontmatter
 
 import (
@@ -18,17 +20,27 @@ import (
 // Key is the key of the front matter that holds the breadcrumb.
 const Key = "breadcrumb"
 
+// claimsKey is the key under Key whose entries are claims: the only
+// values written in single quotes (ADR-0017).
+const claimsKey = "claims"
+
 // Breadcrumb is a breadcrumb as the front matter writes it, before the
 // core checks it.
 type Breadcrumb struct {
 	Line       int // the line of the breadcrumb key, counted from 1
 	Properties map[string]crumb.Property
+	// Dropped holds the problem of each entry of claims that breaks a
+	// rule of the format, in order of line. Such an entry is not in
+	// Properties; the rest of the breadcrumb is.
+	Dropped []crumb.Problem
 }
 
 // Read reads the breadcrumb in the front matter of src, the text of a
 // file. found is false when src has none. When the front matter breaks
 // a rule of the format, Read returns every problem, in order of line,
-// and no breadcrumb.
+// and no breadcrumb. A rule broken by an entry of claims drops only
+// that entry: its problem is in b.Dropped, unless another problem
+// leaves no breadcrumb to hold it.
 func Read(src []byte) (b Breadcrumb, found bool, problems []crumb.Problem) {
 	text, lines, ok := split(src)
 	if !ok {
@@ -66,10 +78,11 @@ func Read(src []byte) (b Breadcrumb, found bool, problems []crumb.Problem) {
 	r.plain(key)
 	props := r.properties(value)
 	if len(r.problems) > 0 {
+		r.problems = append(r.problems, r.dropped...)
 		sort.SliceStable(r.problems, func(i, j int) bool { return r.problems[i].Line < r.problems[j].Line })
 		return Breadcrumb{}, true, r.problems
 	}
-	return Breadcrumb{Line: fileLine(key.Line), Properties: props}, true, nil
+	return Breadcrumb{Line: fileLine(key.Line), Properties: props, Dropped: r.dropped}, true, nil
 }
 
 // split finds the front matter of src: its first line is ---, and it
@@ -125,11 +138,18 @@ func syntaxProblem(lines []string, err error) crumb.Problem {
 type reader struct {
 	lines    []string // the lines of the front matter
 	problems []crumb.Problem
+	dropped  []crumb.Problem // the problems of the entries of claims left out
 }
 
 // report adds a problem at line, a line of the front matter.
 func (r *reader) report(line int, format string, args ...any) {
 	r.problems = append(r.problems, crumb.Problem{Line: fileLine(line), Message: fmt.Sprintf(format, args...)})
+}
+
+// drop adds the problem of an entry of claims at line, a line of the
+// front matter. The entry is left out, and the breadcrumb stands.
+func (r *reader) drop(line int, format string, args ...any) {
+	r.dropped = append(r.dropped, crumb.Problem{Line: fileLine(line), Message: fmt.Sprintf(format, args...)})
 }
 
 // properties reads the value of the breadcrumb key. With no value, the
@@ -177,6 +197,12 @@ func (r *reader) property(k, v *yaml.Node) crumb.Property {
 	case yaml.SequenceNode:
 		p.Kind = crumb.ListValue
 		for _, e := range v.Content {
+			if k.Value == claimsKey {
+				if r.claim(e) {
+					p.Entries = append(p.Entries, crumb.Entry{Text: e.Value, Line: fileLine(e.Line)})
+				}
+				continue
+			}
 			if !r.plain(e) {
 				continue
 			}
@@ -214,6 +240,45 @@ func (r *reader) plain(n *yaml.Node) bool {
 		return true
 	}
 	return false
+}
+
+// claim reports whether e, an entry of claims, is written as ADR-0017
+// says: on one line, in single quotes, with no comment after it. When
+// it is not, claim reports one problem, and the entry is dropped. The
+// parser has already removed the quotes from e's value, and read each
+// quote written twice inside them as one.
+func (r *reader) claim(e *yaml.Node) bool {
+	switch {
+	case e.Kind == yaml.AliasNode:
+		r.drop(e.Line, "alias *%s is not allowed in a breadcrumb", e.Value)
+	case e.Anchor != "":
+		r.drop(e.Line, "anchor &%s is not allowed in a breadcrumb", e.Anchor)
+	case e.Style&yaml.TaggedStyle != 0:
+		r.drop(e.Line, "tag %s is not allowed in a breadcrumb", e.Tag)
+	case e.Kind != yaml.ScalarNode || e.Style&yaml.SingleQuotedStyle == 0:
+		r.drop(e.Line, "claim must be written in single quotes")
+	case !r.quotedOnOneLine(e):
+		r.drop(e.Line, "value over several lines is not allowed in a breadcrumb")
+	case e.LineComment != "":
+		r.drop(e.Line, "claim has a comment after it; a claim is alone on its line")
+	default:
+		return true
+	}
+	return false
+}
+
+// quotedOnOneLine reports whether the single-quoted scalar n is written
+// on one line: its value, in quotes again, is the text that starts at
+// its column.
+func (r *reader) quotedOnOneLine(n *yaml.Node) bool {
+	if n.Line < 1 || n.Line > len(r.lines) {
+		return true
+	}
+	line := []rune(r.lines[n.Line-1])
+	if n.Column < 1 || n.Column-1 > len(line) {
+		return true
+	}
+	return strings.HasPrefix(string(line[n.Column-1:]), "'"+strings.ReplaceAll(n.Value, "'", "''")+"'")
 }
 
 // oneLine reports whether the plain scalar n is written on one line:
