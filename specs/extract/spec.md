@@ -13,6 +13,9 @@ breadcrumb:
     - follows ADR-0013
     - follows ADR-0014
     - follows ADR-0015
+    - follows ADR-0017
+    - follows ADR-0018
+    - follows ADR-0019
 ---
 # Feature: extract
 
@@ -38,7 +41,9 @@ patterns name.
 
 A rule about one file can be checked on any set of files, so this
 command checks the form of each breadcrumb (ADR-0002, ADR-0010,
-ADR-0012). A rule about the whole set, such as unique ids (ADR-0003)
+ADR-0012), its claims included (ADR-0017). It reads claims, but does
+not check them against their targets: that needs the targets' files,
+and is the job of a later stage. A rule about the whole set, such as unique ids (ADR-0003)
 or links that point to an existing breadcrumb, is checked by
 `bcr verify`, which reads the records this command prints (ADR-0015).
 
@@ -50,8 +55,8 @@ or links that point to an existing breadcrumb, is checked by
 |---|---|---|
 | Command | Reads the operands, opens the files, prints records and problems, sets the exit status | Infrastructure |
 | File set reader | With no operand: reads `.breadcrumbs`, checks its patterns, and finds the files they name from the root of the repository (ADR-0014) | Infrastructure |
-| Front matter reader, `internal/frontmatter` | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
-| Core, `internal/crumb` | Holds the breadcrumb, the link and the problem; checks the breadcrumb's properties (ADR-0002) and its link entries (ADR-0012); builds the breadcrumb or reports what is wrong | Core domain |
+| Front matter reader, `internal/frontmatter` | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); allows single quotes only in the entries of `claims`, and reports an entry of `claims` that is not single-quoted or has a comment after it (ADR-0017); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
+| Core, `internal/crumb` | Holds the breadcrumb, the link, the claim and the problem; checks the breadcrumb's properties (ADR-0002, ADR-0018), its link entries (ADR-0012) and its claim entries, with the kinds it knows (ADR-0017, ADR-0019); builds the breadcrumb or reports what is wrong | Core domain |
 
 - The core imports only the standard library, and knows no file format
   (ADR-0007, ADR-0013).
@@ -67,7 +72,8 @@ or links that point to an existing breadcrumb, is checked by
 - A `breadcrumb` key with no value has no properties: the core reports
   each one missing.
 - A value is the text written: `0001`, `true` and `~` are text. Only a
-  value left empty has none.
+  value left empty has none. The text of a single-quoted entry is what
+  is inside the quotes, with each `''` read as `'`.
 - A second `breadcrumb` key, or a key written twice under it, is a
   problem at the second.
 - Front matter that is not YAML is a problem at the first line it
@@ -93,12 +99,14 @@ names, in order of path compared as bytes (ADR-0014).
 
 For a file with a valid breadcrumb, `bcr extract` prints to standard
 output one `breadcrumb` record, then one `link` record for each entry
-of `links`, in the order they are written. Fields are separated by a
-tab (ADR-0006):
+of `links`, then one `claim` record for each valid entry of `claims`,
+each in the order they are written. Fields are separated by a tab
+(ADR-0006):
 
 ```
 breadcrumb	ID	TYPE	PATH	LINE
 link	ID	VERB	OBJECT	PATH	LINE
+claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 ```
 
 - `PATH` is the operand as given, or, with no operand, the file's path
@@ -113,6 +121,13 @@ link	ID	VERB	OBJECT	PATH	LINE
   is not `---` prints nothing.
 - `ID` in a `link` record is the id of the breadcrumb the link belongs
   to; `VERB` and `OBJECT` are the two words of its entry (ADR-0012).
+- In a `claim` record, `ID` is the id of the breadcrumb the claim
+  belongs to, and `LINE` the line of its entry. `TARGET`, `KIND` and
+  `ARGUMENT` are the three parts of the entry, after its quotes are
+  removed (ADR-0017): `TARGET` is the file the claim is about, and
+  `PATH` the file the claim is written in.
+- `ARGUMENT` holds no tab, since a claim's entry holds none. No field
+  of a `claim` record is empty while `has-line` is its only kind.
 - A consumer selects records by their first field, and reads their
   fields by position. New kinds of record may be added (ADR-0011), and
   new fields may be added at the end of a record.
@@ -122,7 +137,27 @@ key, prints nothing.
 
 A problem is printed to standard error as `PATH:LINE: MESSAGE`
 (ADR-0006). A file's problems are printed in order of line. A file
-with a problem prints no records; the other files are still read.
+with a problem in its id, type or links prints no records; the other
+files are still read.
+
+A problem in a claim entry drops only that claim (ADR-0017). The
+breadcrumb's record, its links and its other claims are still printed,
+and the exit status is 1. A claim entry has a problem when:
+
+- it is not single-quoted, or has a comment after it on its line;
+- it has fewer than three parts, or a part is separated from the next
+  by anything other than one space;
+- its `TARGET` starts with `/`, has a part that is `..`, or holds
+  white space;
+- its `KIND` is not a kind `bcr` knows. The only kind is `has-line`
+  (ADR-0019);
+- its argument is one its kind does not allow. For `has-line`: an
+  empty text, or a text that starts or ends with a space or a tab, or
+  holds a tab.
+
+`claims` is optional (ADR-0018). A bare `claims:`, or `claims`
+written as text, is a problem at its line, and the breadcrumb prints
+no records, as with `links`. `claims: []` is the same as no `claims`.
 
 A pattern may not use `**`, start or end with `/`, be empty after
 `!`, or be malformed, such as with a `[` that does not close.
@@ -141,14 +176,19 @@ Exit status:
 
 ### Constraints
 
-- Keys under `breadcrumb` other than `id`, `type` and `links` are not
-  covered by this spec yet.
+- Keys under `breadcrumb` other than `id`, `type`, `links` and
+  `claims` are not read.
+- A dropped claim is visible only on standard error and in the exit
+  status: no record says it was there (ADR-0017). In a pipe, it shows
+  only with `set -o pipefail`.
+- `bcr extract` does not open a claim's target, so a claim about a file
+  that does not exist is printed like any other.
 
 ## Contract
 
 ### Definition of Done
 
-- [x] Each Scenario below has a test.
+- [ ] Each Scenario below has a test.
 - [x] The old `bcr list` and its tests are removed.
 - [x] `docs/bcr.md` describes `bcr extract` under `### extract`,
       including the reading of `.breadcrumbs` and the `PATH` and
@@ -162,6 +202,10 @@ Exit status:
       nothing to standard error, and exits 0.
 - [x] In this repository, `git ls-files '*.md' | xargs bcr extract`
       prints the same records, in the order of its operands.
+- [ ] `docs/bcr.md` describes the `claim` record and what makes a
+      claim entry a problem; `docs/bcr.1` is generated again.
+- [ ] `go.yaml.in/yaml/v3` is still the only module `bcr` requires
+      directly: reading claims adds no library.
 
 ### Regression Guardrails
 
@@ -264,7 +308,7 @@ Scenario: A link to itself
 
 Scenario: YAML outside the part ADR-0002 allows
   Given a breadcrumb that uses an anchor, an alias, a tag, a quoted
-    value, a value over several lines, a flow collection other
+    value outside claims, a value over several lines, a flow collection other
     than "[]", a map as a value, or a list inside a list
   When I extract it
   Then a problem is printed at the line of each
@@ -361,4 +405,97 @@ Scenario: Front matter that does not close
   When I extract it
   Then a problem is printed at line 1
   And the exit status is 1
+
+Scenario: A breadcrumb with claims
+  Given specs/verify/spec.md whose front matter is
+    """
+    breadcrumb:
+      id: verify
+      type: spec
+      links:
+        - follows ADR-0016
+      claims:
+        - 'docs/bcr.md has-line ### verify'
+        - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'
+    """
+  When I run "bcr extract specs/verify/spec.md"
+  Then standard output is
+    """
+    breadcrumb	verify	spec	specs/verify/spec.md	3
+    link	verify	follows	ADR-0016	specs/verify/spec.md	6
+    claim	verify	has-line	docs/bcr.md	### verify	specs/verify/spec.md	8
+    claim	verify	has-line	docs/adrs/ADR-0001-adopt-asdlc.md	Status: Accepted	specs/verify/spec.md	9
+    """
+  And the exit status is 0
+
+Scenario: No claims
+  Given a breadcrumb with no claims key, and one with "claims: []"
+  When I extract them
+  Then each prints its breadcrumb and link records, and no claim record
+  And the exit status is 0
+
+Scenario: Claims with no list
+  Given a breadcrumb with a bare "claims:", or "claims:" followed by
+    text on the same line
+  When I extract it
+  Then a problem is printed at the line of "claims:"
+  And the file prints no records
+  And the exit status is 1
+
+Scenario: A quote inside a claim
+  Given a claim entry 'cmd/bcr/main.go has-line return fmt.Sprintf(''%s'', id)'
+  When I extract it
+  Then the claim record's argument is "return fmt.Sprintf('%s', id)"
+
+Scenario: A claim entry that is not single-quoted
+  Given a plain claim entry, and a claim entry in double quotes
+  When I extract them
+  Then a problem is printed at the line of each
+  And no claim record is printed for either
+
+Scenario: A claim with a comment after it
+  Given the claim entries "- docs/bcr.md has-line ### verify" and
+    "- 'docs/bcr.md has-line ### verify' # why"
+  When I extract them
+  Then a problem is printed at the line of each
+  And no claim record is printed for either
+
+Scenario: A claim entry that is not three parts
+  Given the claim entries 'docs/bcr.md', 'docs/bcr.md has-line' and
+    'docs/bcr.md  has-line ### verify'
+  When I extract them
+  Then a problem is printed at the line of each
+
+Scenario: A target outside the rules
+  Given claims whose targets are "/etc/passwd", "../x.md" and
+    "docs/../x.md"
+  When I extract them
+  Then a problem is printed at the line of each
+
+Scenario: A kind bcr does not know
+  Given the claim entries 'docs/bcr.md contains ### verify' and
+    'docs/bcr.md has-lines ### verify'
+  When I extract them
+  Then a problem that names the kind is printed at the line of each
+
+Scenario: A has-line text that no line can equal
+  Given has-line claims whose texts start with a space, end with a
+    space, or hold a tab
+  When I extract them
+  Then a problem is printed at the line of each
+
+Scenario: An invalid claim drops only itself
+  Given a breadcrumb with two links and three claims, the second of
+    which has a kind bcr does not know
+  When I extract it
+  Then its breadcrumb record, its two link records and the claim
+    records of the first and third claims are printed
+  And a problem is printed at the line of the second claim
+  And the exit status is 1
+
+Scenario: A claim whose target does not exist
+  Given a has-line claim whose target is no file in the repository
+  When I extract it
+  Then its claim record is printed
+  And the exit status is 0
 ```
