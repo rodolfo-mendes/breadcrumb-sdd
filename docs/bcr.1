@@ -460,7 +460,7 @@ Sets up the repository whose root is the current directory for the pipe. It writ
 .IP \(bu 2
 \fB.breadcrumbs\fR, holding only comments: what a pattern is, and example patterns, commented out. Until a pattern is written in it, \fBbcr extract\fR reads no file, and the pipe exits 0 with a page that says \fBNo breadcrumbs.\fR.
 .IP \(bu 2
-A \fB## Breadcrumbs\fR section for agents in the agents file, saying where breadcrumbs live, to run the pipe before committing, and never to edit a claim to turn a \fBRefuted\fR verdict green. It is added at the end of the file, after an empty line, when the file has no line \fB## Breadcrumbs\fR; a file that is not there is written with the section alone.
+A \fB## Breadcrumbs\fR section for agents in the agents file, saying where breadcrumbs live, to run the pipe before committing, and never to edit a claim to turn a \fBRefuted\fR verdict green, then showing how to look breadcrumbs up with \fBbcr filter\fR: one by its id, every one of a type, what links to one, and one's verdict. It is added at the end of the file, after an empty line, when the file has no line \fB## Breadcrumbs\fR; a file that is not there is written with the section alone.
 .IP \(bu 2
 \fB.github/workflows/breadcrumbs.yml\fR, a GitHub Actions workflow that, on each push and pull request, installs this release of \fBbcr\fR from its Linux archive, checked against the release's checksums, runs the pipe under \fBset \-o pipefail\fR, and puts the page \fBbcr report\fR writes in the job's summary and in an artifact of the run.
 .PP

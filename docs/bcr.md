@@ -639,7 +639,9 @@ set up only when it is not there yet, found by its name:
   says `No breadcrumbs.`.
 - A `## Breadcrumbs` section for agents in the agents file, saying
   where breadcrumbs live, to run the pipe before committing, and never
-  to edit a claim to turn a `Refuted` verdict green. It is added at the
+  to edit a claim to turn a `Refuted` verdict green, then showing how
+  to look breadcrumbs up with `bcr filter`: one by its id, every one
+  of a type, what links to one, and one's verdict. It is added at the
   end of the file, after an empty line, when the file has no line
   `## Breadcrumbs`; a file that is not there is written with the
   section alone.

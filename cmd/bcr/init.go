@@ -84,6 +84,16 @@ YAML front matter, under the ` + "`breadcrumb`" + ` key, in the files
   nothing.
 - Never edit a claim to turn a Refuted verdict green. Fix the code,
   or propose the change to the document that holds the claim.
+
+To look breadcrumbs up, read their records rather than search the
+files:
+
+- One breadcrumb, with its links and claims:
+  ` + "`bcr extract | bcr filter --id ID`" + `
+- Every breadcrumb of a type: ` + "`bcr extract | bcr filter --type TYPE`" + `
+- What links to a breadcrumb: ` + "`bcr extract | bcr filter --object ID`" + `
+- A breadcrumb's verdict:
+  ` + "`bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id ID`" + `
 `
 
 // workflow checks the breadcrumbs on each change with the release of

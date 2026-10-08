@@ -148,6 +148,46 @@ func TestInitWorkflowRunsTheBcrThatWroteIt(t *testing.T) {
 	}
 }
 
+// lookup reads a command the agents section shows: a text in
+// backticks that starts with bcr extract and ends with bcr filter.
+var lookup = regexp.MustCompile("`(bcr extract \\|[^`]*bcr filter [^`]*)`")
+
+func TestInitSectionShowsHowToLookBreadcrumbsUp(t *testing.T) {
+	var commands []string
+	for _, m := range lookup.FindAllStringSubmatch(agentsSection, -1) {
+		commands = append(commands, m[1])
+	}
+	for _, flags := range []string{"--id ID`", "--type TYPE`", "--object ID`", "--kind verdict --id ID`"} {
+		if !strings.Contains(agentsSection, "bcr filter "+flags) {
+			t.Errorf("the section shows no bcr filter %s", strings.TrimSuffix(flags, "`"))
+		}
+	}
+	// Each command runs, in a repository where it finds something.
+	files(t, map[string]string{
+		".breadcrumbs": "*.md\n",
+		"a.md":         crumbOf("PBI-00001", "implements PBI-00002"),
+		"b.md":         crumbOf("PBI-00002"),
+	})
+	for _, command := range commands {
+		command = strings.NewReplacer("ID", "PBI-00002", "TYPE", "PBI").Replace(command)
+		input := ""
+		for _, stage := range strings.Split(command, " | ") {
+			args := strings.Fields(stage)
+			var stdout, stderr bytes.Buffer
+			if code := run(args[1:], strings.NewReader(input), &stdout, &stderr); args[0] != "bcr" || code != 0 || stderr.Len() > 0 {
+				t.Fatalf("%q: %q exits %d, writes %q", command, stage, code, stderr.String())
+			}
+			input = stdout.String()
+		}
+		if input == "" {
+			t.Errorf("%q prints nothing", command)
+		}
+	}
+	if len(commands) != 4 {
+		t.Errorf("got %d commands, want 4: %q", len(commands), commands)
+	}
+}
+
 func TestInitAddsTheSectionToAnAgentsFile(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, "AGENTS.md", "# Agents")
