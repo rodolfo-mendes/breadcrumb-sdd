@@ -103,7 +103,7 @@ stage's status, such as `bcr audit`'s 1 for a Refuted claim, runs with
 | Presentation | Show the records to a person | `report` | Done |
 | Setup | Set a repository up for the pipe | `init` | Done ([`specs/init`](specs/init/spec.md)) |
 | Feedback | Tell an author what is wrong, printing only problems | Not named | Reserved |
-| Queries | Answer questions about the records | `filter` | Done: selects records by id, type and kind ([`specs/filter`](specs/filter/spec.md)) |
+| Queries | Answer questions about the records | `filter` | Done: selects records by id, type and kind, and links by the id they point to ([`specs/filter`](specs/filter/spec.md)) |
 | Cache | Store the records in `.bcr/` | `build` | Deferred |
 
 A new command takes its name from what its family does: `extract`

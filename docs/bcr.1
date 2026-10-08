@@ -418,7 +418,7 @@ Output: each record that matches, on standard output, as it was read, byte for b
 .PP
 A \fBproblem\fR record is printed only with \fB\-\-kind problem\fR: it has no id, so the problems of a breadcrumb do not follow it. \fB\-\-type\fR alone prints \fBbreadcrumb\fR records only; the links and claims of those breadcrumbs are found by their ids, with a second \fBbcr filter\fR.
 .PP
-A link is written only in the breadcrumb it belongs to: \fB\-\-id X\fR selects the links X writes, and \fB\-\-object X\fR the links that point to X, wherever they are written. \fB\-\-id X \-\-object X\fR selects nothing, since no breadcrumb links to itself, so the two directions are two runs over the same records:
+A link is written only in the breadcrumb it belongs to: \fB\-\-id X\fR selects the links X writes, and \fB\-\-object X\fR the links that point to X, wherever they are written. In what \fBbcr extract\fR prints, which has no link from a breadcrumb to itself, \fB\-\-id X \-\-object X\fR selects nothing, so the two directions are two runs over the same records:
 .PP
 .RS 4
 .nf

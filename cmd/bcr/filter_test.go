@@ -144,13 +144,24 @@ var objectRecords = []string{
 func TestFilterWhatLinksToABreadcrumb(t *testing.T) {
 	filtered(t, []string{"--object", "ADR-0019"}, objectRecords, objectRecords[3], objectRecords[5])
 	filtered(t, []string{"-o", "ADR-0019", "-o", "ADR-0017"}, objectRecords, objectRecords[1], objectRecords[3], objectRecords[5])
-	// Only a link record has an OBJECT field.
+	// Only a link record has an OBJECT field: another kind does not
+	// match, even with the value in its fourth field.
 	filtered(t, []string{"--object", "ADR-0019", "--kind", "breadcrumb"}, objectRecords)
+	filtered(t, []string{"--object", "ADR-0019"}, []string{
+		"claim\tA\thas-line\tADR-0019\tx\ta.md\t8",
+		"claim-verdict\tA\tConfirmed\tADR-0019\t8",
+		"verdict\tA\tConfirmed\tADR-0019\t3",
+		"problem\ta.md\t3\tADR-0019",
+		"note\tA\tx\tADR-0019",
+	})
 }
 
 func TestFilterALinkFromOneBreadcrumbToAnother(t *testing.T) {
 	filtered(t, []string{"--id", "PBI-00016", "--object", "ADR-0019"}, objectRecords, objectRecords[5])
 	filtered(t, []string{"--id", "ADR-0019", "--object", "ADR-0019"}, objectRecords)
+	// bcr filter judges nothing: a link to itself, written by hand, is
+	// printed like any other record.
+	filtered(t, []string{"--id", "X", "--object", "X"}, []string{"link\tX\tamends\tX\ta.md\t6"}, "link\tX\tamends\tX\ta.md\t6")
 }
 
 func TestFilterProblemRecords(t *testing.T) {

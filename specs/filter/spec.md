@@ -146,10 +146,12 @@ Exit status:
   would make a breadcrumb Undecided (ADR-0022), so a breadcrumb with a
   dropped claim can read Confirmed. A verdict is read after
   `bcr audit`, never computed after `bcr filter`.
-- `--id X --object X` selects nothing, since a breadcrumb has no link
-  to itself (`specs/extract/spec.md`). The links that X writes and the
-  links that point to X are two selections: two `bcr filter` runs over
-  the same records.
+- `--id X --object X` selects nothing in what `bcr extract` prints,
+  since it prints no link from a breadcrumb to itself
+  (`specs/extract/spec.md`). `bcr filter` judges nothing, so such a
+  link written by hand is printed like any other record. The links
+  that X writes and the links that point to X are two selections: two
+  `bcr filter` runs over the same records.
 - `--type` alone prints `breadcrumb` records only. The links and
   claims of the breadcrumbs it selects are found by their ids, in a
   second `bcr filter`.
@@ -259,11 +261,19 @@ Scenario: What links to a breadcrumb
     """
 
 Scenario: A link from one breadcrumb to another
-  Given the records above
+  Given the records
+    """
+    link	ADR-0019	follows	ADR-0017	docs/adrs/c.md	6
+    link	ADR-0022	follows	ADR-0019	docs/adrs/d.md	7
+    link	PBI-00016	implements	ADR-0019	tasks/PBI-00016.md	6
+    """
   When I pipe them to "bcr filter --id PBI-00016 --object ADR-0019"
   Then only the link of PBI-00016 to ADR-0019 is printed
   When I pipe them to "bcr filter --id ADR-0019 --object ADR-0019"
   Then nothing is printed
+  When I pipe the record "link	X	amends	X	a.md	6" to
+    "bcr filter --id X --object X"
+  Then it is printed: bcr filter judges nothing
 
 Scenario: Problem records
   Given a breadcrumb record with the id ADR-0001, and the record

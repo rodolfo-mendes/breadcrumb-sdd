@@ -588,9 +588,9 @@ breadcrumbs are found by their ids, with a second `bcr filter`.
 
 A link is written only in the breadcrumb it belongs to: `--id X`
 selects the links X writes, and `--object X` the links that point to
-X, wherever they are written. `--id X --object X` selects nothing,
-since no breadcrumb links to itself, so the two directions are two
-runs over the same records:
+X, wherever they are written. In what `bcr extract` prints, which
+has no link from a breadcrumb to itself, `--id X --object X` selects
+nothing, so the two directions are two runs over the same records:
 
 ```
 bcr extract > records.tsv
