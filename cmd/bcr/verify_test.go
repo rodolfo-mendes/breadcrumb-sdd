@@ -281,3 +281,194 @@ func TestVerifyAClaimRecordThatIsNotARecord(t *testing.T) {
 		t.Errorf("got %q, exit %d; want nothing printed, exit 2", stdout, code)
 	}
 }
+
+// The tests below follow the Scenarios of specs/verify/spec.md about
+// breadcrumb.rules, in the same order.
+
+// layoutLines is the layout of the Scenarios, one line of
+// breadcrumb.rules each.
+var layoutLines = []string{
+	"type\tADR",
+	"type\tspec",
+	"type\tPBI",
+	"link\tspec\tconstrained_by\tADR",
+	"link\tPBI\tchanges\tspec",
+	"claims\tspec",
+}
+
+// shapedRecords is the set of the Scenarios, which has the shape of
+// the layout.
+var shapedRecords = []string{
+	"breadcrumb\tADR-0007\tADR\tdocs/adrs/a.md\t3",
+	"breadcrumb\tverify\tspec\tspecs/verify/spec.md\t3",
+	"link\tverify\tconstrained_by\tADR-0007\tspecs/verify/spec.md\t6",
+	"claim\tverify\thas-line\tdocs/bcr.md\t### verify\tspecs/verify/spec.md\t8",
+	"breadcrumb\tPBI-00030\tPBI\ttasks/PBI-00030.md\t3",
+	"link\tPBI-00030\tchanges\tverify\ttasks/PBI-00030.md\t6",
+}
+
+// The records the Scenarios add to the set.
+const (
+	undeclaredADR = "breadcrumb\tADR-0008\tadr\tdocs/adrs/b.md\t3"
+	implementsADR = "link\tPBI-00030\timplements\tADR-0007\ttasks/PBI-00030.md\t7"
+	linkToNowhere = "link\tPBI-00030\timplements\tADR-0099\ttasks/PBI-00030.md\t7"
+)
+
+// rulesFile runs the test from a temporary directory whose
+// breadcrumb.rules has lines.
+func rulesFile(t *testing.T, lines ...string) {
+	t.Helper()
+	files(t, map[string]string{"breadcrumb.rules": recordsOf(lines...)})
+}
+
+// with returns the set of the Scenarios with records added.
+func with(records ...string) string {
+	return recordsOf(append(append([]string{}, shapedRecords...), records...)...)
+}
+
+// says fails unless problem, a line of standard error, is
+// PATH:LINE: message.
+func says(t *testing.T, problem, message string) {
+	t.Helper()
+	if _, got, _ := strings.Cut(problem, ": "); got != message {
+		t.Errorf("problem %q, want the message %q", problem, message)
+	}
+}
+
+func TestVerifyASetThatHasTheDeclaredShape(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	passes(t, with())
+}
+
+func TestVerifyNoBreadcrumbRules(t *testing.T) {
+	files(t, nil)
+	passes(t, with(implementsADR))
+}
+
+func TestVerifyABreadcrumbRulesThatCannotBeRead(t *testing.T) {
+	files(t, map[string]string{"breadcrumb.rules/keep": ""})
+	stdout, stderr, code := verifyRun(with())
+	if stdout != "" || !strings.HasPrefix(stderr, "bcr: ") || strings.Count(stderr, "\n") != 1 || code != 2 {
+		t.Errorf("got %q, %q, exit %d; want nothing printed, one message starting \"bcr: \", exit 2", stdout, stderr, code)
+	}
+}
+
+func TestVerifyATypeThatIsNotDeclared(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	ps := verifyProblems(t, with(undeclaredADR), "docs/adrs/b.md:3")
+	says(t, ps[0], `type "adr" is not declared in breadcrumb.rules`)
+}
+
+func TestVerifyALinkNoRuleAllows(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	ps := verifyProblems(t, with(implementsADR), "tasks/PBI-00030.md:7")
+	says(t, ps[0], `link "PBI implements ADR" matches no rule in breadcrumb.rules`)
+}
+
+func TestVerifyAClaimOnATypeThatMayNotCarryClaims(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	ps := verifyProblems(t, with("claim\tPBI-00030\thas-line\tdocs/bcr.md\t### verify\ttasks/PBI-00030.md\t9"), "tasks/PBI-00030.md:9")
+	says(t, ps[0], `a breadcrumb of type "PBI" may not carry claims under breadcrumb.rules`)
+}
+
+func TestVerifyNoClaimsLine(t *testing.T) {
+	rulesFile(t, layoutLines[:5]...)
+	verifyProblems(t, with(), "specs/verify/spec.md:8")
+}
+
+func TestVerifyALinkOfABreadcrumbWhoseTypeIsNotDeclared(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	verifyProblems(t, recordsOf(
+		"breadcrumb\tADR-0007\tADR\tdocs/adrs/a.md\t3",
+		"breadcrumb\tverify\tSpec\tspecs/verify/spec.md\t3",
+		"link\tverify\tfollows\tADR-0007\tspecs/verify/spec.md\t6",
+		"claim\tverify\thas-line\tdocs/bcr.md\t### verify\tspecs/verify/spec.md\t8",
+	), "specs/verify/spec.md:3")
+}
+
+func TestVerifyALinkToABreadcrumbWhoseTypeIsNotDeclared(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	verifyProblems(t, recordsOf(
+		"breadcrumb\tADR-0007\tadr\tdocs/adrs/a.md\t3",
+		"breadcrumb\tverify\tspec\tspecs/verify/spec.md\t3",
+		"link\tverify\tconstrained_by\tADR-0007\tspecs/verify/spec.md\t6",
+	), "docs/adrs/a.md:3")
+}
+
+func TestVerifyALinkThatPointsNowhereWithAShape(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	ps := verifyProblems(t, with(linkToNowhere), "tasks/PBI-00030.md:7")
+	says(t, ps[0], `link points to "ADR-0099", which is no breadcrumb's id`)
+}
+
+func TestVerifyALinkToADuplicatedIDWithAShape(t *testing.T) {
+	rulesFile(t, layoutLines...)
+	verifyProblems(t, with("breadcrumb\tADR-0007\tADR\tdocs/adrs/b.md\t3", implementsADR), "docs/adrs/a.md:3", "docs/adrs/b.md:3")
+}
+
+func TestVerifyAnUnknownKindOfLine(t *testing.T) {
+	rulesFile(t, append(layoutLines[:6:6], "lnik\tPBI\tchanges\tspec")...)
+	input := with()
+	stdout, stderr, code := verifyRun(input)
+	const message = `unknown kind of line "lnik"; a line is type, link or claims`
+	if stderr != "breadcrumb.rules:7: "+message+"\n" {
+		t.Errorf("standard error %q", stderr)
+	}
+	if want := input + "problem\tbreadcrumb.rules\t7\t" + message + "\n"; stdout != want {
+		t.Errorf("standard output %q, want %q", stdout, want)
+	}
+	if code != 1 {
+		t.Errorf("exit %d, want 1", code)
+	}
+}
+
+func TestVerifyFieldsSeparatedBySpaces(t *testing.T) {
+	rulesFile(t, append(layoutLines[:6:6], "link PBI changes ADR")...)
+	ps := verifyProblems(t, with(), "breadcrumb.rules:7")
+	says(t, ps[0], "link has 1 field, needs 4; its fields are separated by spaces, use a tab")
+}
+
+func TestVerifyTheWrongNumberOfFields(t *testing.T) {
+	rulesFile(t, "type\tspec\t# a feature", "claims")
+	ps := verifyProblems(t, with(), "breadcrumb.rules:1", "breadcrumb.rules:2")
+	says(t, ps[0], "type has 3 fields, needs 2")
+	says(t, ps[1], "claims has 1 field, needs 2")
+}
+
+func TestVerifyAnEmptyFieldAndWhiteSpaceInAField(t *testing.T) {
+	rulesFile(t, "type\tspec", "link\tspec\t\tspec", "link\tspec\tbuilt on\tspec")
+	ps := verifyProblems(t, with(), "breadcrumb.rules:2", "breadcrumb.rules:3")
+	says(t, ps[0], "link has an empty field 3")
+	says(t, ps[1], "link has white space in field 3")
+}
+
+func TestVerifyATypeNoTypeLineDeclares(t *testing.T) {
+	rulesFile(t, append(layoutLines[:6:6], "link\tPBI\tchanges\tSpec")...)
+	ps := verifyProblems(t, with(), "breadcrumb.rules:7")
+	says(t, ps[0], `link names type "Spec", which no type line declares`)
+}
+
+func TestVerifyALineWrittenTwice(t *testing.T) {
+	rulesFile(t, append(layoutLines[:6:6], "type\tspec", "link\tPBI\tchanges\tspec")...)
+	ps := verifyProblems(t, with(), "breadcrumb.rules:7", "breadcrumb.rules:8")
+	says(t, ps[0], `type "spec" is already declared at line 2`)
+	says(t, ps[1], `link "PBI changes spec" is already written at line 5`)
+}
+
+func TestVerifyABreadcrumbRulesWithAProblem(t *testing.T) {
+	rulesFile(t, append(layoutLines[:6:6], "lnik\tPBI\tchanges\tspec")...)
+	// The shape is not known, so the type of ADR-0008 is not judged;
+	// the link that points nowhere still is.
+	verifyProblems(t, with(undeclaredADR, linkToNowhere), "breadcrumb.rules:7", "tasks/PBI-00030.md:7")
+}
+
+func TestVerifyAnEmptyBreadcrumbRules(t *testing.T) {
+	files(t, map[string]string{"breadcrumb.rules": ""})
+	verifyProblems(t, with(), "docs/adrs/a.md:3", "specs/verify/spec.md:3", "tasks/PBI-00030.md:3")
+}
+
+func TestVerifyBlankLinesCommentsAndLineEndingsInBreadcrumbRules(t *testing.T) {
+	lines := append([]string{"# the layout", "", "  "}, layoutLines...)
+	files(t, map[string]string{"breadcrumb.rules": "\xEF\xBB\xBF" + strings.Join(lines, "\r\n")})
+	passes(t, with())
+}

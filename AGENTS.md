@@ -53,6 +53,7 @@ internal/crumb: the core of the front matter breadcrumbs; knows no file format (
 internal/frontmatter: reads a breadcrumb from a file's YAML front matter for internal/crumb
 internal/fileset: reads .breadcrumbs and finds the files it names; infrastructure (ADR-0014)
 internal/records: writes and reads the records the commands of the pipe print; the only package that knows their format (ADR-0011)
+internal/rules: reads breadcrumb.rules, the shape a repository declares, for internal/crumb; the only package that knows its format (ADR-0025)
 internal/target: reads the file a claim is about from the working tree; infrastructure (ADR-0023)
 internal/page: writes the page bcr report prints; the only package that knows its Markdown and Mermaid; infrastructure
 .breadcrumbs: names by pattern the files bcr extract reads when given none

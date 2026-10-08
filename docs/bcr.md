@@ -26,9 +26,10 @@ bcr extract | bcr verify | bcr audit | bcr report
 
 `bcr extract` reads the breadcrumbs of a repository from the front
 matter of its files and prints them as records. `bcr verify` checks
-the set of breadcrumbs, `bcr audit` checks their claims against the
-repository's files, and `bcr report` writes a page of what the pipe
-found. Each stage reads the records of the one before it from
+the set of breadcrumbs, and its shape when the repository declares
+one in `breadcrumb.rules`, `bcr audit` checks their claims against
+the repository's files, and `bcr report` writes a page of what the
+pipe found. Each stage reads the records of the one before it from
 standard input. `bcr filter` prints only the records that match its
 flags, wherever records flow. `bcr init` sets a repository up for the
 pipe. Run `bcr` from the root of the repository.
@@ -241,15 +242,18 @@ bcr extract | bcr verify
 
 Flags: none.
 
-Operands: none. `bcr verify` reads no file: which files make up the
-set is decided by `bcr extract`, from its operands or from
-`.breadcrumbs`.
+Operands: none. `bcr verify` reads no file that carries a breadcrumb:
+which files make up the set is decided by `bcr extract`, from its
+operands or from `.breadcrumbs`. The only file it reads is
+`breadcrumb.rules`, in the current directory, when there is one (see
+The shape of a repository, below).
 
 Standard input: the records, as `bcr extract` prints them, read to the
-end. A line may end in `\n` or `\r\n`. A record of a kind other than
-`breadcrumb` and `link` is not checked, a `problem` record included,
-and neither are fields after
-the ones `bcr extract` prints today; both are still copied. With no input, there is no problem.
+end. A line may end in `\n` or `\r\n`. Of a `claim` record, only its
+`ID`, `PATH` and `LINE` are read. A record of a kind other than
+`breadcrumb`, `link` and `claim` is not checked, a `problem` record
+included, and neither are fields after the ones `bcr extract` prints
+today; both are still copied. With no input, there is no problem.
 
 Output: standard input, copied to standard output byte for byte.
 Every line comes out in the order read, with its line ending as read,
@@ -293,6 +297,77 @@ What is a problem:
 A link to an id that two breadcrumbs share is not a problem of its
 own; the duplicate is.
 
+The shape of a repository: a repository may declare which types its
+breadcrumbs have, which links are allowed between them, and which
+types carry claims, in a file called `breadcrumb.rules` at its root.
+`bcr verify` reads it from the current directory. With no such file,
+no shape is checked. Each line is of one of three kinds, with one tab
+between its fields:
+
+```
+type	NAME
+link	NAME	VERB	NAME
+claims	NAME
+```
+
+- `type` declares a type a breadcrumb may have.
+- `link` allows a link with `VERB` from a breadcrumb of the first type
+  to a breadcrumb of the second.
+- `claims` allows a breadcrumb of the type to carry claims.
+
+A name or a verb is one word, compared as exact bytes: `spec` and
+`Spec` are two types. Lines may come in any order. Blank lines, and
+lines that start with `#`, are ignored; no comment follows a field.
+For example:
+
+```
+# decisions above features above changes
+type	ADR
+type	spec
+type	PBI
+link	spec	constrained_by	ADR
+link	PBI	changes	spec
+claims	spec
+```
+
+The shape is closed: what no line allows is a problem, at the record
+that breaks it.
+
+- A breadcrumb whose type no `type` line declares, at its `breadcrumb`
+  record: `type "Spec" is not declared in breadcrumb.rules`.
+- A link when no `link` line has the type of the breadcrumb it is
+  written in, its verb, and the type of the breadcrumb it points to,
+  at its `link` record:
+  `link "PBI implements ADR" matches no rule in breadcrumb.rules`.
+- A claim of a breadcrumb whose type has no `claims` line, at its
+  `claim` record:
+  `a breadcrumb of type "PBI" may not carry claims under breadcrumb.rules`.
+
+One cause is one problem. A link or a claim of a breadcrumb whose
+type is not declared is not judged, and neither is a link to such a
+breadcrumb, a link that points nowhere, or a link from or to an id
+that two breadcrumbs share. The rules say which links are allowed,
+not which are required: a breadcrumb with no link is not a problem.
+
+A line `breadcrumb.rules` does not allow is a problem too, written as
+`breadcrumb.rules:LINE: MESSAGE` and as a `problem` record whose
+`PATH` is `breadcrumb.rules`:
+
+- a line of a kind other than `type`, `link` and `claims`;
+- a line with the wrong number of fields: 2 for `type` and `claims`,
+  4 for `link`. A line typed with spaces between its fields is told
+  to use a tab;
+- a field that is empty or holds white space;
+- a `link` or `claims` line that names a type no `type` line
+  declares;
+- a line that repeats an earlier one.
+
+While `breadcrumb.rules` has a problem, the shape is not known, and
+nothing is judged against it; ids and links are still checked as
+above. A file with no `type` line, an empty one included, is a shape
+with no type: every breadcrumb is then a problem. Deleting the file
+turns the shape checks off.
+
 A line of input that is not a record `bcr extract` could print, an
 empty line included, stops `bcr verify`: it writes a message starting
 `bcr: `, which gives the line's number in the input, and prints no
@@ -307,8 +382,8 @@ Exit status:
 - 0: no problem was found.
 - 1: at least one problem was found.
 - 2: `bcr verify` was given an operand, its input could not be read,
-  a line of its input was not a record, or its output could not be
-  written.
+  a line of its input was not a record, `breadcrumb.rules` exists and
+  could not be read, or its output could not be written.
 
 In a pipe, the shell returns the exit status of `bcr verify`, so a
 problem `bcr extract` found is seen only on standard error. A script

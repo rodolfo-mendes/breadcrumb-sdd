@@ -24,7 +24,7 @@ bcr extract | bcr verify | bcr audit | bcr report
 .fi
 .RE
 .PP
-\fBbcr extract\fR reads the breadcrumbs of a repository from the front matter of its files and prints them as records. \fBbcr verify\fR checks the set of breadcrumbs, \fBbcr audit\fR checks their claims against the repository's files, and \fBbcr report\fR writes a page of what the pipe found. Each stage reads the records of the one before it from standard input. \fBbcr filter\fR prints only the records that match its flags, wherever records flow. \fBbcr init\fR sets a repository up for the pipe. Run \fBbcr\fR from the root of the repository.
+\fBbcr extract\fR reads the breadcrumbs of a repository from the front matter of its files and prints them as records. \fBbcr verify\fR checks the set of breadcrumbs, and its shape when the repository declares one in \fBbreadcrumb.rules\fR, \fBbcr audit\fR checks their claims against the repository's files, and \fBbcr report\fR writes a page of what the pipe found. Each stage reads the records of the one before it from standard input. \fBbcr filter\fR prints only the records that match its flags, wherever records flow. \fBbcr init\fR sets a repository up for the pipe. Run \fBbcr\fR from the root of the repository.
 .PP
 This document is the user documentation of \fBbcr\fR: its commands, flags, inputs, outputs and exit codes. Where it and a command's spec disagree, the spec is right (ADR\-0008).
 .PP
@@ -177,9 +177,9 @@ bcr extract | bcr verify
 .PP
 Flags: none.
 .PP
-Operands: none. \fBbcr verify\fR reads no file: which files make up the set is decided by \fBbcr extract\fR, from its operands or from \fB.breadcrumbs\fR.
+Operands: none. \fBbcr verify\fR reads no file that carries a breadcrumb: which files make up the set is decided by \fBbcr extract\fR, from its operands or from \fB.breadcrumbs\fR. The only file it reads is \fBbreadcrumb.rules\fR, in the current directory, when there is one (see The shape of a repository, below).
 .PP
-Standard input: the records, as \fBbcr extract\fR prints them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. A record of a kind other than \fBbreadcrumb\fR and \fBlink\fR is not checked, a \fBproblem\fR record included, and neither are fields after the ones \fBbcr extract\fR prints today; both are still copied. With no input, there is no problem.
+Standard input: the records, as \fBbcr extract\fR prints them, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. Of a \fBclaim\fR record, only its \fBID\fR, \fBPATH\fR and \fBLINE\fR are read. A record of a kind other than \fBbreadcrumb\fR, \fBlink\fR and \fBclaim\fR is not checked, a \fBproblem\fR record included, and neither are fields after the ones \fBbcr extract\fR prints today; both are still copied. With no input, there is no problem.
 .PP
 Output: standard input, copied to standard output byte for byte. Every line comes out in the order read, with its line ending as read, records of any kind included, so a later command in the pipe gets what \fBbcr extract\fR printed. \fBbcr verify\fR reads its whole input before it writes. It copies the input even when it finds a problem, and prints nothing to standard output when a line is not a record. To see only the problems, send standard output to \fB/dev/null\fR.
 .PP
@@ -209,6 +209,60 @@ A link whose \fBOBJECT\fR is not the id of any breadcrumb in the set, at its \fB
 .PP
 A link to an id that two breadcrumbs share is not a problem of its own; the duplicate is.
 .PP
+The shape of a repository: a repository may declare which types its breadcrumbs have, which links are allowed between them, and which types carry claims, in a file called \fBbreadcrumb.rules\fR at its root. \fBbcr verify\fR reads it from the current directory. With no such file, no shape is checked. Each line is of one of three kinds, with one tab between its fields:
+.PP
+.RS 4
+.nf
+type	NAME
+link	NAME	VERB	NAME
+claims	NAME
+.fi
+.RE
+.IP \(bu 2
+\fBtype\fR declares a type a breadcrumb may have.
+.IP \(bu 2
+\fBlink\fR allows a link with \fBVERB\fR from a breadcrumb of the first type to a breadcrumb of the second.
+.IP \(bu 2
+\fBclaims\fR allows a breadcrumb of the type to carry claims.
+.PP
+A name or a verb is one word, compared as exact bytes: \fBspec\fR and \fBSpec\fR are two types. Lines may come in any order. Blank lines, and lines that start with \fB#\fR, are ignored; no comment follows a field. For example:
+.PP
+.RS 4
+.nf
+# decisions above features above changes
+type	ADR
+type	spec
+type	PBI
+link	spec	constrained_by	ADR
+link	PBI	changes	spec
+claims	spec
+.fi
+.RE
+.PP
+The shape is closed: what no line allows is a problem, at the record that breaks it.
+.IP \(bu 2
+A breadcrumb whose type no \fBtype\fR line declares, at its \fBbreadcrumb\fR record: \fBtype "Spec" is not declared in breadcrumb.rules\fR.
+.IP \(bu 2
+A link when no \fBlink\fR line has the type of the breadcrumb it is written in, its verb, and the type of the breadcrumb it points to, at its \fBlink\fR record: \fBlink "PBI implements ADR" matches no rule in breadcrumb.rules\fR.
+.IP \(bu 2
+A claim of a breadcrumb whose type has no \fBclaims\fR line, at its \fBclaim\fR record: \fBa breadcrumb of type "PBI" may not carry claims under breadcrumb.rules\fR.
+.PP
+One cause is one problem. A link or a claim of a breadcrumb whose type is not declared is not judged, and neither is a link to such a breadcrumb, a link that points nowhere, or a link from or to an id that two breadcrumbs share. The rules say which links are allowed, not which are required: a breadcrumb with no link is not a problem.
+.PP
+A line \fBbreadcrumb.rules\fR does not allow is a problem too, written as \fBbreadcrumb.rules:LINE: MESSAGE\fR and as a \fBproblem\fR record whose \fBPATH\fR is \fBbreadcrumb.rules\fR:
+.IP \(bu 2
+a line of a kind other than \fBtype\fR, \fBlink\fR and \fBclaims\fR;
+.IP \(bu 2
+a line with the wrong number of fields: 2 for \fBtype\fR and \fBclaims\fR, 4 for \fBlink\fR. A line typed with spaces between its fields is told to use a tab;
+.IP \(bu 2
+a field that is empty or holds white space;
+.IP \(bu 2
+a \fBlink\fR or \fBclaims\fR line that names a type no \fBtype\fR line declares;
+.IP \(bu 2
+a line that repeats an earlier one.
+.PP
+While \fBbreadcrumb.rules\fR has a problem, the shape is not known, and nothing is judged against it; ids and links are still checked as above. A file with no \fBtype\fR line, an empty one included, is a shape with no type: every breadcrumb is then a problem. Deleting the file turns the shape checks off.
+.PP
 A line of input that is not a record \fBbcr extract\fR could print, an empty line included, stops \fBbcr verify\fR: it writes a message starting \fBbcr: \fR, which gives the line's number in the input, and prints no problem.
 .PP
 A breadcrumb \fBbcr extract\fR could not read has no record, so links to its id are reported as pointing to no breadcrumb. Fix the problem \fBbcr extract\fR printed first.
@@ -219,7 +273,7 @@ Exit status:
 .IP \(bu 2
 1: at least one problem was found.
 .IP \(bu 2
-2: \fBbcr verify\fR was given an operand, its input could not be read, a line of its input was not a record, or its output could not be written.
+2: \fBbcr verify\fR was given an operand, its input could not be read, a line of its input was not a record, \fBbreadcrumb.rules\fR exists and could not be read, or its output could not be written.
 .PP
 In a pipe, the shell returns the exit status of \fBbcr verify\fR, so a problem \fBbcr extract\fR found is seen only on standard error. A script that needs both runs with \fBset \-o pipefail\fR, or saves the records first.
 .PP

@@ -12,7 +12,8 @@
 // Run it from the root of a repository. extract prints the breadcrumb
 // of each file it is given, or of each file .breadcrumbs names, as
 // records, verify each problem in the set of breadcrumbs whose records
-// it reads from standard input, audit the verdict of each claim and
+// it reads from standard input, and in its shape when breadcrumb.rules
+// declares one, audit the verdict of each claim and
 // breadcrumb whose records it reads from standard input, and report a
 // page of the records it reads from standard input. filter prints the
 // records it reads from standard input that match its flags. init sets

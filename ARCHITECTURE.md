@@ -37,6 +37,7 @@ flowchart TD
 | Which files to read | `internal/fileset` | Infrastructure ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md)) |
 | Front matter | `internal/frontmatter` | Infrastructure ([ADR-0010](docs/adrs/ADR-0010-read-front-matter-with-go-yaml-v3.md)) |
 | Records | `internal/records` | Infrastructure ([ADR-0011](docs/adrs/ADR-0011-breadcrumbs-printed-as-tagged-records.md)) |
+| The repository's shape | `internal/rules` | Infrastructure ([ADR-0025](docs/adrs/ADR-0025-breadcrumb-rules-declares-the-shape.md)) |
 | Targets | `internal/target` | Infrastructure ([ADR-0023](docs/adrs/ADR-0023-audit-checks-claims-against-the-working-tree.md)) |
 | The report's page | `internal/page` | Infrastructure ([`specs/report`](specs/report/spec.md)) |
 | Core | `internal/crumb` | Core domain ([ADR-0007](docs/adrs/ADR-0007-core-domain.md)) |
@@ -62,7 +63,11 @@ bcr extract | bcr verify | bcr audit | bcr report
   [ADR-0017](docs/adrs/ADR-0017-claims-written-under-breadcrumb-key.md)).
 - `bcr verify` reads those records and checks the rules about the whole
   set ([ADR-0015](docs/adrs/ADR-0015-verify-reads-extract-records.md),
-  [`specs/verify`](specs/verify/spec.md)).
+  [`specs/verify`](specs/verify/spec.md)). When the repository declares
+  its shape in `breadcrumb.rules`, it checks the set against it: the
+  types, the links allowed between them, and the types that carry
+  claims
+  ([ADR-0025](docs/adrs/ADR-0025-breadcrumb-rules-declares-the-shape.md)).
 - `bcr audit` checks each claim against the working tree, and gives
   each claim and each breadcrumb a verdict: a breadcrumb's verdict is
   the AND of its own claims
@@ -126,7 +131,8 @@ so nothing of it is in the core either.
 - A format's rules live in its reader; a breadcrumb's meaning lives in
   the core ([ADR-0013](docs/adrs/ADR-0013-core-holds-meaning-not-format.md)).
 - Files come from operands, or from `.breadcrumbs`; a command that
-  judges the whole set reads records, not files
+  judges the whole set reads records, not the files that carry
+  breadcrumbs
   ([ADR-0014](docs/adrs/ADR-0014-breadcrumbs-file-names-the-files-to-read.md),
   [ADR-0015](docs/adrs/ADR-0015-verify-reads-extract-records.md)).
 - A key added under `breadcrumb` is optional

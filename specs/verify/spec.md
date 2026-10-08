@@ -272,10 +272,10 @@ Exit status:
       exits 0.
 - [x] `docs/bcr.md` describes the `problem` records `bcr verify` adds;
       `docs/bcr.1` is generated again.
-- [ ] Each Scenario about `breadcrumb.rules` has a test.
-- [ ] `docs/bcr.md` describes `breadcrumb.rules` and the checks
+- [x] Each Scenario about `breadcrumb.rules` has a test.
+- [x] `docs/bcr.md` describes `breadcrumb.rules` and the checks
       against it; `docs/bcr.1` is generated again.
-- [ ] With no `breadcrumb.rules`, `bcr verify` prints for this
+- [x] With no `breadcrumb.rules`, `bcr verify` prints for this
       repository's records what it printed before it read the file.
 
 ### Regression Guardrails
