@@ -19,7 +19,8 @@ type Place struct {
 func (p Place) String() string { return fmt.Sprintf("%s:%d", p.Text, p.Line) }
 
 // SetBreadcrumb is a breadcrumb of a set: its id, and where it was
-// written. Type is its type, when the set was read for Views.
+// written. Type is its type, when the set was read for CheckShape or
+// for Views.
 type SetBreadcrumb struct {
 	ID   string
 	Type string
@@ -27,8 +28,10 @@ type SetBreadcrumb struct {
 }
 
 // SetLink is a link of a set: the id it points to, and where it was
-// written. Verb is its verb, when the set was read for Views.
+// written. ID is the id of the breadcrumb it is written in, and Verb
+// its verb, when the set was read for CheckShape or for Views.
 type SetLink struct {
+	ID     string
 	Verb   string
 	Object string
 	At     Place
@@ -45,7 +48,8 @@ type SetClaim struct {
 // Set is the breadcrumbs of one state of a repository, with their
 // links, their claims, and the problems found in them before. Its
 // rules need every breadcrumb at once. Check reads the breadcrumbs
-// and the links; Audit the breadcrumbs, the claims and the problems;
+// and the links; CheckShape the breadcrumbs, the links and the claims;
+// Audit the breadcrumbs, the claims and the problems;
 // Views and Given all of it, with the verdicts given before.
 type Set struct {
 	Breadcrumbs []SetBreadcrumb
@@ -131,8 +135,14 @@ func (s Set) Check() []SetProblem {
 		sort.Strings(cased)
 		report(l.At, "link points to %q, which is no breadcrumb's id; %s differs only in case", l.Object, strings.Join(cased, ", "))
 	}
-	sort.SliceStable(problems, func(i, j int) bool { return before(problems[i].At, problems[j].At) })
+	SortProblems(problems)
 	return problems
+}
+
+// SortProblems puts ps in order of place: the text compared as bytes,
+// then the line. Problems at one place keep their order.
+func SortProblems(ps []SetProblem) {
+	sort.SliceStable(ps, func(i, j int) bool { return before(ps[i].At, ps[j].At) })
 }
 
 // before reports whether a comes before b: the text compared as bytes,
