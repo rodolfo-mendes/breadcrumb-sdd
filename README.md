@@ -41,7 +41,10 @@ breadcrumb:
 
 The toolkit, `bcr`, reads the breadcrumbs, checks that their ids are
 unique and their links point to a breadcrumb, and checks each claim
-against the files. A breadcrumb whose claims all hold is Confirmed,
+against the files. A repository may also declare its shape in
+`breadcrumb.rules`: the types its breadcrumbs may have, the links
+between them, and which types carry claims. `bcr` then reports any
+breadcrumb that goes beyond it. A breadcrumb whose claims all hold is Confirmed,
 and one with a claim that fails is Refuted. One with no claims, or
 with a problem, is Undecided: nothing about it was checked. A Refuted
 claim is drift: the document says one thing, and the file another.
@@ -78,14 +81,28 @@ It writes a `.breadcrumbs` file, a section for agents in `AGENTS.md`
 (or the file `-a` names), and a GitHub Actions workflow that runs the
 pipe on each change with the same release of `bcr`, so it needs a
 released `bcr`, not one run with `go run`. It replaces nothing, and
-writes no breadcrumb. Next, list the files that carry breadcrumbs in
-`.breadcrumbs`, one pattern per line, such as:
+writes no breadcrumb that `.breadcrumbs` names. Next, list the files
+that carry breadcrumbs in `.breadcrumbs`, one pattern per line, such
+as:
 
 ```
 docs/adrs/*.md
 specs/*/spec.md
 tasks/*.md
 ```
+
+A repository that follows
+[ASDLC](https://asdlc.io) can be set up in one step instead:
+
+```
+bcr init --layout asdlc
+```
+
+As well as the pieces above, it writes a `.breadcrumbs` that names
+ASDLC's ADRs, specs and PBIs, a `breadcrumb.rules` with ASDLC's
+shape, a template for each of the three, and a section in the agents
+file that says where each goes. It refuses when `.breadcrumbs` or
+`breadcrumb.rules` is already there.
 
 Then run four of the commands of `bcr` as a pipe:
 
@@ -94,8 +111,9 @@ bcr extract | bcr verify | bcr audit | bcr report > report.md
 ```
 
 - `bcr extract` reads each breadcrumb and prints it as records.
-- `bcr verify` checks the whole set: unique ids, and links that point
-  to a breadcrumb.
+- `bcr verify` checks the whole set: unique ids, links that point to
+  a breadcrumb, and, when there is a `breadcrumb.rules`, the shape it
+  declares.
 - `bcr audit` checks each claim against the files, and gives each
   claim and each breadcrumb a verdict.
 - `bcr report` writes one Markdown page: every breadcrumb by verdict,
