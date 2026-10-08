@@ -155,7 +155,7 @@ number of its line, counted from 1:
 |---|---|
 | A kind other than `type`, `link` and `claims` | `unknown kind of line "lnik"; a line is type, link or claims` |
 | The wrong number of fields | `link has 3 fields, needs 4` |
-| The same, on a line that holds a space | `link has 1 field, needs 4; its fields are separated by spaces, use a tab` |
+| The same, on a line that has the right number when split at white space | `link has 1 field, needs 4; its fields are separated by spaces, use a tab` |
 | An empty field | `link has an empty field 3` |
 | A field that holds white space | `link has white space in field 3` |
 | A `link` or `claims` line names a type no `type` line declares | `link names type "Spec", which no type line declares` |
