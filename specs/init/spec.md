@@ -220,18 +220,18 @@ Exit status:
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
+- [x] Each Scenario below has a test.
 - [x] `docs/bcr.md` describes `bcr init` under `### init`, and its
       flag; `docs/bcr.1` is generated again.
-- [ ] `docs/bcr.md` describes `--layout`, and names it in SYNOPSIS;
+- [x] `docs/bcr.md` describes `--layout`, and names it in SYNOPSIS;
       `docs/bcr.1` is generated again.
 - [x] In a new directory, `bcr init` with a version, then the pipe,
       exits 0 and the page says `No breadcrumbs.`.
 - [x] The workflow `bcr init` writes is valid YAML, and every action
       it uses is pinned to a commit.
-- [ ] In a new directory, `bcr init --layout asdlc` with a version,
+- [x] In a new directory, `bcr init --layout asdlc` with a version,
       then the pipe, exits 0.
-- [ ] In that directory, an ADR, a spec and a PBI written from the
+- [x] In that directory, an ADR, a spec and a PBI written from the
       templates, linked as `breadcrumb.rules` allows, pass the pipe.
 - [x] Each lookup command the agents section shows runs, and prints
       the records it names, in a repository with breadcrumbs.

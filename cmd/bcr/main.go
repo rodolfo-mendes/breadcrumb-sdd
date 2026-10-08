@@ -7,7 +7,7 @@
 //	bcr audit
 //	bcr report
 //	bcr filter [-i ID] [-o ID] [-t TYPE] [-k KIND]
-//	bcr init [-a FILE]
+//	bcr init [-a FILE] [-l LAYOUT]
 //
 // Run it from the root of a repository. extract prints the breadcrumb
 // of each file it is given, or of each file .breadcrumbs names, as
@@ -36,7 +36,7 @@ const (
 	auditUsage   = "usage: bcr audit\n"
 	reportUsage  = "usage: bcr report\n"
 	filterUsage  = "usage: bcr filter [-i ID] [-o ID] [-t TYPE] [-k KIND]\n"
-	initUsage    = "usage: bcr init [-a FILE]\n"
+	initUsage    = "usage: bcr init [-a FILE] [-l LAYOUT]\n"
 	usage        = extractUsage + verifyUsage + auditUsage + reportUsage + filterUsage + initUsage
 )
 

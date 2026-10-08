@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/cli"
+	"github.com/rodolfo-mendes/breadcrumb-sdd/internal/rules"
 )
 
 // version is the release version bcr was built as, set by the release
@@ -156,7 +157,10 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 // release, or with no version when release is "". It finds every piece
 // to write before it writes the first.
 func initIn(root, release string, args []string, stdout, stderr io.Writer) int {
-	set, operands, err := cli.Parse(args[1:], []cli.Flag{{Short: 'a', Long: "agents-file", Value: true}})
+	set, operands, err := cli.Parse(args[1:], []cli.Flag{
+		{Short: 'a', Long: "agents-file", Value: true},
+		{Short: 'l', Long: "layout", Value: true},
+	})
 	if err != nil {
 		return usageError(stderr, initUsage, err.Error())
 	}
@@ -170,26 +174,59 @@ func initIn(root, release string, args []string, stdout, stderr io.Writer) int {
 	if !inRepository(agents) {
 		return usageError(stderr, initUsage, fmt.Sprintf("the agents file %q is not a path in the repository", agents))
 	}
+	name, withLayout := set["layout"]
+	lay, known := layouts[name]
+	if withLayout && !known {
+		return usageError(stderr, initUsage, fmt.Sprintf("unknown layout %q; the layouts are: %s", name, strings.Join(layoutNames(), ", ")))
+	}
 	if release == "" {
 		return trouble(stderr, errors.New("this bcr has no release version, so the workflow cannot install it; run a released bcr"))
 	}
 	fill := strings.NewReplacer("{{bcr}}", release, "{{release}}", releaseURL).Replace
 
+	// The first line of each file that declares what bcr reads names
+	// what wrote it (ADR-0027).
+	header := "# bcr init, bcr " + release + "\n"
+	pieces := []initWrite{{path: patternsFile, text: header + patterns}}
+	sections := []initSection{{head: agentsHead, text: agentsSection}}
+	if withLayout {
+		// A layout's pieces work only together: both files must be
+		// absent, so that neither is left from another setup.
+		refused := false
+		for _, p := range []string{patternsFile, rules.Name} {
+			if _, err := os.Lstat(filepath.Join(root, filepath.FromSlash(p))); !errors.Is(err, fs.ErrNotExist) {
+				fmt.Fprintf(stderr, "bcr: %s is already there; --layout sets up %s and %s together: delete both to set the layout up again\n", p, patternsFile, rules.Name)
+				refused = true
+			}
+		}
+		if refused {
+			return exitTrouble
+		}
+		header = "# bcr init --layout " + name + ", bcr " + release + "\n"
+		pieces = []initWrite{
+			{path: patternsFile, text: header + lay.patterns},
+			{path: rules.Name, text: header + lay.rules},
+		}
+		pieces = append(pieces, lay.templates...)
+		sections = append(sections, lay.sections...)
+	}
+	pieces = append(pieces,
+		initWrite{path: agents, sections: sections},
+		initWrite{path: workflowFile, text: fill(workflow)},
+	)
+
 	// What to write, found before anything is written.
 	var writes []initWrite
-	for _, p := range []initWrite{
-		{path: patternsFile, text: patterns},
-		{path: agents, text: agentsSection, section: true},
-		{path: workflowFile, text: fill(workflow)},
-	} {
-		w, there, err := plan(root, p)
+	for _, p := range pieces {
+		w, there, present, err := plan(root, p)
 		if err != nil {
 			return trouble(stderr, err)
 		}
+		for _, head := range present {
+			fmt.Fprintf(stderr, "bcr: %s already has a %s section; left as it is\n", p.path, head)
+		}
 		if there {
-			if p.section {
-				fmt.Fprintf(stderr, "bcr: %s already has a %s section; left as it is\n", p.path, agentsHead)
-			} else {
+			if p.sections == nil {
 				fmt.Fprintf(stderr, "bcr: %s is already there; left as it is\n", p.path)
 			}
 			continue
@@ -221,36 +258,58 @@ func inRepository(p string) bool {
 	return true
 }
 
-// initWrite is a file bcr init creates, or, for the agents section,
-// adds text to the end of.
+// initWrite is a file bcr init creates, or, for the agents file, adds
+// sections to the end of.
 type initWrite struct {
-	path    string
-	text    string
-	section bool // the agents section, which may be added to a file
-	append  bool // add text to the end of an existing file
+	path     string
+	text     string
+	sections []initSection // the agents file's sections, each found by its heading
+	append   bool          // add text to the end of an existing file
+}
+
+// initSection is a section of the agents file.
+type initSection struct {
+	head string // its heading, a line of its own
+	text string // the section, its heading first
 }
 
 // plan finds what to do for p under root: the write to make, or there
-// when the piece is already in place.
-func plan(root string, p initWrite) (w initWrite, there bool, err error) {
+// when the piece is already in place. For the agents file, present
+// names the heading of each section already in it.
+func plan(root string, p initWrite) (w initWrite, there bool, present []string, err error) {
 	name := filepath.Join(root, filepath.FromSlash(p.path))
+	var texts []string
+	for _, s := range p.sections {
+		texts = append(texts, s.text)
+	}
 	info, err := os.Lstat(name)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return p, false, nil
+		if p.sections != nil {
+			p.text = strings.Join(texts, "\n")
+		}
+		return p, false, nil, nil
 	case err != nil:
-		return p, false, err
-	case !p.section:
-		return p, true, nil
+		return p, false, nil, err
+	case p.sections == nil:
+		return p, true, nil, nil
 	case !info.Mode().IsRegular():
-		return p, false, fmt.Errorf("%s is not a regular file", p.path)
+		return p, false, nil, fmt.Errorf("%s is not a regular file", p.path)
 	}
 	existing, err := os.ReadFile(name)
 	if err != nil {
-		return p, false, err
+		return p, false, nil, err
 	}
-	if hasLine(string(existing), agentsHead) {
-		return p, true, nil
+	var missing []string
+	for _, s := range p.sections {
+		if hasLine(string(existing), s.head) {
+			present = append(present, s.head)
+		} else {
+			missing = append(missing, s.text)
+		}
+	}
+	if len(missing) == 0 {
+		return p, true, present, nil
 	}
 	sep := ""
 	if len(existing) > 0 {
@@ -259,9 +318,9 @@ func plan(root string, p initWrite) (w initWrite, there bool, err error) {
 			sep = "\n\n"
 		}
 	}
-	p.text = sep + p.text
+	p.text = sep + strings.Join(missing, "\n")
 	p.append = true
-	return p, false, nil
+	return p, false, present, nil
 }
 
 // do writes w under root. A file it creates must not be there.

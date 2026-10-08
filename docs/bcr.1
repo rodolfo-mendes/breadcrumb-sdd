@@ -11,7 +11,7 @@ bcr verify
 bcr audit
 bcr report
 bcr filter [\-i ID] [\-o ID] [\-t TYPE] [\-k KIND]
-bcr init [\-a FILE]
+bcr init [\-a FILE] [\-l LAYOUT]
 .fi
 .RE
 .SH "DESCRIPTION"
@@ -506,27 +506,66 @@ bcr extract | bcr verify | bcr filter \-\-kind problem | cut \-f2\-
 .PP
 .RS 4
 .nf
-bcr init [\-a FILE]
+bcr init [\-a FILE] [\-l LAYOUT]
 .fi
 .RE
 .PP
-Sets up the repository whose root is the current directory for the pipe. It writes no breadcrumb: which files carry breadcrumbs, and what they are, is the repository's choice. Each of three pieces is set up only when it is not there yet, found by its name:
+Sets up the repository whose root is the current directory for the pipe. It writes no breadcrumb that \fB.breadcrumbs\fR names: which files carry breadcrumbs, and what they are, is the repository's choice. Each of three pieces is set up only when it is not there yet, found by its name:
 .IP \(bu 2
-\fB.breadcrumbs\fR, holding only comments: what a pattern is, and example patterns, commented out. Until a pattern is written in it, \fBbcr extract\fR reads no file, and the pipe exits 0 with a page that says \fBNo breadcrumbs.\fR.
+\fB.breadcrumbs\fR, whose first line is \fB# bcr init, bcr VERSION\fR, the release of \fBbcr\fR that wrote it, and which holds only comments: what a pattern is, and example patterns, commented out. Until a pattern is written in it, \fBbcr extract\fR reads no file, and the pipe exits 0 with a page that says \fBNo breadcrumbs.\fR.
 .IP \(bu 2
 A \fB## Breadcrumbs\fR section for agents in the agents file, saying where breadcrumbs live, to run the pipe before committing, and never to edit a claim to turn a \fBRefuted\fR verdict green, then showing how to look breadcrumbs up with \fBbcr filter\fR: one by its id, every one of a type, what links to one, and one's verdict. It is added at the end of the file, after an empty line, when the file has no line \fB## Breadcrumbs\fR; a file that is not there is written with the section alone.
 .IP \(bu 2
 \fB.github/workflows/breadcrumbs.yml\fR, a GitHub Actions workflow that, on each push and pull request, installs this release of \fBbcr\fR from its Linux archive, checked against the release's checksums, runs the pipe under \fBset \-o pipefail\fR, and puts the page \fBbcr report\fR writes in the job's summary and in an artifact of the run.
 .PP
+With \fB\-\-layout asdlc\fR, \fBbcr init\fR sets up the layout of ASDLC as well, following ASDLC's conventions: ADRs in \fBdocs/adrs/ADR\-NNN\-slug.md\fR, specs in \fBspecs/feature\-name/spec.md\fR, and PBIs in \fBtasks/PBI\-NNN.md\fR. In place of the \fB.breadcrumbs\fR of comments, it writes a \fB.breadcrumbs\fR that names those files and excludes the templates:
+.PP
+.RS 4
+.nf
+# bcr init \-\-layout asdlc, bcr VERSION
+docs/adrs/*.md
+!docs/adrs/TEMPLATE.md
+specs/*/spec.md
+tasks/*.md
+!tasks/TEMPLATE.md
+.fi
+.RE
+.PP
+It writes \fBbreadcrumb.rules\fR, the shape \fBbcr verify\fR checks:
+.PP
+.RS 4
+.nf
+# bcr init \-\-layout asdlc, bcr VERSION
+type	ADR
+type	spec
+type	PBI
+link	ADR	constrained_by	ADR
+link	ADR	supersedes	ADR
+link	spec	constrained_by	ADR
+link	PBI	changes	spec
+claims	spec
+.fi
+.RE
+.PP
+And it sets up two pieces more:
+.IP \(bu 2
+\fBdocs/adrs/TEMPLATE.md\fR, \fBspecs/TEMPLATE.md\fR and \fBtasks/TEMPLATE.md\fR, each with the sections of its kind of document and front matter that is a breadcrumb of its type, with the links it may have as comments. Each is written when it is not there.
+.IP \(bu 2
+A \fB## ASDLC\fR section in the agents file, after the \fB## Breadcrumbs\fR section and added as it is: where each kind of document lives, how it is named, and where its template is. For the links, it points to \fBbreadcrumb.rules\fR.
+.PP
+A layout's files work only together, so when \fB.breadcrumbs\fR or \fBbreadcrumb.rules\fR is there, \fB\-\-layout\fR writes nothing and exits 2. To set the layout up again, delete both and run it again.
+.PP
 Flags:
 .IP \(bu 2
 \fB\-a FILE\fR, \fB\-\-agents\-file FILE\fR: the agents file, a path from the root of the repository, such as \fBCLAUDE.md\fR. Without it, \fBAGENTS.md\fR. A path that starts with \fB/\fR or has a part that is \fB..\fR is a usage error.
+.IP \(bu 2
+\fB\-l LAYOUT\fR, \fB\-\-layout LAYOUT\fR: a layout to set up as well. The one layout is \fBasdlc\fR. Any other is a usage error that names it.
 .PP
 Operands: none.
 .PP
 Standard input: not read.
 .PP
-Output: on standard output, the path of each file written or added to, one per line, in the order above. On standard error, a message for each piece that was already there, and is left as it is.
+Output: on standard output, the path of each file written or added to, one per line: \fB.breadcrumbs\fR, then, with \fB\-\-layout\fR, \fBbreadcrumb.rules\fR and the templates, then the agents file and the workflow. On standard error, a message for each piece that was already there, and is left as it is.
 .PP
 \fBbcr init\fR replaces no file, and changes no file but the agents file, by adding its section at the end. It finds what to write before it writes anything. The workflow installs the release of \fBbcr\fR that wrote it, so \fBbcr init\fR needs a released \fBbcr\fR: one built with \fBgo run\fR, or with no release version, exits 2 and writes nothing.
 .PP
@@ -542,7 +581,7 @@ Exit status:
 .IP \(bu 2
 0: every piece is in place, set up now or before.
 .IP \(bu 2
-2: \fBbcr init\fR was used wrongly, this \fBbcr\fR has no release version, the agents file is not a regular file, or a file could not be read or written.
+2: \fBbcr init\fR was used wrongly, this \fBbcr\fR has no release version, \fB\-\-layout\fR found a \fB.breadcrumbs\fR or a \fBbreadcrumb.rules\fR, the agents file is not a regular file, or a file could not be read or written.
 .PP
 Examples:
 .PP
@@ -550,6 +589,7 @@ Examples:
 .nf
 bcr init
 bcr init \-a CLAUDE.md
+bcr init \-\-layout asdlc
 .fi
 .RE
 .SH "EXIT STATUS"

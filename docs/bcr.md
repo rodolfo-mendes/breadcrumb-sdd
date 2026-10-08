@@ -12,7 +12,7 @@ bcr verify
 bcr audit
 bcr report
 bcr filter [-i ID] [-o ID] [-t TYPE] [-k KIND]
-bcr init [-a FILE]
+bcr init [-a FILE] [-l LAYOUT]
 ```
 
 ## DESCRIPTION
@@ -700,16 +700,19 @@ bcr extract | bcr verify | bcr filter --kind problem | cut -f2-
 ### init
 
 ```
-bcr init [-a FILE]
+bcr init [-a FILE] [-l LAYOUT]
 ```
 
 Sets up the repository whose root is the current directory for the
-pipe. It writes no breadcrumb: which files carry breadcrumbs, and
-what they are, is the repository's choice. Each of three pieces is
-set up only when it is not there yet, found by its name:
+pipe. It writes no breadcrumb that `.breadcrumbs` names: which files
+carry breadcrumbs, and what they are, is the repository's choice.
+Each of three pieces is set up only when it is not there yet, found
+by its name:
 
-- `.breadcrumbs`, holding only comments: what a pattern is, and
-  example patterns, commented out. Until a pattern is written in it,
+- `.breadcrumbs`, whose first line is `# bcr init, bcr VERSION`, the
+  release of `bcr` that wrote it, and which holds only comments: what
+  a pattern is, and example patterns, commented out. Until a pattern
+  is written in it,
   `bcr extract` reads no file, and the pipe exits 0 with a page that
   says `No breadcrumbs.`.
 - A `## Breadcrumbs` section for agents in the agents file, saying
@@ -726,19 +729,68 @@ set up only when it is not there yet, found by its name:
   the pipe under `set -o pipefail`, and puts the page `bcr report`
   writes in the job's summary and in an artifact of the run.
 
+With `--layout asdlc`, `bcr init` sets up the layout of ASDLC as
+well, following ASDLC's conventions: ADRs in
+`docs/adrs/ADR-NNN-slug.md`, specs in `specs/feature-name/spec.md`,
+and PBIs in `tasks/PBI-NNN.md`. In place of the `.breadcrumbs` of
+comments, it writes a `.breadcrumbs` that names those files and
+excludes the templates:
+
+```
+# bcr init --layout asdlc, bcr VERSION
+docs/adrs/*.md
+!docs/adrs/TEMPLATE.md
+specs/*/spec.md
+tasks/*.md
+!tasks/TEMPLATE.md
+```
+
+It writes `breadcrumb.rules`, the shape `bcr verify` checks:
+
+```
+# bcr init --layout asdlc, bcr VERSION
+type	ADR
+type	spec
+type	PBI
+link	ADR	constrained_by	ADR
+link	ADR	supersedes	ADR
+link	spec	constrained_by	ADR
+link	PBI	changes	spec
+claims	spec
+```
+
+And it sets up two pieces more:
+
+- `docs/adrs/TEMPLATE.md`, `specs/TEMPLATE.md` and
+  `tasks/TEMPLATE.md`, each with the sections of its kind of document
+  and front matter that is a breadcrumb of its type, with the links it
+  may have as comments. Each is written when it is not there.
+- A `## ASDLC` section in the agents file, after the `## Breadcrumbs`
+  section and added as it is: where each kind of document lives, how
+  it is named, and where its template is. For the links, it points to
+  `breadcrumb.rules`.
+
+A layout's files work only together, so when `.breadcrumbs` or
+`breadcrumb.rules` is there, `--layout` writes nothing and exits 2.
+To set the layout up again, delete both and run it again.
+
 Flags:
 
 - `-a FILE`, `--agents-file FILE`: the agents file, a path from the
   root of the repository, such as `CLAUDE.md`. Without it,
   `AGENTS.md`. A path that starts with `/` or has a part that is `..`
   is a usage error.
+- `-l LAYOUT`, `--layout LAYOUT`: a layout to set up as well. The one
+  layout is `asdlc`. Any other is a usage error that names it.
 
 Operands: none.
 
 Standard input: not read.
 
 Output: on standard output, the path of each file written or added
-to, one per line, in the order above. On standard error, a message for
+to, one per line: `.breadcrumbs`, then, with `--layout`,
+`breadcrumb.rules` and the templates, then the agents file and the
+workflow. On standard error, a message for
 each piece that was already there, and is left as it is.
 
 `bcr init` replaces no file, and changes no file but the agents file,
@@ -757,14 +809,16 @@ Exit status:
 
 - 0: every piece is in place, set up now or before.
 - 2: `bcr init` was used wrongly, this `bcr` has no release version,
-  the agents file is not a regular file, or a file could not be read
-  or written.
+  `--layout` found a `.breadcrumbs` or a `breadcrumb.rules`, the
+  agents file is not a regular file, or a file could not be read or
+  written.
 
 Examples:
 
 ```
 bcr init
 bcr init -a CLAUDE.md
+bcr init --layout asdlc
 ```
 
 ## EXIT STATUS

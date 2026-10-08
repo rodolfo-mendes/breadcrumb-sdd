@@ -79,8 +79,8 @@ func TestInitWritesEveryPiece(t *testing.T) {
 	if stdout != want {
 		t.Errorf("standard output %q, want %q", stdout, want)
 	}
-	if read(t, dir, ".breadcrumbs") != patterns {
-		t.Error(".breadcrumbs is not the patterns of bcr init")
+	if read(t, dir, ".breadcrumbs") != "# bcr init, bcr 0.8.0\n"+patterns {
+		t.Error(".breadcrumbs is not the patterns of bcr init, after its first line")
 	}
 	if read(t, dir, "AGENTS.md") != agentsSection {
 		t.Error("AGENTS.md is not the agents section alone")
@@ -93,7 +93,11 @@ func TestInitWritesEveryPiece(t *testing.T) {
 func TestInitPatternsNameNoFile(t *testing.T) {
 	dir := t.TempDir()
 	initRun(dir, "0.8.0")
-	for i, line := range strings.Split(strings.TrimSuffix(read(t, dir, ".breadcrumbs"), "\n"), "\n") {
+	text := read(t, dir, ".breadcrumbs")
+	if first, _, _ := strings.Cut(text, "\n"); first != "# bcr init, bcr 0.8.0" {
+		t.Errorf("the first line of .breadcrumbs is %q", first)
+	}
+	for i, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
 		if line != "" && !strings.HasPrefix(line, "#") {
 			t.Errorf(".breadcrumbs line %d is a pattern: %q", i+1, line)
 		}
@@ -334,6 +338,251 @@ func TestInitOperand(t *testing.T) {
 	}
 	if !strings.HasSuffix(stderr, "\n"+initUsage) {
 		t.Errorf("standard error %q does not end with the usage line", stderr)
+	}
+	if f := filesIn(t, dir); len(f) > 0 {
+		t.Errorf("wrote %q", f)
+	}
+}
+
+// The templates of the ASDLC layout, in the order bcr init writes them.
+var asdlcTemplates = []string{"docs/adrs/TEMPLATE.md", "specs/TEMPLATE.md", "tasks/TEMPLATE.md"}
+
+// command runs bcr with args and stdin, and returns what it writes to
+// standard output and standard error, and its exit status.
+func command(stdin string, args ...string) (string, string, int) {
+	var stdout, stderr bytes.Buffer
+	code := run(args, strings.NewReader(stdin), &stdout, &stderr)
+	return stdout.String(), stderr.String(), code
+}
+
+// unchanged fails unless the files under dir are those of before.
+func unchanged(t *testing.T, dir string, before map[string]string) {
+	t.Helper()
+	after := filesIn(t, dir)
+	if len(after) != len(before) {
+		t.Errorf("files %q, want %d", after, len(before))
+	}
+	for _, f := range after {
+		if read(t, dir, f) != before[f] {
+			t.Errorf("%s changed", f)
+		}
+	}
+}
+
+// contents returns the content of each file under dir, by path.
+func contents(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	m := map[string]string{}
+	for _, f := range filesIn(t, dir) {
+		m[f] = read(t, dir, f)
+	}
+	return m
+}
+
+func TestInitASDLCLayout(t *testing.T) {
+	dir := t.TempDir()
+	stdout, stderr, code := initRun(dir, "0.9.0", "--layout", "asdlc")
+	if code != 0 || stderr != "" {
+		t.Fatalf("exit %d, standard error %q; want 0 and nothing", code, stderr)
+	}
+	want := ".breadcrumbs\nbreadcrumb.rules\ndocs/adrs/TEMPLATE.md\nspecs/TEMPLATE.md\ntasks/TEMPLATE.md\nAGENTS.md\n.github/workflows/breadcrumbs.yml\n"
+	if stdout != want {
+		t.Errorf("standard output %q, want %q", stdout, want)
+	}
+}
+
+// specBlock returns the text of the code block of specs/init/spec.md
+// that follows after, without its fences and its indent of two spaces.
+func specBlock(t *testing.T, after string) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "..", "specs", "init", "spec.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, rest, ok := strings.Cut(string(b), after)
+	if !ok {
+		t.Fatalf("the spec has no %q", after)
+	}
+	_, rest, _ = strings.Cut(rest, "  ```\n")
+	block, _, ok := strings.Cut(rest, "  ```\n")
+	if !ok {
+		t.Fatalf("no code block follows %q", after)
+	}
+	var text strings.Builder
+	for _, line := range strings.SplitAfter(block, "\n") {
+		text.WriteString(strings.TrimPrefix(line, "  "))
+	}
+	return text.String()
+}
+
+func TestInitLayoutRulesAndPatterns(t *testing.T) {
+	dir := t.TempDir()
+	initRun(dir, "0.9.0", "-l", "asdlc")
+	for _, f := range []string{"breadcrumb.rules", ".breadcrumbs"} {
+		got := read(t, dir, f)
+		if first, _, _ := strings.Cut(got, "\n"); first != "# bcr init --layout asdlc, bcr 0.9.0" {
+			t.Errorf("the first line of %s is %q", f, first)
+		}
+		want := strings.Replace(specBlock(t, "**`"+f+"`.** Written as:"), "VERSION", "0.9.0", 1)
+		if got != want {
+			t.Errorf("%s is\n%s\nwant, as the spec shows it,\n%s", f, got, want)
+		}
+	}
+}
+
+func TestInitTemplatesAreNotBreadcrumbs(t *testing.T) {
+	dir := t.TempDir()
+	initRun(dir, "0.9.0", "--layout", "asdlc")
+	chdir(t, dir)
+	if stdout, stderr, code := command("", "extract"); stdout != "" || stderr != "" || code != 0 {
+		t.Errorf("bcr extract prints %q and %q, exits %d; want nothing and 0", stdout, stderr, code)
+	}
+	for i, f := range asdlcTemplates {
+		stdout, stderr, code := command("", "extract", f)
+		if code != 0 || stderr != "" {
+			t.Errorf("bcr extract %s: exit %d, standard error %q", f, code, stderr)
+			continue
+		}
+		lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
+		fields := strings.Split(lines[0], "\t")
+		if len(lines) != 1 || len(fields) < 3 || fields[0] != "breadcrumb" || fields[2] != []string{"ADR", "spec", "PBI"}[i] {
+			t.Errorf("bcr extract %s prints %q; want one breadcrumb record of its type", f, stdout)
+		}
+	}
+}
+
+// fromTemplate returns the template at path under dir with each old
+// replaced by its new, and fails when the template lacks an old.
+func fromTemplate(t *testing.T, dir, path string, oldNew ...string) string {
+	t.Helper()
+	text := read(t, dir, path)
+	for i := 0; i < len(oldNew); i += 2 {
+		if !strings.Contains(text, oldNew[i]) {
+			t.Fatalf("%s has no %q", path, oldNew[i])
+		}
+		text = strings.Replace(text, oldNew[i], oldNew[i+1], 1)
+	}
+	return text
+}
+
+func TestInitDocumentsFromTheTemplates(t *testing.T) {
+	dir := t.TempDir()
+	initRun(dir, "0.9.0", "--layout", "asdlc")
+	write(t, dir, "docs/adrs/ADR-001-first.md", fromTemplate(t, dir, "docs/adrs/TEMPLATE.md",
+		"id: ADR-NNN", "id: ADR-001"))
+	write(t, dir, "specs/first/spec.md", fromTemplate(t, dir, "specs/TEMPLATE.md",
+		"id: feature-name", "id: first",
+		"  links: []\n  # links:\n  #   - constrained_by ADR-NNN\n", "  links:\n    - constrained_by ADR-001\n"))
+	write(t, dir, "tasks/PBI-001.md", fromTemplate(t, dir, "tasks/TEMPLATE.md",
+		"id: PBI-NNN", "id: PBI-001",
+		"  links: []\n  # links:\n  #   - changes feature-name\n", "  links:\n    - changes first\n"))
+	chdir(t, dir)
+
+	input := ""
+	for _, stage := range []string{"extract", "verify", "audit"} {
+		stdout, stderr, code := command(input, stage)
+		if code != 0 || stderr != "" {
+			t.Fatalf("bcr %s: exit %d, standard error %q; want 0 and nothing", stage, code, stderr)
+		}
+		input = stdout
+	}
+	for _, want := range []string{"\tADR-001\t", "\tfirst\t", "\tPBI-001\t"} {
+		if !strings.Contains(input, want) {
+			t.Errorf("the pipe has no record of%s", strings.TrimSuffix(want, "\t"))
+		}
+	}
+}
+
+func TestInitAgentsFileWithTheLayout(t *testing.T) {
+	dir := t.TempDir()
+	initRun(dir, "0.9.0", "--layout", "asdlc")
+	if got, want := read(t, dir, "AGENTS.md"), agentsSection+"\n"+asdlcSection; got != want {
+		t.Errorf("AGENTS.md is %q, want the Breadcrumbs section, then the ASDLC section", got)
+	}
+	if !strings.HasPrefix(asdlcSection, "## ASDLC\n") {
+		t.Error("the ASDLC section does not start with ## ASDLC")
+	}
+	for _, name := range append([]string{"breadcrumb.rules"}, asdlcTemplates...) {
+		if !strings.Contains(asdlcSection, "`"+name+"`") {
+			t.Errorf("the ASDLC section does not name %s", name)
+		}
+	}
+}
+
+func TestInitLayoutOverTheBreadcrumbsSection(t *testing.T) {
+	dir := t.TempDir()
+	initRun(dir, "0.8.0")
+	if err := os.Remove(filepath.Join(dir, ".breadcrumbs")); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, code := initRun(dir, "0.9.0", "--layout", "asdlc")
+	if code != 0 {
+		t.Fatalf("exit %d, standard error %q; want 0", code, stderr)
+	}
+	if got, want := read(t, dir, "AGENTS.md"), agentsSection+"\n"+asdlcSection; got != want {
+		t.Errorf("AGENTS.md is %q, want the ASDLC section after the Breadcrumbs section", got)
+	}
+	if !strings.Contains(stderr, "AGENTS.md already has a ## Breadcrumbs section; left as it is") {
+		t.Errorf("standard error %q does not say the Breadcrumbs section was left", stderr)
+	}
+	if !strings.Contains(stdout, "AGENTS.md\n") {
+		t.Errorf("standard output %q does not name AGENTS.md", stdout)
+	}
+}
+
+func TestInitLayoutRefusesAnyShapeFile(t *testing.T) {
+	dir := t.TempDir()
+	initRun(dir, "0.8.0")
+	before := contents(t, dir)
+	stdout, stderr, code := initRun(dir, "0.9.0", "--layout", "asdlc")
+	if code != 2 || stdout != "" {
+		t.Errorf("exit %d, standard output %q; want 2 and nothing", code, stdout)
+	}
+	if !strings.Contains(stderr, ".breadcrumbs is already there") || !strings.Contains(stderr, "delete both") || !strings.Contains(stderr, "breadcrumb.rules") {
+		t.Errorf("standard error %q does not name .breadcrumbs and say to delete both", stderr)
+	}
+	unchanged(t, dir, before)
+
+	dir = t.TempDir()
+	write(t, dir, "breadcrumb.rules", "type\tPBI\n")
+	before = contents(t, dir)
+	stdout, stderr, code = initRun(dir, "0.9.0", "--layout", "asdlc")
+	if code != 2 || stdout != "" {
+		t.Errorf("with a breadcrumb.rules: exit %d, standard output %q; want 2 and nothing", code, stdout)
+	}
+	if !strings.Contains(stderr, "breadcrumb.rules is already there") {
+		t.Errorf("standard error %q does not name breadcrumb.rules", stderr)
+	}
+	unchanged(t, dir, before)
+}
+
+func TestInitLeavesATemplate(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "specs/TEMPLATE.md", "Ours.\n")
+	stdout, stderr, code := initRun(dir, "0.9.0", "--layout", "asdlc")
+	if code != 0 {
+		t.Fatalf("exit %d, want 0", code)
+	}
+	if read(t, dir, "specs/TEMPLATE.md") != "Ours.\n" {
+		t.Error("specs/TEMPLATE.md changed")
+	}
+	if !strings.Contains(stderr, "specs/TEMPLATE.md is already there; left as it is") {
+		t.Errorf("standard error %q does not say specs/TEMPLATE.md was left", stderr)
+	}
+	want := ".breadcrumbs\nbreadcrumb.rules\ndocs/adrs/TEMPLATE.md\ntasks/TEMPLATE.md\nAGENTS.md\n.github/workflows/breadcrumbs.yml\n"
+	if stdout != want {
+		t.Errorf("standard output %q, want %q", stdout, want)
+	}
+}
+
+func TestInitUnknownLayout(t *testing.T) {
+	dir := t.TempDir()
+	stdout, stderr, code := initRun(dir, "0.9.0", "--layout", "spec-kit")
+	if code != 2 || stdout != "" {
+		t.Errorf("exit %d, standard output %q; want 2 and nothing", code, stdout)
+	}
+	if !strings.Contains(stderr, "asdlc") || !strings.HasSuffix(stderr, "\n"+initUsage) {
+		t.Errorf("standard error %q does not name asdlc, then the usage line", stderr)
 	}
 	if f := filesIn(t, dir); len(f) > 0 {
 		t.Errorf("wrote %q", f)
