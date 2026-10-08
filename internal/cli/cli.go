@@ -28,7 +28,21 @@ func (f Flag) name() string {
 // or `--`, ends them. A flag given more than once keeps its last value;
 // a flag with no value maps to "".
 func Parse(args []string, flags []Flag) (map[string]string, []string, error) {
+	all, operands, err := ParseAll(args, flags)
+	if err != nil {
+		return nil, nil, err
+	}
 	set := map[string]string{}
+	for name, values := range all {
+		set[name] = values[len(values)-1]
+	}
+	return set, operands, nil
+}
+
+// ParseAll reads the flags in args as Parse does, and keeps every
+// value of a flag given more than once, in the order given.
+func ParseAll(args []string, flags []Flag) (map[string][]string, []string, error) {
+	set := map[string][]string{}
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
@@ -50,7 +64,7 @@ func Parse(args []string, flags []Flag) (map[string]string, []string, error) {
 				i++
 				value = args[i]
 			}
-			set[f.name()] = value
+			set[f.name()] = append(set[f.name()], value)
 		case strings.HasPrefix(a, "-") && a != "-":
 			letters := []rune(a[1:])
 			for j, c := range letters {
@@ -59,7 +73,7 @@ func Parse(args []string, flags []Flag) (map[string]string, []string, error) {
 					return nil, nil, fmt.Errorf("unknown flag -%c", c)
 				}
 				if !f.Value {
-					set[f.name()] = ""
+					set[f.name()] = append(set[f.name()], "")
 					continue
 				}
 				value := string(letters[j+1:])
@@ -70,7 +84,7 @@ func Parse(args []string, flags []Flag) (map[string]string, []string, error) {
 					i++
 					value = args[i]
 				}
-				set[f.name()] = value
+				set[f.name()] = append(set[f.name()], value)
 				break
 			}
 		default:

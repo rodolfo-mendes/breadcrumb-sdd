@@ -46,6 +46,31 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestParseAll(t *testing.T) {
+	for _, tc := range []struct {
+		args     []string
+		set      map[string][]string
+		operands []string
+	}{
+		{nil, map[string][]string{}, nil},
+		{[]string{"-o", "A", "-o", "B"}, map[string][]string{"output": {"A", "B"}}, nil},
+		{[]string{"-oA", "--output=B", "--output", "C"}, map[string][]string{"output": {"A", "B", "C"}}, nil},
+		{[]string{"-a", "-oA", "x"}, map[string][]string{"all": {""}, "output": {"A"}}, []string{"x"}},
+	} {
+		set, operands, err := ParseAll(tc.args, flags)
+		if err != nil {
+			t.Errorf("%q: %v", tc.args, err)
+			continue
+		}
+		if !reflect.DeepEqual(set, tc.set) || !reflect.DeepEqual(operands, tc.operands) {
+			t.Errorf("%q: got %v %q, want %v %q", tc.args, set, operands, tc.set, tc.operands)
+		}
+	}
+	if _, _, err := ParseAll([]string{"-o"}, flags); err == nil || err.Error() != "flag -o needs a value" {
+		t.Errorf("got error %v", err)
+	}
+}
+
 func TestParseErrors(t *testing.T) {
 	for _, tc := range []struct {
 		args []string

@@ -6,6 +6,7 @@
 //	bcr verify
 //	bcr audit
 //	bcr report
+//	bcr filter [-i ID] [-t TYPE] [-k KIND]
 //	bcr init [-a FILE]
 //
 // Run it from the root of a repository. extract prints the breadcrumb
@@ -13,8 +14,9 @@
 // records, verify each problem in the set of breadcrumbs whose records
 // it reads from standard input, audit the verdict of each claim and
 // breadcrumb whose records it reads from standard input, and report a
-// page of the records it reads from standard input. init sets a
-// repository up for the pipe. Its user documentation is docs/bcr.md.
+// page of the records it reads from standard input. filter prints the
+// records it reads from standard input that match its flags. init sets
+// a repository up for the pipe. Its user documentation is docs/bcr.md.
 //
 // It exits 0 when it finds nothing wrong, 1 when it finds something
 // wrong, and 2 when it is used wrongly or cannot run (ADR-0006).
@@ -32,8 +34,9 @@ const (
 	verifyUsage  = "usage: bcr verify\n"
 	auditUsage   = "usage: bcr audit\n"
 	reportUsage  = "usage: bcr report\n"
+	filterUsage  = "usage: bcr filter [-i ID] [-t TYPE] [-k KIND]\n"
 	initUsage    = "usage: bcr init [-a FILE]\n"
-	usage        = extractUsage + verifyUsage + auditUsage + reportUsage + initUsage
+	usage        = extractUsage + verifyUsage + auditUsage + reportUsage + filterUsage + initUsage
 )
 
 // Exit codes (ADR-0006).
@@ -60,6 +63,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runAudit(args, stdin, stdout, stderr)
 	case "report":
 		return runReport(args, stdin, stdout, stderr)
+	case "filter":
+		return runFilter(args, stdin, stdout, stderr)
 	case "init":
 		return runInit(args, stdout, stderr)
 	}

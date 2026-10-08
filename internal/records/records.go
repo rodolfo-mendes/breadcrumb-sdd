@@ -35,8 +35,8 @@ const (
 	claimFields      = 7
 	problemKind      = "problem" // skipped by Read
 	problemFields    = 4
-	claimVerdictKind = "claim-verdict" // read only by ReadReport
-	verdictKind      = "verdict"       // read only by ReadReport
+	claimVerdictKind = "claim-verdict" // read only by ReadReport and ReadLines
+	verdictKind      = "verdict"       // read only by ReadReport and ReadLines
 	verdictFields    = 5               // of both; a verdict record may have a reason after them
 )
 
@@ -122,20 +122,82 @@ func ReadReport(r io.Reader) (crumb.Set, error) {
 // a line is not a record, or "".
 func readWith(r io.Reader, addLine func(*crumb.Set, string) string) (crumb.Set, error) {
 	var set crumb.Set
+	err := eachLine(r, func(_, line string) string { return addLine(&set, line) })
+	if err != nil {
+		return crumb.Set{}, err
+	}
+	return set, nil
+}
+
+// eachLine calls line with each line of r, as read and without its
+// line ending, until r ends. line returns why a line is not a record,
+// or ""; the error then gives the line's number in the input, counted
+// from 1.
+func eachLine(r io.Reader, line func(read, text string) string) error {
 	in := bufio.NewReader(r)
 	for n := 1; ; n++ {
-		line, err := in.ReadString('\n')
+		read, err := in.ReadString('\n')
 		if err != nil && err != io.EOF {
-			return crumb.Set{}, err
+			return err
 		}
-		if err == io.EOF && line == "" {
-			return set, nil
+		if err == io.EOF && read == "" {
+			return nil
 		}
-		line = strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
-		if why := addLine(&set, line); why != "" {
-			return crumb.Set{}, fmt.Errorf("line %d of the input is not a record: %s", n, why)
+		text := strings.TrimSuffix(strings.TrimSuffix(read, "\n"), "\r")
+		if why := line(read, text); why != "" {
+			return fmt.Errorf("line %d of the input is not a record: %s", n, why)
 		}
 	}
+}
+
+// Line is a line of the input that is a record, as it was read.
+type Line struct {
+	Kind string // its first field
+	ID   string // "" for a problem record, and for a kind bcr does not know
+	Type string // of a breadcrumb record only
+	Text string // the line as read, with its line ending
+}
+
+// ReadLines reads records as Read does, for bcr filter: it returns
+// every record, of a kind it does not know included, in the order
+// read. A record of a kind the pipe prints has the fields of its
+// kind, none of them empty, and a LINE; nothing else about it is
+// checked, neither a claim nor a VERDICT (specs/filter/spec.md).
+func ReadLines(r io.Reader) ([]Line, error) {
+	var lines []Line
+	err := eachLine(r, func(read, text string) string {
+		fields, why := split(text, map[string]int{
+			breadcrumbKind: breadcrumbFields, linkKind: linkFields, claimKind: claimFields,
+			problemKind: problemFields, claimVerdictKind: verdictFields, verdictKind: verdictFields,
+		})
+		if why != "" {
+			return why
+		}
+		if fields == nil {
+			kind, _, _ := strings.Cut(text, "\t")
+			lines = append(lines, Line{Kind: kind, Text: read})
+			return ""
+		}
+		l := Line{Kind: fields[0], Text: read}
+		if l.Kind == problemKind {
+			_, why = place(fields[1], fields[2])
+		} else {
+			_, why = place(fields[len(fields)-2], fields[len(fields)-1])
+			l.ID = fields[1]
+		}
+		if why != "" {
+			return why
+		}
+		if l.Kind == breadcrumbKind {
+			l.Type = fields[2]
+		}
+		lines = append(lines, l)
+		return ""
+	})
+	if err != nil {
+		return nil, err
+	}
+	return lines, nil
 }
 
 // add adds the record in line to set when it is a breadcrumb or a

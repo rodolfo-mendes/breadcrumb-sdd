@@ -101,6 +101,15 @@ Rules:
   since new fields may be added at the end of a record.
 - A line of input may end in `\n` or `\r\n`. The last line need not
   end.
+- A `breadcrumb`, a `claim-verdict` and a `verdict` record have at
+  least five fields, a `link` record at least six, a `claim` record at
+  least seven and a `problem` record at least four. None of the fields
+  above is empty, and `LINE` is a whole number from 1, written in
+  digits only.
+- Nothing else about a record is checked: not a `claim` record's
+  `TARGET`, `KIND` and `ARGUMENT`, and not a `VERDICT`. Those rules
+  belong to `bcr audit` and `bcr report`, and `bcr filter` judges
+  nothing.
 - A line whose first field is empty has no kind, and is not a record.
 - A line that is not a record `bcr extract` could print, an empty line
   included, stops `bcr filter`: it writes a message starting `bcr: `
@@ -143,17 +152,17 @@ Exit status:
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
-- [ ] `docs/bcr.md` describes `bcr filter` under `### filter`, and
+- [x] Each Scenario below has a test.
+- [x] `docs/bcr.md` describes `bcr filter` under `### filter`, and
       lists it in its SYNOPSIS; `docs/bcr.1` is generated again.
-- [ ] `AGENTS.md`'s Toolchain shows how to look up a breadcrumb with
+- [x] `AGENTS.md`'s Toolchain shows how to look up a breadcrumb with
       `bcr filter`.
-- [ ] In this repository, `bcr extract | bcr filter --type ADR | wc -l`
+- [x] In this repository, `bcr extract | bcr filter --type ADR | wc -l`
       prints the number of files in `docs/adrs/`.
-- [ ] In this repository, `bcr extract | bcr filter --kind breadcrumb`
+- [x] In this repository, `bcr extract | bcr filter --kind breadcrumb`
       prints the same lines as
       `bcr extract | grep '^breadcrumb'`.
-- [ ] In this repository,
+- [x] In this repository,
       `bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id filter`
       prints one line: this spec's verdict.
 

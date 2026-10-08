@@ -11,13 +11,14 @@ bcr extract [FILE...]
 bcr verify
 bcr audit
 bcr report
+bcr filter [-i ID] [-t TYPE] [-k KIND]
 bcr init [-a FILE]
 ```
 
 ## DESCRIPTION
 
-`bcr` is the toolkit of Breadcrumb. Its four commands are the stages
-of a pipe:
+`bcr` is the toolkit of Breadcrumb. Four of its commands are the
+stages of a pipe:
 
 ```
 bcr extract | bcr verify | bcr audit | bcr report
@@ -28,8 +29,9 @@ matter of its files and prints them as records. `bcr verify` checks
 the set of breadcrumbs, `bcr audit` checks their claims against the
 repository's files, and `bcr report` writes a page of what the pipe
 found. Each stage reads the records of the one before it from
-standard input. `bcr init` sets a repository up for the pipe. Run
-`bcr` from the root of the repository.
+standard input. `bcr filter` prints only the records that match its
+flags, wherever records flow. `bcr init` sets a repository up for the
+pipe. Run `bcr` from the root of the repository.
 
 This document is the user documentation of `bcr`: its commands,
 flags, inputs, outputs and exit codes. Where it and a command's spec
@@ -518,6 +520,92 @@ set -o pipefail; bcr extract | bcr verify | bcr audit | bcr report > report.md
 bcr extract | bcr report
 ```
 
+### filter
+
+```
+bcr filter [-i ID] [-t TYPE] [-k KIND]
+```
+
+Reads the records of the pipe, and prints only those that match the
+flags it is given, unchanged. It can stand wherever records flow.
+Right after `bcr extract`, it looks a breadcrumb up:
+
+```
+bcr extract | bcr filter --id ADR-0019
+```
+
+After `bcr audit`, it shows one breadcrumb's verdict, judged with the
+whole set:
+
+```
+bcr extract | bcr verify | bcr audit | bcr filter --id ADR-0019
+```
+
+Flags:
+
+- `-i ID`, `--id ID`: a `breadcrumb`, `link`, `claim`,
+  `claim-verdict` or `verdict` record matches when its `ID` field
+  equals `ID`. A `problem` record has no `ID` field, and never
+  matches.
+- `-t TYPE`, `--type TYPE`: a `breadcrumb` record matches when its
+  `TYPE` field equals `TYPE`. No other kind of record matches.
+- `-k KIND`, `--kind KIND`: a record matches when its first field
+  equals `KIND`, whether or not `bcr` knows that kind.
+
+At least one flag is given. Each flag may be given more than once: a
+record matches a flag when it matches at least one of its values, and
+is printed when it matches every flag given. Fields are compared byte
+for byte, letter case included, so `adr-0019` does not select
+`ADR-0019`.
+
+Operands: none. `bcr filter` reads no file.
+
+Standard input: the records, as `bcr extract`, `bcr verify` and
+`bcr audit` print them, read to the end. A line may end in `\n` or
+`\r\n`. A record of a kind `bcr` does not know matches only `--kind`,
+and fields after the ones printed today are not read.
+
+Output: each record that matches, on standard output, as it was read,
+byte for byte, with its line ending, in the order read. `bcr filter`
+adds no record and changes none. It reads its whole input before it
+writes. When no record matches, it prints nothing, and that is not an
+error.
+
+`bcr filter` judges nothing: two records with the same id both match,
+and a claim or a verdict is not checked. So it comes after the
+commands that judge, not before them. Before `bcr verify`, a link to a
+breadcrumb filtered out is reported as pointing nowhere; before
+`bcr audit`, a `problem` record that is dropped can no longer make its
+breadcrumb `Undecided`.
+
+A `problem` record is printed only with `--kind problem`: it has no
+id, so the problems of a breadcrumb do not follow it. `--type` alone
+prints `breadcrumb` records only; the links and claims of those
+breadcrumbs are found by their ids, with a second `bcr filter`.
+
+A line of input that is not a record the pipe could print, an empty
+line included, stops `bcr filter`: it writes a message starting
+`bcr: `, which gives the line's number in the input, and prints no
+record. A record of a kind the pipe prints needs the fields of its
+kind, none of them empty, and a `LINE` that is a whole number from 1.
+
+Exit status:
+
+- 0: the input was read to its end, whether or not a record matched.
+- 2: `bcr filter` was given an operand or no flag, its input could not
+  be read, a line of its input was not a record, or its output could
+  not be written.
+
+Examples:
+
+```
+bcr extract | bcr filter --id ADR-0019
+bcr extract | bcr filter --type ADR | wc -l
+bcr extract | bcr filter -k link -i PBI-00001 | cut -f3,4
+bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id filter
+bcr extract | bcr verify | bcr filter --kind problem | cut -f2-
+```
+
 ### init
 
 ```
@@ -594,8 +682,8 @@ Every command exits with (ADR-0006):
 - 1: it ran and found something wrong in the breadcrumbs.
 - 2: it was used wrongly, or could not run.
 
-`bcr report` and `bcr init` judge nothing, so they exit only with 0 or
-2.
+`bcr report`, `bcr filter` and `bcr init` judge nothing, so they exit
+only with 0 or 2.
 
 ## SEE ALSO
 

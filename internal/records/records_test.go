@@ -446,3 +446,71 @@ func TestReadAndReadAuditStillSkipVerdicts(t *testing.T) {
 		t.Errorf("ReadAudit got %+v, %v; want an empty set", set, err)
 	}
 }
+
+func TestReadLines(t *testing.T) {
+	input := "breadcrumb\tverify\tspec\tspecs/verify/spec.md\t3\n" +
+		"link\tverify\tfollows\tADR-0015\tspecs/verify/spec.md\t6\r\n" +
+		"claim\tverify\tcontains\t../x.md\tx\tspecs/verify/spec.md\t8\n" + // neither its kind nor its target is checked
+		"problem\ta.md\t9\tclaim must be written in single quotes\n" +
+		"claim-verdict\tverify\tPassed\tspecs/verify/spec.md\t8\n" + // its VERDICT is not checked
+		"note\tx\n" +
+		"note\n" +
+		"breadcrumb\tADR-0001\tADR\ta.md\t3\tmore\n" +
+		"verdict\tverify\tUndecided\tspecs/verify/spec.md\t3\tno claims" // the last line does not end
+	want := []Line{
+		{Kind: "breadcrumb", ID: "verify", Type: "spec"},
+		{Kind: "link", ID: "verify"},
+		{Kind: "claim", ID: "verify"},
+		{Kind: "problem"},
+		{Kind: "claim-verdict", ID: "verify"},
+		{Kind: "note"},
+		{Kind: "note"},
+		{Kind: "breadcrumb", ID: "ADR-0001", Type: "ADR"},
+		{Kind: "verdict", ID: "verify"},
+	}
+	for i, text := range strings.SplitAfter(input, "\n") {
+		want[i].Text = text
+	}
+	got, err := ReadLines(strings.NewReader(input))
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, %v; want %+v", got, err, want)
+	}
+	if got, err := ReadLines(strings.NewReader("")); err != nil || len(got) != 0 {
+		t.Errorf("no input: got %+v, %v; want no record", got, err)
+	}
+}
+
+func TestReadLinesALineThatIsNotARecord(t *testing.T) {
+	const valid = "breadcrumb\tA\tADR\ta.md\t3\n"
+	for _, line := range []string{
+		"",                                          // empty
+		"\tA\tADR\ta.md\t3",                         // no kind
+		"breadcrumb\tADR-0001\tADR",                 // too few fields
+		"breadcrumb\t\tADR\ta.md\t3",                // an empty ID
+		"breadcrumb\tA\tADR\ta.md\tthree",           // LINE is not a number
+		"link\tA\tfollows\tB\ta.md",                 // no LINE
+		"link\tA\tfollows\tB\ta.md\t0",              // LINE is not from 1
+		"claim\tA\thas-line\tb.md\tx\ta.md",         // no LINE
+		"claim\tA\thas-line\tb.md\t\ta.md\t8",       // an empty ARGUMENT
+		"problem\ta.md\t3",                          // no MESSAGE
+		"problem\ta.md\tthree\tmessage",             // LINE is not a number
+		"claim-verdict\tA\tConfirmed\ta.md",         // no LINE
+		"verdict\tA\t\ta.md\t3",                     // an empty VERDICT
+		"verdict\tA\tUndecided\ta.md\tx\tno claims", // LINE is not a number
+	} {
+		got, err := ReadLines(strings.NewReader(valid + line + "\n" + valid))
+		if err == nil || !strings.Contains(err.Error(), "line 2 ") {
+			t.Errorf("%q: got error %v, want one that gives line 2", line, err)
+		}
+		if got != nil {
+			t.Errorf("%q: got %+v with an error, want none", line, got)
+		}
+	}
+}
+
+func TestReadLinesReturnsTheErrorOfItsReader(t *testing.T) {
+	got, err := ReadLines(broken{strings.NewReader(pbiRecords)})
+	if err == nil || err.Error() != "cannot read" || got != nil {
+		t.Errorf("got %+v and error %v, want no record and the reader's error", got, err)
+	}
+}

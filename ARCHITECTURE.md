@@ -71,6 +71,11 @@ bcr extract | bcr verify | bcr audit | bcr report
   [`specs/audit`](specs/audit/spec.md)).
 - `bcr report` ends the pipe with one Markdown page, its diagrams in
   Mermaid ([`specs/report`](specs/report/spec.md)).
+- `bcr filter` is no stage of that pipe. It stands wherever records
+  flow, and prints only the records that match its flags, unchanged:
+  after `bcr extract` it looks a breadcrumb up, and after `bcr audit`
+  it shows one breadcrumb's verdict
+  ([`specs/filter`](specs/filter/spec.md)).
 
 Records are the common language of the commands: one record per line,
 its kind in the first field, and only `internal/records` knows their
@@ -78,9 +83,11 @@ format. A consumer selects records by kind and reads their fields by
 position; new kinds, and new fields at the end of a record, may be
 added. Every stage but the last passes every record it reads on, byte
 for byte
-([ADR-0016](docs/adrs/ADR-0016-verify-passes-on-every-record.md)), and
-a problem travels down the pipe as a record as well as on standard
-error ([ADR-0021](docs/adrs/ADR-0021-problems-travel-as-records.md)).
+([ADR-0016](docs/adrs/ADR-0016-verify-passes-on-every-record.md));
+`bcr filter` passes on only the records it selects, so it comes after
+the stages that judge the whole set. A problem travels down the pipe
+as a record as well as on standard error
+([ADR-0021](docs/adrs/ADR-0021-problems-travel-as-records.md)).
 
 In a pipe, the shell returns the exit status of the last command, and
 `bcr report` exits 0 whatever the verdicts. A script that needs a
@@ -96,13 +103,15 @@ stage's status, such as `bcr audit`'s 1 for a Refuted claim, runs with
 | Presentation | Show the records to a person | `report` | Done |
 | Setup | Set a repository up for the pipe | `init` | Done ([`specs/init`](specs/init/spec.md)) |
 | Feedback | Tell an author what is wrong, printing only problems | Not named | Reserved |
-| Queries | Answer questions about the records | Not named | Open: a filter over the records may be enough |
+| Queries | Answer questions about the records | `filter` | Done: selects records by id, type and kind ([`specs/filter`](specs/filter/spec.md)) |
 | Cache | Store the records in `.bcr/` | `build` | Deferred |
 
 A new command takes its name from what its family does: `extract`
 produces data, `verify` and `audit` judge it, `report` shows it, and
 `init` sets the pipe up. `init` reads no breadcrumb and no record, so
-nothing of it is in the core.
+nothing of it is in the core. `filter` answers a question by selecting
+records; matching a flag against a field is no rule about breadcrumbs,
+so nothing of it is in the core either.
 
 ## Rules every command follows
 
@@ -153,5 +162,4 @@ nothing of it is in the core.
 ## What comes next
 
 1. Release the new model as v0.8.0.
-2. Queries, as a command only where a filter over the records is not
-   enough.
+2. More queries, as a command only where `bcr filter` is not enough.

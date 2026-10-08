@@ -35,6 +35,10 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		{[]string{"spec"}, usage},
 		// bcr init came back, with its own usage (specs/init/spec.md).
 		{[]string{"init", "-x"}, initUsage},
+		// bcr filter needs a flag it knows (specs/filter/spec.md).
+		{[]string{"filter"}, filterUsage},
+		{[]string{"filter", "-x"}, filterUsage},
+		{[]string{"filter", "--id"}, filterUsage},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {

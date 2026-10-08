@@ -87,7 +87,7 @@ specs/*/spec.md
 tasks/*.md
 ```
 
-Then run the four commands of `bcr` as a pipe:
+Then run four of the commands of `bcr` as a pipe:
 
 ```
 bcr extract | bcr verify | bcr audit | bcr report > report.md
@@ -103,7 +103,15 @@ bcr extract | bcr verify | bcr audit | bcr report > report.md
   wherever it shows Markdown.
 
 Each stage passes every record on, so a stage's output can also be
-read with `grep`, `cut` or `awk`. To check a repository in a script or
+read with `grep`, `cut` or `awk`. `bcr filter` selects records by id,
+type or kind, to look up one breadcrumb or to read its verdict:
+
+```
+bcr extract | bcr filter --id ADR-0019
+bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id ADR-0019
+```
+
+To check a repository in a script or
 in CI, keep only the problems and the Refuted claims, and let a
 Refuted claim fail the pipe:
 
