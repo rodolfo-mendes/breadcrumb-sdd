@@ -28,10 +28,10 @@ const pbiRecords = "breadcrumb\tPBI-00001\tPBI\ttasks/PBI-00001.md\t3\n" +
 	"link\tPBI-00001\tchanges\tasdlc\ttasks/PBI-00001.md\t7\n"
 
 var pbiSet = crumb.Set{
-	Breadcrumbs: []crumb.SetBreadcrumb{{ID: "PBI-00001", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 3}}},
+	Breadcrumbs: []crumb.SetBreadcrumb{{ID: "PBI-00001", Type: "PBI", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 3}}},
 	Links: []crumb.SetLink{
-		{Object: "ADR-0001", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 6}},
-		{Object: "asdlc", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 7}},
+		{ID: "PBI-00001", Verb: "implements", Object: "ADR-0001", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 6}},
+		{ID: "PBI-00001", Verb: "changes", Object: "asdlc", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 7}},
 	},
 }
 
@@ -103,11 +103,28 @@ func TestWriteABreadcrumbWithClaims(t *testing.T) {
 	}
 }
 
-func TestReadSkipsTheClaimsWriteWrites(t *testing.T) {
+func TestReadTheClaimsWriteWrites(t *testing.T) {
 	var out bytes.Buffer
 	Write(&out, "tasks/PBI-00001.md", spec())
-	if got := read(t, out.String()); !reflect.DeepEqual(got, pbiSet) {
-		t.Errorf("got %+v, want %+v", got, pbiSet)
+	// Of a claim, bcr verify reads whose it is and where: no kind, no
+	// target, no argument.
+	want := pbiSet
+	want.Claims = []crumb.SetClaim{
+		{ID: "PBI-00001", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 9}},
+		{ID: "PBI-00001", At: crumb.Place{Text: "tasks/PBI-00001.md", Line: 10}},
+	}
+	if got := read(t, out.String()); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestReadDoesNotCheckAClaim(t *testing.T) {
+	// A kind bcr does not know and a target outside the repository are
+	// bcr audit's to refuse.
+	set := read(t, "claim\tverify\tcontains\t/etc/passwd\tx\tspecs/verify/spec.md\t8\tmore\n")
+	want := crumb.Set{Claims: []crumb.SetClaim{{ID: "verify", At: crumb.Place{Text: "specs/verify/spec.md", Line: 8}}}}
+	if !reflect.DeepEqual(set, want) {
+		t.Errorf("got %+v, want %+v", set, want)
 	}
 }
 
@@ -129,7 +146,7 @@ func TestWhatIsWrittenIsReadBackTheSame(t *testing.T) {
 	Write(&out, "docs/adrs/my decision.md", adr)
 	want := crumb.Set{
 		Breadcrumbs: append(append([]crumb.SetBreadcrumb{}, pbiSet.Breadcrumbs...),
-			crumb.SetBreadcrumb{ID: "ADR-0001", At: crumb.Place{Text: "docs/adrs/my decision.md", Line: 4}}),
+			crumb.SetBreadcrumb{ID: "ADR-0001", Type: "ADR", At: crumb.Place{Text: "docs/adrs/my decision.md", Line: 4}}),
 		Links: pbiSet.Links,
 	}
 	if got := read(t, out.String()); !reflect.DeepEqual(got, want) {
@@ -163,7 +180,7 @@ func TestReadFieldsAddedAtTheEnd(t *testing.T) {
 }
 
 func TestReadRecordsOfAKindItDoesNotKnow(t *testing.T) {
-	input := "claim\tPBI-00001\tcontains\n" + pbiRecords + "claim\nBreadcrumb\tX\tPBI\tx.md\t3\nlinks\t\t\n"
+	input := "note\tPBI-00001\tcontains\n" + pbiRecords + "claims\nBreadcrumb\tX\tPBI\tx.md\t3\nlinks\t\t\n"
 	if got := read(t, input); !reflect.DeepEqual(got, pbiSet) {
 		t.Errorf("got %+v, want %+v", got, pbiSet)
 	}
@@ -172,11 +189,16 @@ func TestReadRecordsOfAKindItDoesNotKnow(t *testing.T) {
 func TestReadALineThatIsNotARecord(t *testing.T) {
 	const valid = "breadcrumb\tADR-0002\tADR\ta.md\t3\n"
 	for _, line := range []string{
-		"breadcrumb\tADR-0001\tADR",                             // too few fields
-		"breadcrumb\tADR-0001\tADR\ta.md",                       // no LINE
-		"link\tPBI-00001\timplements\tADR-0001\t6",              // no PATH
-		"link\tPBI-00001\timplements\tADR-0001",                 // too few fields
-		"breadcrumb",                                            // only its kind
+		"breadcrumb\tADR-0001\tADR",                            // too few fields
+		"breadcrumb\tADR-0001\tADR\ta.md",                      // no LINE
+		"link\tPBI-00001\timplements\tADR-0001\t6",             // no PATH
+		"link\tPBI-00001\timplements\tADR-0001",                // too few fields
+		"breadcrumb",                                           // only its kind
+		"claim\tverify\thas-line\tdocs/bcr.md",                 // too few fields
+		"claim\tverify\thas-line\tdocs/bcr.md\tx\ta.md",        // no LINE
+		"claim\t\thas-line\tdocs/bcr.md\tx\ta.md\t8",           // an empty ID
+		"claim\tverify\thas-line\tdocs/bcr.md\t\ta.md\t8",      // an empty ARGUMENT
+		"claim\tverify\thas-line\tdocs/bcr.md\tx\ta.md\teight", // LINE is not a number
 		"",                                                      // empty
 		"\tADR-0001\tADR\ta.md\t3",                              // no kind
 		"breadcrumb\t\tADR\ta.md\t3",                            // an empty ID
@@ -329,10 +351,10 @@ func TestReadAuditALineThatIsNotARecord(t *testing.T) {
 	}
 }
 
-func TestReadStillSkipsClaimsAndProblems(t *testing.T) {
-	set := read(t, "claim\tverify\tcontains\t/etc/passwd\n"+"problem\ta.md\n")
+func TestReadStillSkipsProblems(t *testing.T) {
+	set := read(t, "problem\ta.md\n"+"problem\ta.md\t3\tid has no value\n")
 	if !reflect.DeepEqual(set, crumb.Set{}) {
-		t.Errorf("got %+v, want an empty set: bcr verify does not read these kinds", set)
+		t.Errorf("got %+v, want an empty set: bcr verify does not read this kind", set)
 	}
 }
 
@@ -350,7 +372,7 @@ func TestReadReportEveryKindOfThePipe(t *testing.T) {
 	spec, adr := crumb.Place{Text: "specs/verify/spec.md", Line: 3}, crumb.Place{Text: "docs/adrs/a.md", Line: 3}
 	want := crumb.Set{
 		Breadcrumbs: []crumb.SetBreadcrumb{{ID: "verify", Type: "spec", At: spec}, {ID: "ADR-0015", Type: "ADR", At: adr}},
-		Links:       []crumb.SetLink{{Verb: "follows", Object: "ADR-0015", At: crumb.Place{Text: "specs/verify/spec.md", Line: 6}}},
+		Links:       []crumb.SetLink{{ID: "verify", Verb: "follows", Object: "ADR-0015", At: crumb.Place{Text: "specs/verify/spec.md", Line: 6}}},
 		Claims: []crumb.SetClaim{{
 			ID:    "verify",
 			Claim: crumb.Claim{Target: "docs/bcr.md", Kind: "has-line", Argument: "### verify", Line: 8},

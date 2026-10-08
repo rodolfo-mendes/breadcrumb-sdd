@@ -156,7 +156,7 @@ func TestVerifyALinkToADuplicatedID(t *testing.T) {
 }
 
 func TestVerifyRecordsOfAKindItDoesNotKnow(t *testing.T) {
-	passes(t, recordsOf(append([]string{"claim\tPBI-00001\tcontains\tdocs/bcr.md"}, validRecords...)...))
+	passes(t, recordsOf(append([]string{"note\tPBI-00001\tcontains\tdocs/bcr.md"}, validRecords...)...))
 }
 
 func TestVerifyFieldsAddedAtTheEnd(t *testing.T) {
@@ -269,4 +269,15 @@ func TestVerifyAProblemAfterALastLineWithNoLineEnding(t *testing.T) {
 
 func TestVerifyAProblemRecordInTheInput(t *testing.T) {
 	passes(t, recordsOf(append(validRecords, "problem\ta.md\t3\tid has no value")...))
+}
+
+func TestVerifyAClaimRecordThatIsNotARecord(t *testing.T) {
+	input := recordsOf(validRecords[0], "claim\tverify\thas-line\tdocs/bcr.md", validRecords[1])
+	stdout, stderr, code := verifyRun(input)
+	if !strings.HasPrefix(stderr, "bcr: ") || !strings.Contains(stderr, "line 2 ") {
+		t.Errorf("wrote %q to standard error, want a message starting \"bcr: \" that gives line 2", stderr)
+	}
+	if stdout != "" || code != 2 {
+		t.Errorf("got %q, exit %d; want nothing printed, exit 2", stdout, code)
+	}
 }

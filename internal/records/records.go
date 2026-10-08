@@ -31,7 +31,7 @@ const (
 	breadcrumbFields = 5
 	linkKind         = "link"
 	linkFields       = 6
-	claimKind        = "claim" // skipped by Read
+	claimKind        = "claim"
 	claimFields      = 7
 	problemKind      = "problem" // skipped by Read
 	problemFields    = 4
@@ -90,12 +90,15 @@ func WriteVerdict(w io.Writer, id string, v crumb.BreadcrumbVerdict, at crumb.Pl
 	return err
 }
 
-// Read reads records from r until it ends, and returns the set of
-// breadcrumbs they describe, each breadcrumb and each link at the
-// path and line of its record. A line may end in \n or \r\n. A record
-// of a kind Read does not know is skipped. A line that is not a
-// record, an empty one included, is an error that gives its number in
-// the input, counted from 1.
+// Read reads records from r until it ends, for bcr verify, and
+// returns the set of breadcrumbs they describe: each breadcrumb with
+// its type, each link with its verb and the id of its breadcrumb, and
+// each claim with the id of its breadcrumb only, each at the path and
+// line of its record. The kind, target and argument of a claim record
+// are not read: they are bcr audit's. A line may end in \n or \r\n. A
+// record of a kind Read does not know is skipped. A line that is not
+// a record, an empty one included, is an error that gives its number
+// in the input, counted from 1.
 func Read(r io.Reader) (crumb.Set, error) {
 	return readWith(r, add)
 }
@@ -204,10 +207,10 @@ func ReadLines(r io.Reader) ([]Line, error) {
 	return lines, nil
 }
 
-// add adds the record in line to set when it is a breadcrumb or a
-// link, or returns why line is not a record.
+// add adds the record in line to set when it is a breadcrumb, a link
+// or a claim, or returns why line is not a record.
 func add(set *crumb.Set, line string) string {
-	fields, why := split(line, map[string]int{breadcrumbKind: breadcrumbFields, linkKind: linkFields})
+	fields, why := split(line, map[string]int{breadcrumbKind: breadcrumbFields, linkKind: linkFields, claimKind: claimFields})
 	if fields == nil {
 		return why
 	}
@@ -215,10 +218,13 @@ func add(set *crumb.Set, line string) string {
 	if why != "" {
 		return why
 	}
-	if fields[0] == breadcrumbKind {
-		set.Breadcrumbs = append(set.Breadcrumbs, crumb.SetBreadcrumb{ID: fields[1], At: at})
-	} else {
-		set.Links = append(set.Links, crumb.SetLink{Object: fields[3], At: at})
+	switch fields[0] {
+	case breadcrumbKind:
+		set.Breadcrumbs = append(set.Breadcrumbs, crumb.SetBreadcrumb{ID: fields[1], Type: fields[2], At: at})
+	case linkKind:
+		set.Links = append(set.Links, crumb.SetLink{ID: fields[1], Verb: fields[2], Object: fields[3], At: at})
+	case claimKind:
+		set.Claims = append(set.Claims, crumb.SetClaim{ID: fields[1], At: at})
 	}
 	return ""
 }
@@ -278,7 +284,7 @@ func addReport(set *crumb.Set, line string) string {
 		set.Breadcrumbs = append(set.Breadcrumbs, crumb.SetBreadcrumb{ID: fields[1], Type: fields[2], At: at})
 		return ""
 	case linkKind:
-		set.Links = append(set.Links, crumb.SetLink{Verb: fields[2], Object: fields[3], At: at})
+		set.Links = append(set.Links, crumb.SetLink{ID: fields[1], Verb: fields[2], Object: fields[3], At: at})
 		return ""
 	}
 	v, ok := crumb.ParseVerdict(fields[2])
