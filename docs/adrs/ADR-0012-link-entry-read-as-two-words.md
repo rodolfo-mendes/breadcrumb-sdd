@@ -52,7 +52,7 @@ the id names a breadcrumb that exists cannot, and is not decided here.
 - A verb is one word, so a verb and an id can be printed as fields of
   a tab-separated record (ADR-0006) without quoting.
 - A verb of two words, such as `depends on`, has to be written as one,
-  such as `depends-on`.
+  such as `depends_on`.
 - A link to an id that no breadcrumb has is not found by reading one
   file; it is left to a check of the whole repository.
 

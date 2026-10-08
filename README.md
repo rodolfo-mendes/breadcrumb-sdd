@@ -26,7 +26,7 @@ breadcrumb:
   id: verify
   type: spec
   links:
-    - follows ADR-0016
+    - constrained_by ADR-0016
   claims:
     - 'docs/bcr.md has-line ### verify'
 ---

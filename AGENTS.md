@@ -42,7 +42,8 @@ This repository is developed with ASDLC
 - Change a feature's spec in the same commit as the behavior it
   describes.
 - Give a new ADR, PBI or spec a breadcrumb in its front matter, as
-  [ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md) describes.
+  [ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md) describes,
+  with only the types, links and claims `breadcrumb.rules` allows.
 
 ## Context Map
 
@@ -57,6 +58,7 @@ internal/rules: reads breadcrumb.rules, the shape a repository declares, for int
 internal/target: reads the file a claim is about from the working tree; infrastructure (ADR-0023)
 internal/page: writes the page bcr report prints; the only package that knows its Markdown and Mermaid; infrastructure
 .breadcrumbs: names by pattern the files bcr extract reads when given none
+breadcrumb.rules: declares the types, links and claims a breadcrumb here may have; bcr verify checks it (ADR-0026)
 specs/: feature specs, one directory per feature; each command of bcr is a feature
 tasks/: PBIs, closed after merge and kept
 docs/adrs/: decisions, from ADR-0001 on

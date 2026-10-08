@@ -1,0 +1,9 @@
+# The ASDLC layout: ADR above spec above PBI (ITD-0167)
+type	ADR
+type	spec
+type	PBI
+link	ADR	constrained_by	ADR
+link	ADR	amends	ADR
+link	spec	constrained_by	ADR
+link	PBI	changes	spec
+claims	spec

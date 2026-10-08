@@ -11,6 +11,7 @@ breadcrumb:
   claims:
     - 'AGENTS.md has-line This repository is developed with ASDLC'
     - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'
+    - 'breadcrumb.rules has-line # The ASDLC layout: ADR above spec above PBI (ITD-0167)'
     - '.github/workflows/check.yml has-line "$RUNNER_TEMP/bcr" extract | "$RUNNER_TEMP/bcr" verify | "$RUNNER_TEMP/bcr" audit | "$RUNNER_TEMP/bcr" report > "$RUNNER_TEMP/report.md"'
 ---
 # Feature: ASDLC
@@ -85,6 +86,16 @@ Where this repository goes beyond ASDLC, it is listed here.
   ([ADR-0002](../../docs/adrs/ADR-0002-breadcrumb-metadata.md)).
   It comes from Breadcrumb, not from ASDLC. A spec's id is the name
   of its directory, such as `asdlc`.
+- **The layout.** `breadcrumb.rules`, at the root, declares the shape
+  of the breadcrumbs: an ADR is `constrained_by` or `amends` an ADR, a
+  spec is `constrained_by` an ADR, a PBI `changes` a spec, and only a
+  spec carries claims
+  ([ADR-0026](../../docs/adrs/ADR-0026-this-repository-uses-the-asdlc-layout.md)).
+  `bcr verify` checks every breadcrumb against it
+  ([ADR-0025](../../docs/adrs/ADR-0025-breadcrumb-rules-declares-the-shape.md)).
+- **`amends`.** An ADR that changes part of an Accepted ADR links to
+  it with `amends`, and both stay in force. ASDLC's ADR is superseded
+  as a whole.
 
 ## Contract
 
@@ -102,6 +113,8 @@ Where this repository goes beyond ASDLC, it is listed here.
 - ADR-0001 is in force.
 
 - CI runs the whole pipe on every push, `bcr report` included.
+
+- `breadcrumb.rules` is at the root, and declares the ASDLC layout.
 
 - An Accepted ADR keeps its Context, Decision, Consequences and
   Alternatives Considered; only its Status, its breadcrumb and

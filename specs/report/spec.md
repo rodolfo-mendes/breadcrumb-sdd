@@ -338,7 +338,7 @@ Scenario: A breadcrumb two links away
   Then the view has ADR-1 and the spec, and not ADR-2
 
 Scenario: Links among the breadcrumbs of a view
-  Given a spec that follows ADR-1 and ADR-2, where ADR-2 amends ADR-1,
+  Given a spec constrained by ADR-1 and ADR-2, where ADR-2 amends ADR-1,
     and a PBI that changes the spec and implements ADR-1
   When I report them
   Then the view has five arrows, the one from ADR-2 to ADR-1 and the
