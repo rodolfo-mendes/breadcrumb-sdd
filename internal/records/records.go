@@ -152,10 +152,11 @@ func eachLine(r io.Reader, line func(read, text string) string) error {
 
 // Line is a line of the input that is a record, as it was read.
 type Line struct {
-	Kind string // its first field
-	ID   string // "" for a problem record, and for a kind bcr does not know
-	Type string // of a breadcrumb record only
-	Text string // the line as read, with its line ending
+	Kind   string // its first field
+	ID     string // "" for a problem record, and for a kind bcr does not know
+	Type   string // of a breadcrumb record only
+	Object string // of a link record only
+	Text   string // the line as read, with its line ending
 }
 
 // ReadLines reads records as Read does, for bcr filter: it returns
@@ -188,8 +189,11 @@ func ReadLines(r io.Reader) ([]Line, error) {
 		if why != "" {
 			return why
 		}
-		if l.Kind == breadcrumbKind {
+		switch l.Kind {
+		case breadcrumbKind:
 			l.Type = fields[2]
+		case linkKind:
+			l.Object = fields[3]
 		}
 		lines = append(lines, l)
 		return ""

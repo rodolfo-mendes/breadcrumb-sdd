@@ -104,10 +104,12 @@ bcr extract | bcr verify | bcr audit | bcr report > report.md
 
 Each stage passes every record on, so a stage's output can also be
 read with `grep`, `cut` or `awk`. `bcr filter` selects records by id,
-type or kind, to look up one breadcrumb or to read its verdict:
+type or kind, or links by the id they point to, to look up one
+breadcrumb, what links to it, or its verdict:
 
 ```
 bcr extract | bcr filter --id ADR-0019
+bcr extract | bcr filter --object ADR-0019
 bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id ADR-0019
 ```
 

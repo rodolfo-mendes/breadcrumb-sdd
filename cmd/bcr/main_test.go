@@ -39,6 +39,7 @@ func TestAnythingElseIsAUsageError(t *testing.T) {
 		{[]string{"filter"}, filterUsage},
 		{[]string{"filter", "-x"}, filterUsage},
 		{[]string{"filter", "--id"}, filterUsage},
+		{[]string{"filter", "--object"}, filterUsage},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := run(tc.args, nil, &stdout, &stderr); code != 2 {

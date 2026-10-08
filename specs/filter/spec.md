@@ -162,7 +162,7 @@ Exit status:
 
 ### Definition of Done
 
-- [ ] Each Scenario below has a test.
+- [x] Each Scenario below has a test.
 - [x] `docs/bcr.md` describes `bcr filter` under `### filter`, and
       lists it in its SYNOPSIS; `docs/bcr.1` is generated again.
 - [x] `AGENTS.md`'s Toolchain shows how to look up a breadcrumb with
@@ -175,7 +175,7 @@ Exit status:
 - [x] In this repository,
       `bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id filter`
       prints one line: this spec's verdict.
-- [ ] In this repository, `bcr extract | bcr filter --object ADR-0019`
+- [x] In this repository, `bcr extract | bcr filter --object ADR-0019`
       prints the same lines as
       `bcr extract | awk -F'\t' '$1 == "link" && $4 == "ADR-0019"'`.
 

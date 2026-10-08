@@ -11,7 +11,7 @@ bcr extract [FILE...]
 bcr verify
 bcr audit
 bcr report
-bcr filter [-i ID] [-t TYPE] [-k KIND]
+bcr filter [-i ID] [-o ID] [-t TYPE] [-k KIND]
 bcr init [-a FILE]
 ```
 
@@ -523,7 +523,7 @@ bcr extract | bcr report
 ### filter
 
 ```
-bcr filter [-i ID] [-t TYPE] [-k KIND]
+bcr filter [-i ID] [-o ID] [-t TYPE] [-k KIND]
 ```
 
 Reads the records of the pipe, and prints only those that match the
@@ -547,6 +547,9 @@ Flags:
   `claim-verdict` or `verdict` record matches when its `ID` field
   equals `ID`. A `problem` record has no `ID` field, and never
   matches.
+- `-o ID`, `--object ID`: a `link` record matches when its `OBJECT`
+  field, the id the link points to, equals `ID`. No other kind of
+  record matches.
 - `-t TYPE`, `--type TYPE`: a `breadcrumb` record matches when its
   `TYPE` field equals `TYPE`. No other kind of record matches.
 - `-k KIND`, `--kind KIND`: a record matches when its first field
@@ -583,6 +586,18 @@ id, so the problems of a breadcrumb do not follow it. `--type` alone
 prints `breadcrumb` records only; the links and claims of those
 breadcrumbs are found by their ids, with a second `bcr filter`.
 
+A link is written only in the breadcrumb it belongs to: `--id X`
+selects the links X writes, and `--object X` the links that point to
+X, wherever they are written. `--id X --object X` selects nothing,
+since no breadcrumb links to itself, so the two directions are two
+runs over the same records:
+
+```
+bcr extract > records.tsv
+bcr filter --kind link --id ADR-0019 < records.tsv
+bcr filter --object ADR-0019 < records.tsv
+```
+
 A line of input that is not a record the pipe could print, an empty
 line included, stops `bcr filter`: it writes a message starting
 `bcr: `, which gives the line's number in the input, and prints no
@@ -602,6 +617,7 @@ Examples:
 bcr extract | bcr filter --id ADR-0019
 bcr extract | bcr filter --type ADR | wc -l
 bcr extract | bcr filter -k link -i PBI-00001 | cut -f3,4
+bcr extract | bcr filter --object ADR-0019 | cut -f2,3
 bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id filter
 bcr extract | bcr verify | bcr filter --kind problem | cut -f2-
 ```

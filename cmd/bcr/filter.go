@@ -17,6 +17,7 @@ import (
 func runFilter(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	set, operands, err := cli.ParseAll(args[1:], []cli.Flag{
 		{Short: 'i', Long: "id", Value: true},
+		{Short: 'o', Long: "object", Value: true},
 		{Short: 't', Long: "type", Value: true},
 		{Short: 'k', Long: "kind", Value: true},
 	})
@@ -35,15 +36,15 @@ func runFilter(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if err != nil {
 		return trouble(stderr, err)
 	}
-	// A flag not given sets no condition. A record with no ID or no
-	// TYPE field has "" there, which no value of a flag selects.
+	// A flag not given sets no condition. A record with no ID, TYPE or
+	// OBJECT field has "" there, which no value of a flag selects.
 	matches := func(flag, field string) bool {
 		values, given := set[flag]
 		return !given || field != "" && slices.Contains(values, field)
 	}
 	var buf bytes.Buffer
 	for _, l := range lines {
-		if matches("id", l.ID) && matches("type", l.Type) && matches("kind", l.Kind) {
+		if matches("id", l.ID) && matches("object", l.Object) && matches("type", l.Type) && matches("kind", l.Kind) {
 			buf.WriteString(l.Text)
 		}
 	}

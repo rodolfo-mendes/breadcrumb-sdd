@@ -130,6 +130,29 @@ func TestFilterAKindAndAnID(t *testing.T) {
 	)
 }
 
+// The records of ADR-0019, of a breadcrumb that follows it and of a
+// PBI that implements it.
+var objectRecords = []string{
+	"breadcrumb\tADR-0019\tADR\tdocs/adrs/c.md\t3",
+	"link\tADR-0019\tfollows\tADR-0017\tdocs/adrs/c.md\t6",
+	"breadcrumb\tADR-0022\tADR\tdocs/adrs/d.md\t3",
+	"link\tADR-0022\tfollows\tADR-0019\tdocs/adrs/d.md\t7",
+	"breadcrumb\tPBI-00016\tPBI\ttasks/PBI-00016.md\t3",
+	"link\tPBI-00016\timplements\tADR-0019\ttasks/PBI-00016.md\t6",
+}
+
+func TestFilterWhatLinksToABreadcrumb(t *testing.T) {
+	filtered(t, []string{"--object", "ADR-0019"}, objectRecords, objectRecords[3], objectRecords[5])
+	filtered(t, []string{"-o", "ADR-0019", "-o", "ADR-0017"}, objectRecords, objectRecords[1], objectRecords[3], objectRecords[5])
+	// Only a link record has an OBJECT field.
+	filtered(t, []string{"--object", "ADR-0019", "--kind", "breadcrumb"}, objectRecords)
+}
+
+func TestFilterALinkFromOneBreadcrumbToAnother(t *testing.T) {
+	filtered(t, []string{"--id", "PBI-00016", "--object", "ADR-0019"}, objectRecords, objectRecords[5])
+	filtered(t, []string{"--id", "ADR-0019", "--object", "ADR-0019"}, objectRecords)
+}
+
 func TestFilterProblemRecords(t *testing.T) {
 	input := []string{
 		"breadcrumb\tADR-0001\tADR\tdocs/adrs/a.md\t3",
@@ -140,6 +163,7 @@ func TestFilterProblemRecords(t *testing.T) {
 	// A problem record has no ID field: its PATH is not one.
 	filtered(t, []string{"--id", "docs/adrs/a.md"}, input)
 	filtered(t, []string{"--kind", "problem", "--id", "ADR-0001"}, input)
+	filtered(t, []string{"--object", "docs/adrs/a.md"}, input)
 }
 
 func TestFilterAKindBcrDoesNotKnow(t *testing.T) {
@@ -149,6 +173,7 @@ func TestFilterAKindBcrDoesNotKnow(t *testing.T) {
 	// It matches only --kind: its second field is not an ID.
 	filtered(t, []string{"--id", "x"}, input)
 	filtered(t, []string{"--type", "x"}, input)
+	filtered(t, []string{"--object", "x"}, input)
 }
 
 func TestFilterNoMatch(t *testing.T) {
@@ -168,6 +193,7 @@ func TestFilterLetterCase(t *testing.T) {
 	filtered(t, []string{"--id", "adr-0001"}, input)
 	filtered(t, []string{"--type", "adr"}, input)
 	filtered(t, []string{"--kind", "Breadcrumb"}, input)
+	filtered(t, []string{"--object", "adr-0002"}, []string{"link\tADR-0001\tamends\tADR-0002\ta.md\t6"})
 }
 
 func TestFilterTheOrderOfTheOutput(t *testing.T) {

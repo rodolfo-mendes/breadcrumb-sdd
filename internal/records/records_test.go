@@ -459,7 +459,7 @@ func TestReadLines(t *testing.T) {
 		"verdict\tverify\tUndecided\tspecs/verify/spec.md\t3\tno claims" // the last line does not end
 	want := []Line{
 		{Kind: "breadcrumb", ID: "verify", Type: "spec"},
-		{Kind: "link", ID: "verify"},
+		{Kind: "link", ID: "verify", Object: "ADR-0015"},
 		{Kind: "claim", ID: "verify"},
 		{Kind: "problem"},
 		{Kind: "claim-verdict", ID: "verify"},

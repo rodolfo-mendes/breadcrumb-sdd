@@ -18,6 +18,7 @@ This repository is developed with ASDLC
 | Verify and audit breadcrumbs | `set -o pipefail; go run ./cmd/bcr extract \| go run ./cmd/bcr verify \| go run ./cmd/bcr audit > /dev/null` | `specs/extract/spec.md`, `specs/verify/spec.md`, `specs/audit/spec.md` |
 | Report the breadcrumbs | `go run ./cmd/bcr extract \| go run ./cmd/bcr verify \| go run ./cmd/bcr audit \| go run ./cmd/bcr report` | `specs/report/spec.md` |
 | Look up a breadcrumb | `go run ./cmd/bcr extract \| go run ./cmd/bcr filter --id ADR-0019` | `specs/filter/spec.md` |
+| Find what links to a breadcrumb | `go run ./cmd/bcr extract \| go run ./cmd/bcr filter --object ADR-0019` | `specs/filter/spec.md` |
 | Man page | `go test ./internal/manpage -update` | Run after any change to `docs/bcr.md` |
 
 ## Judgment Boundaries
