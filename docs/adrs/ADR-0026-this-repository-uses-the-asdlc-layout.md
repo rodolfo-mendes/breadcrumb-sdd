@@ -8,7 +8,7 @@ breadcrumb:
 ---
 # ADR-0026: This repository uses the ASDLC layout
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-08
 
 ## Context

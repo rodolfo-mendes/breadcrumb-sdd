@@ -10,7 +10,7 @@ breadcrumb:
 ---
 # ADR-0025: A repository declares its shape in breadcrumb.rules
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-08
 
 ## Context
