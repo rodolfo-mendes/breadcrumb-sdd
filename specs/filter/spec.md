@@ -20,9 +20,12 @@ those that match the flags it is given, unchanged.
 ### Context
 
 An agent or a person often wants one breadcrumb, or one slice of the
-set, not all of it: ADR-0019 and its links, or every PBI. Today that
-means reading whole files and searching their text, though the
-records already hold the ids, types and links. `bcr filter` selects
+set, not all of it: ADR-0019 and its links, what links to ADR-0019,
+or every PBI. Today that means reading whole files and searching
+their text, though the records already hold the ids, types and links.
+A link is written only in the breadcrumb it belongs to, so the links
+that point to ADR-0019 are spread over other files, and no reading of
+ADR-0019 finds them. `bcr filter` selects
 among the records, as a stage of the pipe:
 
 ```
@@ -59,7 +62,7 @@ after the stages that judge, not before them.
 ### Interface
 
 ```
-bcr filter [-i ID] [-t TYPE] [-k KIND]
+bcr filter [-i ID] [-o ID] [-t TYPE] [-k KIND]
 ```
 
 `bcr filter` takes no operand. It reads records from standard input
@@ -82,6 +85,9 @@ Flags (ADR-0006):
   `claim-verdict` or `verdict` record matches when its `ID` field
   equals `ID`. A `problem` record has no `ID` field, and never
   matches.
+- `-o ID`, `--object ID`: a `link` record matches when its `OBJECT`
+  field, the id the link points to, equals `ID`. No other kind of
+  record has an `OBJECT` field, so no other kind matches.
 - `-t TYPE`, `--type TYPE`: a `breadcrumb` record matches when its
   `TYPE` field equals `TYPE`. No other kind of record has a `TYPE`
   field, so no other kind matches.
@@ -140,6 +146,10 @@ Exit status:
   would make a breadcrumb Undecided (ADR-0022), so a breadcrumb with a
   dropped claim can read Confirmed. A verdict is read after
   `bcr audit`, never computed after `bcr filter`.
+- `--id X --object X` selects nothing, since a breadcrumb has no link
+  to itself (`specs/extract/spec.md`). The links that X writes and the
+  links that point to X are two selections: two `bcr filter` runs over
+  the same records.
 - `--type` alone prints `breadcrumb` records only. The links and
   claims of the breadcrumbs it selects are found by their ids, in a
   second `bcr filter`.
@@ -152,7 +162,7 @@ Exit status:
 
 ### Definition of Done
 
-- [x] Each Scenario below has a test.
+- [ ] Each Scenario below has a test.
 - [x] `docs/bcr.md` describes `bcr filter` under `### filter`, and
       lists it in its SYNOPSIS; `docs/bcr.1` is generated again.
 - [x] `AGENTS.md`'s Toolchain shows how to look up a breadcrumb with
@@ -165,6 +175,9 @@ Exit status:
 - [x] In this repository,
       `bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id filter`
       prints one line: this spec's verdict.
+- [ ] In this repository, `bcr extract | bcr filter --object ADR-0019`
+      prints the same lines as
+      `bcr extract | awk -F'\t' '$1 == "link" && $4 == "ADR-0019"'`.
 
 ### Regression Guardrails
 
@@ -227,6 +240,30 @@ Scenario: A kind and an id
   Given the link records of ADR-0001 and of ADR-0002
   When I pipe them to "bcr filter --kind link --id ADR-0001"
   Then only the link records of ADR-0001 are printed
+
+Scenario: What links to a breadcrumb
+  Given the records
+    """
+    breadcrumb	ADR-0019	ADR	docs/adrs/c.md	3
+    link	ADR-0019	follows	ADR-0017	docs/adrs/c.md	6
+    breadcrumb	ADR-0022	ADR	docs/adrs/d.md	3
+    link	ADR-0022	follows	ADR-0019	docs/adrs/d.md	7
+    breadcrumb	PBI-00016	PBI	tasks/PBI-00016.md	3
+    link	PBI-00016	implements	ADR-0019	tasks/PBI-00016.md	6
+    """
+  When I pipe them to "bcr filter --object ADR-0019"
+  Then standard output is
+    """
+    link	ADR-0022	follows	ADR-0019	docs/adrs/d.md	7
+    link	PBI-00016	implements	ADR-0019	tasks/PBI-00016.md	6
+    """
+
+Scenario: A link from one breadcrumb to another
+  Given the records above
+  When I pipe them to "bcr filter --id PBI-00016 --object ADR-0019"
+  Then only the link of PBI-00016 to ADR-0019 is printed
+  When I pipe them to "bcr filter --id ADR-0019 --object ADR-0019"
+  Then nothing is printed
 
 Scenario: Problem records
   Given a breadcrumb record with the id ADR-0001, and the record
