@@ -3,10 +3,10 @@ breadcrumb:
   id: filter
   type: spec
   links:
-    - follows ADR-0006
-    - follows ADR-0007
-    - follows ADR-0008
-    - follows ADR-0011
+    - constrained_by ADR-0006
+    - constrained_by ADR-0007
+    - constrained_by ADR-0008
+    - constrained_by ADR-0011
   claims:
     - 'docs/bcr.md has-line ### filter'
 ---

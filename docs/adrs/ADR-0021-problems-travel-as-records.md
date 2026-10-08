@@ -4,8 +4,8 @@ breadcrumb:
   type: ADR
   links:
     - amends ADR-0016
-    - follows ADR-0011
-    - follows ADR-0017
+    - constrained_by ADR-0011
+    - constrained_by ADR-0017
 ---
 # ADR-0021: Problems travel down the pipe as records
 

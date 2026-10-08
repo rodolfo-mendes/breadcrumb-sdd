@@ -3,9 +3,9 @@ breadcrumb:
   id: ADR-0024
   type: ADR
   links:
-    - follows ADR-0001
-    - follows ADR-0006
-    - follows ADR-0008
+    - constrained_by ADR-0001
+    - constrained_by ADR-0006
+    - constrained_by ADR-0008
 ---
 # ADR-0024: The old model is removed
 

@@ -3,20 +3,20 @@ breadcrumb:
   id: extract
   type: spec
   links:
-    - follows ADR-0002
-    - follows ADR-0006
-    - follows ADR-0007
-    - follows ADR-0008
-    - follows ADR-0010
-    - follows ADR-0011
-    - follows ADR-0012
-    - follows ADR-0013
-    - follows ADR-0014
-    - follows ADR-0015
-    - follows ADR-0017
-    - follows ADR-0018
-    - follows ADR-0019
-    - follows ADR-0021
+    - constrained_by ADR-0002
+    - constrained_by ADR-0006
+    - constrained_by ADR-0007
+    - constrained_by ADR-0008
+    - constrained_by ADR-0010
+    - constrained_by ADR-0011
+    - constrained_by ADR-0012
+    - constrained_by ADR-0013
+    - constrained_by ADR-0014
+    - constrained_by ADR-0015
+    - constrained_by ADR-0017
+    - constrained_by ADR-0018
+    - constrained_by ADR-0019
+    - constrained_by ADR-0021
   claims:
     - 'docs/bcr.md has-line ### extract'
 ---

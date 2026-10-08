@@ -3,12 +3,12 @@ breadcrumb:
   id: init
   type: spec
   links:
-    - follows ADR-0006
-    - follows ADR-0007
-    - follows ADR-0008
-    - follows ADR-0014
-    - follows ADR-0020
-    - follows ADR-0024
+    - constrained_by ADR-0006
+    - constrained_by ADR-0007
+    - constrained_by ADR-0008
+    - constrained_by ADR-0014
+    - constrained_by ADR-0020
+    - constrained_by ADR-0024
   claims:
     - 'docs/bcr.md has-line ### init'
 ---

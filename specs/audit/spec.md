@@ -3,18 +3,18 @@ breadcrumb:
   id: audit
   type: spec
   links:
-    - follows ADR-0006
-    - follows ADR-0007
-    - follows ADR-0008
-    - follows ADR-0011
-    - follows ADR-0013
-    - follows ADR-0016
-    - follows ADR-0017
-    - follows ADR-0019
-    - follows ADR-0020
-    - follows ADR-0021
-    - follows ADR-0022
-    - follows ADR-0023
+    - constrained_by ADR-0006
+    - constrained_by ADR-0007
+    - constrained_by ADR-0008
+    - constrained_by ADR-0011
+    - constrained_by ADR-0013
+    - constrained_by ADR-0016
+    - constrained_by ADR-0017
+    - constrained_by ADR-0019
+    - constrained_by ADR-0020
+    - constrained_by ADR-0021
+    - constrained_by ADR-0022
+    - constrained_by ADR-0023
   claims:
     - 'docs/bcr.md has-line ### audit'
 ---

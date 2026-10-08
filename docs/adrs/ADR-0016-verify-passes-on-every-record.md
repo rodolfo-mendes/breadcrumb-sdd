@@ -4,7 +4,7 @@ breadcrumb:
   type: ADR
   links:
     - amends ADR-0015
-    - follows ADR-0011
+    - constrained_by ADR-0011
 ---
 # ADR-0016: bcr verify passes on every record it reads
 

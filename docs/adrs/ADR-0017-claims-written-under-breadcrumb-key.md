@@ -5,7 +5,7 @@ breadcrumb:
   links:
     - amends ADR-0002
     - amends ADR-0010
-    - follows ADR-0012
+    - constrained_by ADR-0012
 ---
 # ADR-0017: Claims are written under the breadcrumb key
 

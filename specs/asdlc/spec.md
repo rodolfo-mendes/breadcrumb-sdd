@@ -3,8 +3,11 @@ breadcrumb:
   id: asdlc
   type: spec
   links:
-    - follows ADR-0001
-    - follows ADR-0002
+    - constrained_by ADR-0001
+    - constrained_by ADR-0002
+    - constrained_by ADR-0004
+    - constrained_by ADR-0005
+    - constrained_by ADR-0009
   claims:
     - 'AGENTS.md has-line This repository is developed with ASDLC'
     - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'

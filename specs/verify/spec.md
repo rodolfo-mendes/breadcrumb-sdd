@@ -3,15 +3,15 @@ breadcrumb:
   id: verify
   type: spec
   links:
-    - follows ADR-0003
-    - follows ADR-0006
-    - follows ADR-0007
-    - follows ADR-0008
-    - follows ADR-0011
-    - follows ADR-0013
-    - follows ADR-0015
-    - follows ADR-0016
-    - follows ADR-0021
+    - constrained_by ADR-0003
+    - constrained_by ADR-0006
+    - constrained_by ADR-0007
+    - constrained_by ADR-0008
+    - constrained_by ADR-0011
+    - constrained_by ADR-0013
+    - constrained_by ADR-0015
+    - constrained_by ADR-0016
+    - constrained_by ADR-0021
     - constrained_by ADR-0025
   claims:
     - 'docs/bcr.md has-line ### verify'
