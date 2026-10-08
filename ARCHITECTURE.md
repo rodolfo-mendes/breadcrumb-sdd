@@ -26,6 +26,7 @@ flowchart TD
   E -- records --> V["bcr verify"]
   V -- records --> U["bcr audit"]
   U -- records --> P["bcr report"]
+  Q["breadcrumb.rules: the shape declared"] --> V
   T["Targets: the files claims are about"] --> U
   V --> C
   U --> C
@@ -106,7 +107,7 @@ stage's status, such as `bcr audit`'s 1 for a Refuted claim, runs with
 | Data | Turn files into records | `extract` | Done |
 | Meaning | Judge the records | `verify`, `audit` | Done: the integrity of the graph, and claims |
 | Presentation | Show the records to a person | `report` | Done |
-| Setup | Set a repository up for the pipe | `init` | Done ([`specs/init`](specs/init/spec.md)) |
+| Setup | Set a repository up for the pipe | `init` | Done: the pieces every repository needs, and the ASDLC layout behind `--layout` ([`specs/init`](specs/init/spec.md), [ADR-0027](docs/adrs/ADR-0027-bcr-init-ships-the-asdlc-layout.md)) |
 | Feedback | Tell an author what is wrong, printing only problems | Not named | Reserved |
 | Queries | Answer questions about the records | `filter` | Done: selects records by id, type and kind, and links by the id they point to ([`specs/filter`](specs/filter/spec.md)) |
 | Cache | Store the records in `.bcr/` | `build` | Deferred |
@@ -164,8 +165,10 @@ so nothing of it is in the core either.
 | The `.bcr/` cache: the records committed as tables | 2026-10-04 | A query is too slow over `bcr extract`'s records, or the graph's history is needed and running `bcr extract` on each past commit cannot give it |
 | Verdicts that travel along links | 2026-10-07 | A real case needs a Refuted claim to reach the breadcrumbs that link to it ([ADR-0022](docs/adrs/ADR-0022-verdict-is-the-and-of-own-claims.md)) |
 | Kinds of claim other than `has-line` | 2026-10-07 | A spec needs a claim `has-line` cannot state; each new kind gets its own name and ADR ([ADR-0020](docs/adrs/ADR-0020-a-released-kind-of-claim-keeps-its-meaning.md)) |
+| A way to move a repository to a later layout | 2026-10-08 | A later release changes a layout, and a repository set up by an earlier one needs to follow; the first line of its `.breadcrumbs` and `breadcrumb.rules` says which release wrote them ([ADR-0027](docs/adrs/ADR-0027-bcr-init-ships-the-asdlc-layout.md)) |
 
 ## What comes next
 
-1. Release the new model as v0.8.0.
-2. More queries, as a command only where `bcr filter` is not enough.
+1. More queries, as a command only where `bcr filter` is not enough.
+2. A second layout, through its own ADR, when a repository asks for
+   one ([ADR-0027](docs/adrs/ADR-0027-bcr-init-ships-the-asdlc-layout.md)).

@@ -1,8 +1,9 @@
-# Runs bcr extract | bcr verify | bcr audit | bcr report on every push,
-# with the bcr built from the commit it checks (specs/asdlc). A problem
-# or a Refuted claim fails the job. The log shows them, as they are on
-# standard error; the page bcr report writes goes to the job's summary
-# and is kept as an artifact of the run, whether the job fails or not.
+# Runs go test ./..., then bcr extract | bcr verify | bcr audit |
+# bcr report, on every push, with the bcr built from the commit it
+# checks (specs/asdlc). A failing test, a problem or a Refuted claim
+# fails the job. The log shows them, as they are on standard error; the
+# page bcr report writes goes to the job's summary and is kept as an
+# artifact of the run, whether the job fails or not.
 name: Check
 
 on:
@@ -21,6 +22,9 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
 
       - name: Build
         run: go build -o "$RUNNER_TEMP/bcr" ./cmd/bcr

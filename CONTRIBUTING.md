@@ -43,7 +43,8 @@ may carry claims that `bcr audit` checks.
 1. **Write a PBI.** Name the spec it changes in its Context.
 2. **Record decisions.** When the change decides how the repository is
    built, write an ADR. A maintainer accepts it. An Accepted ADR is not
-   edited; a new ADR supersedes it.
+   edited; a new ADR amends it, linked with `amends`
+   ([ADR-0026](docs/adrs/ADR-0026-this-repository-uses-the-asdlc-layout.md)).
 3. **Change the code and its spec together.** The spec describes the
    new state in the same commit. When the change touches a command,
    flag, output or exit code of `bcr`, update its user documentation in

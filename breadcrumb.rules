@@ -1,4 +1,4 @@
-# The ASDLC layout: ADR above spec above PBI (ITD-0167)
+# The shape of this repository (ADR-0026): ADR above spec above PBI, with amends
 type	ADR
 type	spec
 type	PBI

@@ -26,8 +26,10 @@ This repository is developed with ASDLC
 **NEVER**
 - Edit a claim to turn a Refuted verdict green. Fix the code, or
   propose the change to the spec.
-- Edit the decision of an Accepted ADR. Write a new ADR that
-  supersedes it.
+- Edit the decision of an Accepted ADR. Write a new ADR that `amends`
+  it, the link `breadcrumb.rules` allows for that
+  ([ADR-0026](docs/adrs/ADR-0026-this-repository-uses-the-asdlc-layout.md));
+  `supersedes` has no line there yet.
 - Delete a PBI; it stays in `tasks/`.
 
 **ASK**

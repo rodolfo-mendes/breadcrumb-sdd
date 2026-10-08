@@ -1,3 +1,3 @@
-# Lab configuration, not a method rule: no line-ending conversion, so hash
-# claims read the same bytes on every machine.
+# Lab configuration, not a method rule: no line-ending conversion, so every
+# machine reads the same bytes, and a claim holds or fails the same way.
 * -text
