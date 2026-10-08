@@ -72,7 +72,11 @@ found by its name:
   changes. The section says that breadcrumbs live in front matter,
   under the `breadcrumb` key, of the files `.breadcrumbs` names; to
   run the pipe before committing; and never to edit a claim to turn a
-  Refuted verdict green.
+  Refuted verdict green. It then shows, as commands, how to look
+  breadcrumbs up with `bcr filter` rather than search the files: one
+  breadcrumb by its id, every breadcrumb of a type, what links to a
+  breadcrumb, and a breadcrumb's verdict, read after `bcr audit`
+  (`specs/filter/spec.md`).
 - **The workflow.** `.github/workflows/breadcrumbs.yml`, written when
   there is no file of that name. On each push and pull request, it
   installs the release of `bcr` that wrote it, from its Linux x86-64
@@ -119,6 +123,10 @@ Exit status:
   `bcr init`; the files written before it stay, and are printed.
 - **No file is replaced.** A file is written only when it is not
   there, and the agents file is only added to.
+- **A section written before keeps its words.** `bcr init` finds the
+  section by its heading and replaces nothing, so a repository whose
+  section an earlier `bcr` wrote does not get the lookup commands;
+  they are added by hand.
 - The workflow is for GitHub Actions. On another CI, the same check is
   the pipe: `set -o pipefail; bcr extract | bcr verify | bcr audit`.
 
@@ -126,13 +134,15 @@ Exit status:
 
 ### Definition of Done
 
-- [x] Each Scenario below has a test.
+- [ ] Each Scenario below has a test.
 - [x] `docs/bcr.md` describes `bcr init` under `### init`, and its
       flag; `docs/bcr.1` is generated again.
 - [x] In a new directory, `bcr init` with a version, then the pipe,
       exits 0 and the page says `No breadcrumbs.`.
 - [x] The workflow `bcr init` writes is valid YAML, and every action
       it uses is pinned to a commit.
+- [ ] Each lookup command the agents section shows runs, and prints
+      the records it names, in a repository with breadcrumbs.
 
 ### Regression Guardrails
 
@@ -166,6 +176,15 @@ Scenario: The workflow runs the bcr that wrote it
   And it runs "bcr extract | bcr verify | bcr audit | bcr report"
     under "set -o pipefail"
   And every action it uses is pinned to a commit
+
+Scenario: The agents section shows how to look breadcrumbs up
+  Given the agents section "bcr init" writes
+  Then it shows "bcr extract | bcr filter --id ID",
+    "bcr extract | bcr filter --type TYPE",
+    "bcr extract | bcr filter --object ID" and
+    "bcr extract | bcr verify | bcr audit | bcr filter --kind verdict --id ID"
+  And each of them, run with an id and a type of a repository's
+    breadcrumbs, exits 0 and prints their records
 
 Scenario: An agents file without the section
   Given an AGENTS.md that holds "# Agents" and no "## Breadcrumbs"
