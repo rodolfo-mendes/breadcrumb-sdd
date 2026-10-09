@@ -10,8 +10,11 @@ breadcrumb:
     - constrained_by ADR-0009
     - constrained_by ADR-0025
     - constrained_by ADR-0026
+    - constrained_by ADR-0028
+    - constrained_by ADR-0029
   claims:
     - 'AGENTS.md has-line This repository is developed with ASDLC'
+    - 'CONTRIBUTING.md has-line ## Where a decision goes'
     - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'
     - 'breadcrumb.rules has-line # The shape of this repository (ADR-0026): ADR above spec above PBI, with amends'
     - '.github/workflows/check.yml has-line "$RUNNER_TEMP/bcr" extract | "$RUNNER_TEMP/bcr" verify | "$RUNNER_TEMP/bcr" audit | "$RUNNER_TEMP/bcr" report > "$RUNNER_TEMP/report.md"'
@@ -49,8 +52,18 @@ does. `bcr`'s behavior defines Breadcrumb; it is not a feature spec.
   `AGENTS.md`. It describes how the parts of `bcr` fit together and
   links the ADRs and specs that decide them; it decides nothing
   itself.
+- A change that touches code or a spec starts with a PBI that
+  `changes` each spec it touches. Any other change, such as an ADR on
+  its own or a change to `AGENTS.md`, `CONTRIBUTING.md` or
+  `README.md`, needs no PBI; its commit type is `docs`
+  ([ADR-0028](../../docs/adrs/ADR-0028-a-pbi-directs-only-changes-to-code-or-a-spec.md)).
 - A PBI whose change is about how the repository is built names this
   spec in its Context.
+- A decision goes where whoever must obey it reads it
+  ([ADR-0029](../../docs/adrs/ADR-0029-a-decision-is-recorded-where-its-actor-reads.md)):
+  how `bcr` behaves or how the repository is built, an ADR; a rule
+  for making a change, this spec, explained in `CONTRIBUTING.md`; a
+  boundary for agents, `AGENTS.md`; what the product is, `README.md`.
 - `.github/workflows/check.yml` runs `go test ./...` and then the
   whole pipe on every push, with the `bcr` built from the commit,
   under `set -o pipefail`: a failing test, a problem or a Refuted
@@ -99,6 +112,11 @@ Where this repository goes beyond ASDLC, it is listed here.
 - **`amends`.** An ADR that changes part of an Accepted ADR links to
   it with `amends`, and both stay in force. ASDLC's ADR is superseded
   as a whole.
+- **Issues.** Backlog items, open questions and flags are GitHub
+  Issues, labelled `backlog`, `question` and `flag`. They hold work and
+  debate, not decisions: an issue that settles something closes by
+  naming the decision's home
+  ([ADR-0029](../../docs/adrs/ADR-0029-a-decision-is-recorded-where-its-actor-reads.md)).
 
 ## Contract
 
@@ -135,6 +153,12 @@ Scenario: A change to how the repository is built
   Given a PBI that changes a file or rule this spec names
   When its change is merged
   Then this spec describes the new state in the same commit
+
+Scenario: A change that touches only prose
+  Given a change that touches no code and no spec
+  When it is merged
+  Then it carries no PBI
+  And its commit type is docs
 
 Scenario: Going beyond ASDLC
   Given a practice that ASDLC's pages do not describe
