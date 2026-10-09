@@ -39,6 +39,8 @@ This repository is developed with ASDLC
 - Before adding a Go module outside the standard library. Each
   module `bcr` requires directly is introduced by its own ADR
   ([ADR-0005](docs/adrs/ADR-0005-dependencies-enter-through-adr.md)).
+  Check first that it is maintained, that it has a stable release,
+  and which module path its maintainers recommend.
 
 **ALWAYS**
 - Read the feature's spec and the PBI before changing its code.
@@ -52,6 +54,7 @@ This repository is developed with ASDLC
 
 ```yaml
 ARCHITECTURE.md: describes the high-level design of Breadcrumb and the `bcr` command
+VISION.md: who Breadcrumb is for, its principles, and the tie-breakers for a choice no rule decides
 docs/bcr.md: the user documentation of bcr; docs/bcr.1 is generated from it
 internal/crumb: the core of the front matter breadcrumbs; knows no file format (ADR-0013)
 internal/frontmatter: reads a breadcrumb from a file's YAML front matter for internal/crumb

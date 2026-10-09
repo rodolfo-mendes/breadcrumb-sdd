@@ -32,7 +32,7 @@ replace `> /dev/null` with `| go run ./cmd/bcr report > report.md`.
 |---|---|---|
 | Spec | `specs/<feature>/spec.md` | what a feature does, and the claims that check it |
 | PBI | `tasks/PBI-NNNNN.md` | one change, and how to verify it |
-| ADR | `docs/adrs/ADR-NNNN-<slug>.md` | one decision about how the repository is built |
+| ADR | `docs/adrs/ADR-NNNN-<slug>.md` | one decision about how the repository is built; a title that joins two statements with "and" is two ADRs |
 
 Each of them carries a breadcrumb in its front matter
 ([ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md)), and a spec
@@ -72,10 +72,50 @@ The first home that fits wins:
 5. The answer to an open question: the question's issue closes with
    it.
 
+Between an ADR and a spec: a decision gets an ADR when it contradicts
+an Accepted ADR, must never change, is shared by several commands, or
+has reasons the repository must keep; otherwise the spec of the
+feature it governs holds it.
+
 Backlog items, open questions and flags are GitHub Issues, labelled
 `backlog`, `question` and `flag`. Argue a decision in an issue, then
 close the issue by naming where the decision went, such as "Decided in
 ADR-0030". No decision lives only in an issue.
+
+## Rules of thumb
+
+Ways to make a change well, not rules. Bend one when it does not fit,
+and say so in the commit body.
+
+- **Claim what matters.** Claim what a later reader needs to detect
+  drift, not everything the change touched, as you would not
+  unit-test every getter.
+- **Write the failure half.** For a rule or a scenario, say when it
+  fails, not only when it passes; a rule that only passes detects
+  nothing.
+- **Rule or practice.** When a question has a yes or no answer that
+  one state of the repository can show, write a rule, and say who
+  checks it: a claim, `bcr`, or a named command run by hand. When
+  reasonable judgment could go either way, write a practice and do not
+  dress it as a rule.
+- **One word, one concept.** When a word is about to name a second
+  concept, choose another word; agents read literally. For a link
+  verb, choose the word that states the relation exactly, such as
+  `constrained_by` over `follows`.
+- **Link by derivation, never for a color.** Link a breadcrumb to what
+  it derives from, never to change a verdict. An ADR that amends
+  another links to it with `amends`.
+- **Put the check where the agent reads.** A new check goes into
+  `AGENTS.md`'s Toolchain, the Definition of Done and CI in the same
+  change.
+- **Migrating a decision re-justifies it.** When a decision moves to a
+  new home, check each of its reasons against today's state, or the
+  record carries a reason nobody believes anymore.
+- **Point, don't restate.** Point to the document that holds a rule;
+  two copies drift.
+- **Release or label.** When main's model leaves the latest release
+  behind, cut a release, or say where people install it that the old
+  one is superseded.
 
 ## Commit messages
 

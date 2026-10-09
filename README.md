@@ -58,7 +58,14 @@ and a claim can be checked by hand, against the files, without `bcr`.
 `bcr`'s behavior defines the method. Every command, record, output
 and exit code is documented in [`docs/bcr.md`](docs/bcr.md), also
 shipped as the man page `bcr.1`: `man ./bcr.1` in an unpacked release,
-or `man ./docs/bcr.1` in a clone.
+or `man ./docs/bcr.1` in a clone. Before 1.0, a command, a flag or an
+output may still change between releases; a breadcrumb's keys and a
+kind of claim keep their meaning
+([ADR-0018](docs/adrs/ADR-0018-new-breadcrumb-keys-are-optional.md),
+[ADR-0020](docs/adrs/ADR-0020-a-released-kind-of-claim-keeps-its-meaning.md)).
+
+[VISION.md](VISION.md) says who Breadcrumb is for, the principles
+behind it, and which way it leans when no rule decides.
 
 This repository is developed with Breadcrumb itself: its
 decisions in [`docs/adrs/`](docs/adrs/), its specs in

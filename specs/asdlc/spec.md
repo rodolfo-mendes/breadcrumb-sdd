@@ -15,6 +15,7 @@ breadcrumb:
   claims:
     - 'AGENTS.md has-line This repository is developed with ASDLC'
     - 'CONTRIBUTING.md has-line ## Where a decision goes'
+    - 'VISION.md has-line ## Decision heuristics'
     - 'docs/adrs/ADR-0001-adopt-asdlc.md has-line Status: Accepted'
     - 'breadcrumb.rules has-line # The shape of this repository (ADR-0026): ADR above spec above PBI, with amends'
     - '.github/workflows/check.yml has-line "$RUNNER_TEMP/bcr" extract | "$RUNNER_TEMP/bcr" verify | "$RUNNER_TEMP/bcr" audit | "$RUNNER_TEMP/bcr" report > "$RUNNER_TEMP/report.md"'
@@ -39,6 +40,7 @@ does. `bcr`'s behavior defines Breadcrumb; it is not a feature spec.
 | Pattern | Files | Follows |
 |---|---|---|
 | AGENTS.md | `AGENTS.md` | ASDLC's AGENTS.md Specification |
+| Product Vision | `VISION.md` | Product Vision |
 | The Spec | `specs/<feature>/spec.md`, the directory in kebab-case | Living Specs |
 | The PBI | `tasks/PBI-NNNNN.md`, one file per PBI | PBI Authoring |
 | The ADR | `docs/adrs/ADR-NNNN-<slug>.md` | The ADR |
@@ -52,6 +54,9 @@ does. `bcr`'s behavior defines Breadcrumb; it is not a feature spec.
   `AGENTS.md`. It describes how the parts of `bcr` fit together and
   links the ADRs and specs that decide them; it decides nothing
   itself.
+- `VISION.md` is at the root too. It says who Breadcrumb is for, its
+  principles, and the tie-breakers for a choice no rule decides; it
+  decides nothing itself.
 - A change that touches code or a spec starts with a PBI that
   `changes` each spec it touches. Any other change, such as an ADR on
   its own or a change to `AGENTS.md`, `CONTRIBUTING.md` or

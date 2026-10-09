@@ -158,6 +158,70 @@ so nothing of it is in the core either.
    ([ADR-0008](docs/adrs/ADR-0008-user-documentation-in-docs-bcr-md.md),
    [ADR-0009](docs/adrs/ADR-0009-man-page-generated-from-user-documentation.md)).
 
+## Design heuristics
+
+Rules of thumb that shaped `bcr`, each with a case where it decided.
+They guide; the ADRs decide. The tie-breakers in
+[VISION.md](VISION.md) come first.
+
+- **Select in the pipe, not in the producer.** When a selection can
+  only happen after parsing, make it a stage of its own rather than
+  flags on the stage that parses. Applied: `bcr filter`
+  ([`specs/filter`](specs/filter/spec.md)).
+- **Decide a format with its first reader.** Do not fix the shape of a
+  record passed between stages before the stage that reads it exists.
+  A promise to the repositories that use `bcr` is the exception, and
+  is recorded before it is needed. Applied: problem records waited for
+  `bcr audit` ([ADR-0021](docs/adrs/ADR-0021-problems-travel-as-records.md));
+  optional keys were promised first
+  ([ADR-0018](docs/adrs/ADR-0018-new-breadcrumb-keys-are-optional.md)).
+- **Open for extension, closed to change.** Close the shape and keep
+  the variants open, so a new variant changes no existing part.
+  Applied: a claim is `TARGET KIND ARGUMENT`, and a new meaning is a
+  new kind ([ADR-0017](docs/adrs/ADR-0017-claims-written-under-breadcrumb-key.md),
+  [ADR-0020](docs/adrs/ADR-0020-a-released-kind-of-claim-keeps-its-meaning.md)).
+- **Forgive what cannot be seen.** Be permissive about input a person
+  cannot see, such as white space, and strict about shape. Applied:
+  how a link entry is read
+  ([ADR-0012](docs/adrs/ADR-0012-link-entry-read-as-two-words.md)).
+- **State what a consumer may rely on.** A machine-readable output
+  says which parts are stable, so a script that breaks was relying on
+  something never promised. Applied: select records by their kind; new
+  kinds may appear
+  ([ADR-0011](docs/adrs/ADR-0011-breadcrumbs-printed-as-tagged-records.md)).
+- **No nulls.** Inside what Breadcrumb owns, an empty value is written
+  out, as an empty list; a key with no value is a problem. Outside it,
+  absence keeps its meaning: front matter with no `breadcrumb` key
+  simply carries no breadcrumb. Applied: `links: []`
+  ([ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md),
+  [ADR-0018](docs/adrs/ADR-0018-new-breadcrumb-keys-are-optional.md)).
+- **No vacuous checks.** Prefer "every X does Y" to "an X that does Z
+  also does Y", which holds whenever Z is false. Applied: a breadcrumb
+  with nothing checked is Undecided, never Confirmed
+  ([ADR-0022](docs/adrs/ADR-0022-verdict-is-the-and-of-own-claims.md)).
+- **Progressive permissiveness.** Start a rule as strict as the next
+  step allows, and relax it only when a real change needs more, each
+  relaxation on its own record. Too strict fails loudly; too loose
+  fails silently. Applied: ids that differ only in letter case are a
+  violation ([ADR-0003](docs/adrs/ADR-0003-breadcrumbs-unique-ids.md)).
+- **Prefer evidence over assertion.** When adding metadata, ask what
+  it proves: a link only asserts, while a claim can be checked.
+  Applied: breadcrumbs in source code were weighed and held back.
+- **Property, not name.** Put what must be checked later in the front
+  matter as a property, never in a path. Applied: a breadcrumb's id
+  ([ADR-0002](docs/adrs/ADR-0002-breadcrumb-metadata.md)).
+- **Tool-removal test.** Keep a rule in Breadcrumb only if it still
+  holds with this host framework replaced by another; a rule that
+  needs ASDLC belongs to its layout. Applied: ASDLC's types and links
+  live in `breadcrumb.rules`, not in the core
+  ([ADR-0025](docs/adrs/ADR-0025-breadcrumb-rules-declares-the-shape.md),
+  [ADR-0027](docs/adrs/ADR-0027-bcr-init-ships-the-asdlc-layout.md)).
+- **Use the pre-adoption window.** Before 1.0, and before another
+  repository depends on `bcr`, fix a crack in place rather than adding
+  a compatible scheme beside it. Applied: the old model was removed,
+  not kept beside the new one
+  ([ADR-0024](docs/adrs/ADR-0024-the-old-model-is-removed.md)).
+
 ## Deferred, and what brings it back
 
 | Deferred | Decided | Comes back when |
