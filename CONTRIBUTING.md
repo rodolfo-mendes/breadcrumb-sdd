@@ -40,7 +40,10 @@ may carry claims that `bcr audit` checks.
 
 ## Making a change
 
-1. **Write a PBI.** Name the spec it changes in its Context.
+1. **Write a PBI** when the change touches code or a spec. Name the
+   spec it changes in its Context. Any other change, such as an ADR on
+   its own or an edit to this guide, needs no PBI
+   ([ADR-0028](docs/adrs/ADR-0028-a-pbi-directs-only-changes-to-code-or-a-spec.md)).
 2. **Record decisions.** When the change decides how the repository is
    built, write an ADR. A maintainer accepts it. An Accepted ADR is not
    edited; a new ADR amends it, linked with `amends`
@@ -52,8 +55,27 @@ may carry claims that `bcr audit` checks.
    `go test ./internal/manpage -update`.
 4. **Check.** Each item of the Definition of Done in
    `specs/asdlc/spec.md` holds.
-5. **Commit.** The PBI reaches the main branch in the same merge as its
+5. **Commit.** A PBI reaches the main branch in the same merge as its
    change.
+
+## Where a decision goes
+
+A decision goes where whoever must obey it reads it
+([ADR-0029](docs/adrs/ADR-0029-a-decision-is-recorded-where-its-actor-reads.md)).
+The first home that fits wins:
+
+1. How `bcr` behaves or how the repository is built: an ADR.
+2. A rule for making a change: `specs/asdlc/spec.md`, explained in
+   this guide.
+3. A boundary an agent keeps on every task: `AGENTS.md`.
+4. What the product is: `README.md`.
+5. The answer to an open question: the question's issue closes with
+   it.
+
+Backlog items, open questions and flags are GitHub Issues, labelled
+`backlog`, `question` and `flag`. Argue a decision in an issue, then
+close the issue by naming where the decision went, such as "Decided in
+ADR-0030". No decision lives only in an issue.
 
 ## Commit messages
 
