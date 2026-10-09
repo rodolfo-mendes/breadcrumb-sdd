@@ -1,6 +1,6 @@
-# Breadcrumb SDD
+# Breadcrumb
 
-Breadcrumb SDD makes drift between a repository's intent and its code
+Breadcrumb makes drift between a repository's intent and its code
 visible.
 
 ## The problem
@@ -47,7 +47,9 @@ between them, and which types carry claims. `bcr` then reports any
 breadcrumb that goes beyond it. A breadcrumb whose claims all hold is Confirmed,
 and one with a claim that fails is Refuted. One with no claims, or
 with a problem, is Undecided: nothing about it was checked. A Refuted
-claim is drift: the document says one thing, and the file another.
+claim means the document and the file disagree. Either the code
+drifted from the intent, or the claim went stale because the intent
+changed or its target moved; a person decides which.
 
 The method makes drift visible after the fact; it does not prevent
 it. A repository records as much or as little as its owners choose,
@@ -58,7 +60,7 @@ and exit code is documented in [`docs/bcr.md`](docs/bcr.md), also
 shipped as the man page `bcr.1`: `man ./bcr.1` in an unpacked release,
 or `man ./docs/bcr.1` in a clone.
 
-This repository is developed with Breadcrumb SDD itself: its
+This repository is developed with Breadcrumb itself: its
 decisions in [`docs/adrs/`](docs/adrs/), its specs in
 [`specs/`](specs/) and its tasks in [`tasks/`](tasks/) each carry a
 breadcrumb, and every push audits them.

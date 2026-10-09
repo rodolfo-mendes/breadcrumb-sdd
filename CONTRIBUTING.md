@@ -1,4 +1,4 @@
-# Contributing to Breadcrumb SDD
+# Contributing to Breadcrumb
 
 This repository is developed with ASDLC
 ([ADR-0001](docs/adrs/ADR-0001-adopt-asdlc.md)).
