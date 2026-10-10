@@ -549,8 +549,9 @@ or `\r\n`. `bcr report` reads the `breadcrumb`, `link`, `claim`,
 kind is not read, and neither are fields after the ones printed today.
 
 Output: one page, in Markdown, on standard output. Its diagrams are
-Mermaid, in fenced blocks marked `mermaid`; GitHub draws them wherever
-it shows Markdown. The page has four sections, in this order:
+Mermaid, in fenced blocks marked `mermaid`. GitHub draws them in a
+Markdown file of a repository and in a job's summary, but not in
+release notes. The page has four sections, in this order:
 
 - `## Breadcrumbs`: a line of counts, then a table with one row for
   each breadcrumb, with its verdict, its id, its type and where it is

@@ -88,6 +88,14 @@ jobs:
                  grep -q "id=\"$a\"" "$PUBLIC/docs/index.html" || echo "$a"
                done)"
 
+          silent "A picture is not in site/static" \
+            "$(grep -oE '!\[[^]]*\]\([^)]+\)' site/content/_index.md | sed 's/.*(//; s/)$//' | while read -r f; do
+                 test -f "site/static/$f" || echo "$f"
+               done)"
+
+          silent "A picture has no alt text" \
+            "$(grep -oE '!\[\]\(' site/content/_index.md)"
+
           silent "A link outside the repository and the site" \
             "$(grep -rhoE '(src|href)="(https?:)?//[^"]*"' "$PUBLIC" \
                  | grep -vE '"https://(github\.com/rodolfo-mendes/breadcrumb-sdd|rodolfo-mendes\.github\.io/breadcrumb-sdd/)')"

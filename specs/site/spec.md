@@ -10,6 +10,7 @@ breadcrumb:
     - 'site/content/_index.md has-line # Breadcrumb {#top}'
     - 'site/content/_index.md has-line ## The problem {#problem}'
     - 'site/content/_index.md has-line ## How it works {#how-it-works}'
+    - 'site/content/_index.md has-line ## The report {#report}'
     - 'site/content/_index.md has-line ## Honest scope {#scope}'
     - 'site/content/_index.md has-line ## Try it {#try-it}'
     - 'site/content/_index.md has-line ## Who it''s for {#audience}'
@@ -48,11 +49,11 @@ of it.
 site/
   hugo.toml              baseURL, the menus, the language
   content/
-    _index.md            the landing page: the hero and six sections
+    _index.md            the landing page: the hero and seven sections
     docs/_index.md       docs/bcr.md, copied when the site is built
   layouts/               the templates, with no theme
   assets/                one stylesheet
-  static/                the GitHub mark, as an SVG
+  static/                the GitHub mark, as an SVG, and the pictures
 ```
 
 `site/content/docs/_index.md` is not committed (`.gitignore`). The
@@ -66,19 +67,20 @@ derives from their text, such as `#extract` for `### extract`.
 **The landing page.** The hero is the first heading, `# Breadcrumb
 {#top}`, with the name and one sentence that says what Breadcrumb
 does. Under it, a link to the repository, drawn as the GitHub mark.
-Six sections follow, in this order; each id is written in the
+Seven sections follow, in this order; each id is written in the
 Markdown:
 
 | Menu label | Id | Says |
 |---|---|---|
 | The problem | `problem` | Code says what a repository does, not why; the why drifts |
 | How it works | `how-it-works` | One breadcrumb, its claims, and the three verdicts |
+| The report | `report` | What `bcr report` shows, a picture of one of its diagrams, and a link to its documentation |
 | Honest scope | `scope` | Drift is made visible after the fact, not prevented |
 | Try it | `try-it` | The pipe on one file, with links into the documentation page |
 | Who it's for | `audience` | People who build with agents writing most of the code |
 | Status | `status` | The released version and what is deferred |
 
-**The menu.** A menu lists the six sections, in page order, as entries
+**The menu.** A menu lists the seven sections, in page order, as entries
 of `site/hugo.toml` whose `url` is `#` and the section's id. Above
 them are links to other pages: Docs, Repository (the repository's
 page on GitHub) and Releases. On a narrow screen the menu is collapsed
@@ -121,6 +123,11 @@ the checksums published with it.
   built site are not in the repository, so no claim is about them; the
   Guardrails below check them. A `has-line` claim cannot say that an id
   is unique or that the menu is in page order, so a Guardrail does.
+- **Pictures.** A picture illustrates; it does not have to show the
+  state of the repository or the example of "Try it". It is real
+  output of `bcr report`, never drawn by hand, and its caption says
+  where it comes from. It is in `site/static/`, with alt text that
+  says what it shows.
 - **Text is not claimed.** The hero and the sections' text change
   often and carry no claim.
 
@@ -130,7 +137,7 @@ the checksums published with it.
 
 - [ ] `site/` holds the files of the Architecture, and `hugo` builds it
       with `--panicOnWarning` and exits 0.
-- [ ] The landing page has the hero and the six sections, each with
+- [ ] The landing page has the hero and the seven sections, each with
       the id of the table, and the menu lists them in the same order.
 - [ ] The menu opens and closes on a narrow screen with no script.
 - [ ] `/docs/` is `docs/bcr.md`, and the landing page's links into it
@@ -183,6 +190,16 @@ hand, with `PUBLIC` the folder of a build.
   for a in $(grep -oE 'href="docs/#[a-z0-9-]+"' "$PUBLIC/index.html" | sed 's/.*#//; s/"$//'); do
     grep -q "id=\"$a\"" "$PUBLIC/docs/index.html" || echo "$a"
   done
+  ```
+
+- Each picture the landing page shows is in `site/static/`, and has
+  alt text. Checked by hand:
+
+  ```
+  grep -oE '!\[[^]]*\]\([^)]+\)' site/content/_index.md | sed 's/.*(//; s/)$//' | while read -r f; do
+    test -f "site/static/$f" || echo "$f"
+  done
+  grep -oE '!\[\]\(' site/content/_index.md
   ```
 
 - No link outside the repository and the site, no root-relative link,
@@ -257,4 +274,10 @@ Scenario: A link that points at the site's root
   Given a layout writes href="/docs/"
   When the checks run
   Then the root-relative check prints that link and the workflow fails
+
+Scenario: A picture that is not in site/static
+  Given the landing page shows report-filter.png
+  And site/static has no such file
+  When the checks run
+  Then the picture check prints report-filter.png and the workflow fails
 ```

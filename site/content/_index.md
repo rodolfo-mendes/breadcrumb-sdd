@@ -61,6 +61,24 @@ the text, once the spaces and tabs at the line's start and end are
 removed. It is a text match. Confirmed means the line is there, not
 that the document is right.
 
+## The report {#report}
+
+`bcr report` turns the verdicts into one page: every breadcrumb with
+its verdict, every problem, every claim, and a diagram for each spec.
+A diagram shows a spec, the breadcrumbs it links to and those that
+link to it, each with its verdict. A Refuted one is outlined in red,
+so drift is seen at a glance. GitHub draws the diagrams in a Markdown
+file.
+
+![A diagram from bcr report: the filter spec, outlined in red because its claim is Refuted, with an arrow to each of the four ADRs it follows, outlined in amber because they have no claims](report-filter.png)
+
+*The `filter` spec in Breadcrumb's own report, the morning it was
+specified: its claim on the documentation was Refuted until the
+documentation landed, 17 minutes later.*
+
+How to make one, and what each part of it means:
+[`bcr report`](docs/#report).
+
 ## Honest scope {#scope}
 
 Breadcrumb makes drift visible after the fact; it does not prevent

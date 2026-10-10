@@ -53,21 +53,26 @@ url = "#how-it-works"
 weight = 2
 
 [[menus.sections]]
+name = "The report"
+url = "#report"
+weight = 3
+
+[[menus.sections]]
 name = "Honest scope"
 url = "#scope"
-weight = 3
+weight = 4
 
 [[menus.sections]]
 name = "Try it"
 url = "#try-it"
-weight = 4
+weight = 5
 
 [[menus.sections]]
 name = "Who it's for"
 url = "#audience"
-weight = 5
+weight = 6
 
 [[menus.sections]]
 name = "Status"
 url = "#status"
-weight = 6
+weight = 7

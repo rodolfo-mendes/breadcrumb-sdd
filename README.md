@@ -130,8 +130,9 @@ bcr extract | bcr verify | bcr audit | bcr report > report.md
 - `bcr audit` checks each claim against the files, and gives each
   claim and each breadcrumb a verdict.
 - `bcr report` writes one Markdown page: every breadcrumb by verdict,
-  every problem, and a Mermaid diagram for each spec. GitHub draws it
-  wherever it shows Markdown.
+  every problem, and a Mermaid diagram for each spec. GitHub draws the
+  diagrams in a Markdown file and in a job's summary, but not in
+  release notes.
 
 Each stage passes every record on, so a stage's output can also be
 read with `grep`, `cut` or `awk`. `bcr filter` selects records by id,

@@ -404,7 +404,7 @@ Operands: none. \fBbcr report\fR reads no file of the repository.
 .PP
 Standard input: the records, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. \fBbcr report\fR reads the \fBbreadcrumb\fR, \fBlink\fR, \fBclaim\fR, \fBproblem\fR, \fBclaim\-verdict\fR and \fBverdict\fR records. A record of another kind is not read, and neither are fields after the ones printed today.
 .PP
-Output: one page, in Markdown, on standard output. Its diagrams are Mermaid, in fenced blocks marked \fBmermaid\fR; GitHub draws them wherever it shows Markdown. The page has four sections, in this order:
+Output: one page, in Markdown, on standard output. Its diagrams are Mermaid, in fenced blocks marked \fBmermaid\fR. GitHub draws them in a Markdown file of a repository and in a job's summary, but not in release notes. The page has four sections, in this order:
 .IP \(bu 2
 \fB## Breadcrumbs\fR: a line of counts, then a table with one row for each breadcrumb, with its verdict, its id, its type and where it is written, as \fBPATH:LINE\fR. Rows are in order of verdict, \fBRefuted\fR first, then \fBUndecided\fR, \fBConfirmed\fR and \fBnot audited\fR, and then of id.
 .IP \(bu 2

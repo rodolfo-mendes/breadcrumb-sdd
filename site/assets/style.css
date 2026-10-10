@@ -67,6 +67,19 @@ pre code { background: none; padding: 0; }
 table { border-collapse: collapse; display: block; overflow-x: auto; }
 th, td { border: 1px solid var(--line); padding: 0.4rem 0.75rem; text-align: left; }
 img { vertical-align: middle; }
+/* A picture of a report: a light card in either theme, so the diagram
+   keeps the colours bcr report gives it. Its caption is the paragraph
+   that follows it. */
+main p > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+main p:has(> img) + p { color: var(--soft); font-size: 0.875rem; margin-top: -0.25rem; }
 @media (min-width: 56rem) {
   header {
     position: fixed;

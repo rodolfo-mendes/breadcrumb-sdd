@@ -1,0 +1,368 @@
+From 38075c86641347673a6ea0ee8dc9360a5de1b264 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 10 Oct 2026 12:32:45 -0300
+Subject: [PATCH] feat: Show a report's diagram on the landing page
+
+The landing page gains "The report", after "How it works": what bcr
+report shows, a static picture of one of its diagrams to illustrate
+it, and a link to its documentation; no link to a live report. The
+picture sits on a light card in both colour schemes. specs/site claims
+the new heading, allows pictures that illustrate as long as they are
+real bcr report output, and checks that each picture is in
+site/static with alt text; pages.yml runs that check.
+
+docs/bcr.md and README.md no longer say GitHub draws the diagrams
+wherever it shows Markdown: release notes show them as code, as
+checked in a draft release. docs/bcr.1 is generated again.
+
+site/static/report-filter.png is not in this patch: take the
+screenshot the PBI describes and add it to the same commit.
+
+- PBI-00039: this change.
+- site: the seventh section, pictures, and the picture guardrail.
+
+Verify with: go test ./internal/manpage, the pipe in AGENTS.md's
+Toolchain, and the spec's Regression Guardrails on a build with the
+pinned Hugo
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JQNYCuXgGxwDyisZpL318X
+---
+ .github/workflows/pages.yml |  8 +++++
+ README.md                   |  5 +--
+ docs/bcr.1                  |  2 +-
+ docs/bcr.md                 |  5 +--
+ site/assets/style.css       | 13 ++++++++
+ site/content/_index.md      | 18 ++++++++++
+ site/hugo.toml              | 13 +++++---
+ specs/site/spec.md          | 33 ++++++++++++++++---
+ tasks/PBI-00039.md          | 66 +++++++++++++++++++++++++++++++++++++
+ 9 files changed, 149 insertions(+), 14 deletions(-)
+ create mode 100644 tasks/PBI-00039.md
+
+diff --git a/.github/workflows/pages.yml b/.github/workflows/pages.yml
+index 1ee1110..2d79819 100644
+--- a/.github/workflows/pages.yml
++++ b/.github/workflows/pages.yml
+@@ -88,6 +88,14 @@ jobs:
+                  grep -q "id=\"$a\"" "$PUBLIC/docs/index.html" || echo "$a"
+                done)"
+ 
++          silent "A picture is not in site/static" \
++            "$(grep -oE '!\[[^]]*\]\([^)]+\)' site/content/_index.md | sed 's/.*(//; s/)$//' | while read -r f; do
++                 test -f "site/static/$f" || echo "$f"
++               done)"
++
++          silent "A picture has no alt text" \
++            "$(grep -oE '!\[\]\(' site/content/_index.md)"
++
+           silent "A link outside the repository and the site" \
+             "$(grep -rhoE '(src|href)="(https?:)?//[^"]*"' "$PUBLIC" \
+                  | grep -vE '"https://(github\.com/rodolfo-mendes/breadcrumb-sdd|rodolfo-mendes\.github\.io/breadcrumb-sdd/)')"
+diff --git a/README.md b/README.md
+index 239315e..663a176 100644
+--- a/README.md
++++ b/README.md
+@@ -130,8 +130,9 @@ bcr extract | bcr verify | bcr audit | bcr report > report.md
+ - `bcr audit` checks each claim against the files, and gives each
+   claim and each breadcrumb a verdict.
+ - `bcr report` writes one Markdown page: every breadcrumb by verdict,
+-  every problem, and a Mermaid diagram for each spec. GitHub draws it
+-  wherever it shows Markdown.
++  every problem, and a Mermaid diagram for each spec. GitHub draws the
++  diagrams in a Markdown file and in a job's summary, but not in
++  release notes.
+ 
+ Each stage passes every record on, so a stage's output can also be
+ read with `grep`, `cut` or `awk`. `bcr filter` selects records by id,
+diff --git a/docs/bcr.1 b/docs/bcr.1
+index e5c42f4..3d22399 100644
+--- a/docs/bcr.1
++++ b/docs/bcr.1
+@@ -404,7 +404,7 @@ Operands: none. \fBbcr report\fR reads no file of the repository.
+ .PP
+ Standard input: the records, read to the end. A line may end in \fB\en\fR or \fB\er\en\fR. \fBbcr report\fR reads the \fBbreadcrumb\fR, \fBlink\fR, \fBclaim\fR, \fBproblem\fR, \fBclaim\-verdict\fR and \fBverdict\fR records. A record of another kind is not read, and neither are fields after the ones printed today.
+ .PP
+-Output: one page, in Markdown, on standard output. Its diagrams are Mermaid, in fenced blocks marked \fBmermaid\fR; GitHub draws them wherever it shows Markdown. The page has four sections, in this order:
++Output: one page, in Markdown, on standard output. Its diagrams are Mermaid, in fenced blocks marked \fBmermaid\fR. GitHub draws them in a Markdown file of a repository and in a job's summary, but not in release notes. The page has four sections, in this order:
+ .IP \(bu 2
+ \fB## Breadcrumbs\fR: a line of counts, then a table with one row for each breadcrumb, with its verdict, its id, its type and where it is written, as \fBPATH:LINE\fR. Rows are in order of verdict, \fBRefuted\fR first, then \fBUndecided\fR, \fBConfirmed\fR and \fBnot audited\fR, and then of id.
+ .IP \(bu 2
+diff --git a/docs/bcr.md b/docs/bcr.md
+index 8dff706..56dfd9b 100644
+--- a/docs/bcr.md
++++ b/docs/bcr.md
+@@ -549,8 +549,9 @@ or `\r\n`. `bcr report` reads the `breadcrumb`, `link`, `claim`,
+ kind is not read, and neither are fields after the ones printed today.
+ 
+ Output: one page, in Markdown, on standard output. Its diagrams are
+-Mermaid, in fenced blocks marked `mermaid`; GitHub draws them wherever
+-it shows Markdown. The page has four sections, in this order:
++Mermaid, in fenced blocks marked `mermaid`. GitHub draws them in a
++Markdown file of a repository and in a job's summary, but not in
++release notes. The page has four sections, in this order:
+ 
+ - `## Breadcrumbs`: a line of counts, then a table with one row for
+   each breadcrumb, with its verdict, its id, its type and where it is
+diff --git a/site/assets/style.css b/site/assets/style.css
+index d79bc97..0d3b2ce 100644
+--- a/site/assets/style.css
++++ b/site/assets/style.css
+@@ -67,6 +67,19 @@ pre code { background: none; padding: 0; }
+ table { border-collapse: collapse; display: block; overflow-x: auto; }
+ th, td { border: 1px solid var(--line); padding: 0.4rem 0.75rem; text-align: left; }
+ img { vertical-align: middle; }
++/* A picture of a report: a light card in either theme, so the diagram
++   keeps the colours bcr report gives it. Its caption is the paragraph
++   that follows it. */
++main p > img {
++  display: block;
++  max-width: 100%;
++  height: auto;
++  background: #ffffff;
++  border: 1px solid var(--line);
++  border-radius: 6px;
++  padding: 0.75rem;
++}
++main p:has(> img) + p { color: var(--soft); font-size: 0.875rem; margin-top: -0.25rem; }
+ @media (min-width: 56rem) {
+   header {
+     position: fixed;
+diff --git a/site/content/_index.md b/site/content/_index.md
+index 91207ec..7a125a5 100644
+--- a/site/content/_index.md
++++ b/site/content/_index.md
+@@ -61,6 +61,24 @@ the text, once the spaces and tabs at the line's start and end are
+ removed. It is a text match. Confirmed means the line is there, not
+ that the document is right.
+ 
++## The report {#report}
++
++`bcr report` turns the verdicts into one page: every breadcrumb with
++its verdict, every problem, every claim, and a diagram for each spec.
++A diagram shows a spec, the breadcrumbs it links to and those that
++link to it, each with its verdict. A Refuted one is outlined in red,
++so drift is seen at a glance. GitHub draws the diagrams in a Markdown
++file.
++
++![A diagram from bcr report: the filter spec, outlined in red because its claim is Refuted, with an arrow to each of the four ADRs it follows, outlined in amber because they have no claims](report-filter.png)
++
++*The `filter` spec in Breadcrumb's own report, the morning it was
++specified: its claim on the documentation was Refuted until the
++documentation landed, 17 minutes later.*
++
++How to make one, and what each part of it means:
++[`bcr report`](docs/#report).
++
+ ## Honest scope {#scope}
+ 
+ Breadcrumb makes drift visible after the fact; it does not prevent
+diff --git a/site/hugo.toml b/site/hugo.toml
+index d267bb7..3eea3f4 100644
+--- a/site/hugo.toml
++++ b/site/hugo.toml
+@@ -52,22 +52,27 @@ name = "How it works"
+ url = "#how-it-works"
+ weight = 2
+ 
++[[menus.sections]]
++name = "The report"
++url = "#report"
++weight = 3
++
+ [[menus.sections]]
+ name = "Honest scope"
+ url = "#scope"
+-weight = 3
++weight = 4
+ 
+ [[menus.sections]]
+ name = "Try it"
+ url = "#try-it"
+-weight = 4
++weight = 5
+ 
+ [[menus.sections]]
+ name = "Who it's for"
+ url = "#audience"
+-weight = 5
++weight = 6
+ 
+ [[menus.sections]]
+ name = "Status"
+ url = "#status"
+-weight = 6
++weight = 7
+diff --git a/specs/site/spec.md b/specs/site/spec.md
+index a1b875c..348cc50 100644
+--- a/specs/site/spec.md
++++ b/specs/site/spec.md
+@@ -10,6 +10,7 @@ breadcrumb:
+     - 'site/content/_index.md has-line # Breadcrumb {#top}'
+     - 'site/content/_index.md has-line ## The problem {#problem}'
+     - 'site/content/_index.md has-line ## How it works {#how-it-works}'
++    - 'site/content/_index.md has-line ## The report {#report}'
+     - 'site/content/_index.md has-line ## Honest scope {#scope}'
+     - 'site/content/_index.md has-line ## Try it {#try-it}'
+     - 'site/content/_index.md has-line ## Who it''s for {#audience}'
+@@ -48,11 +49,11 @@ of it.
+ site/
+   hugo.toml              baseURL, the menus, the language
+   content/
+-    _index.md            the landing page: the hero and six sections
++    _index.md            the landing page: the hero and seven sections
+     docs/_index.md       docs/bcr.md, copied when the site is built
+   layouts/               the templates, with no theme
+   assets/                one stylesheet
+-  static/                the GitHub mark, as an SVG
++  static/                the GitHub mark, as an SVG, and the pictures
+ ```
+ 
+ `site/content/docs/_index.md` is not committed (`.gitignore`). The
+@@ -66,19 +67,20 @@ derives from their text, such as `#extract` for `### extract`.
+ **The landing page.** The hero is the first heading, `# Breadcrumb
+ {#top}`, with the name and one sentence that says what Breadcrumb
+ does. Under it, a link to the repository, drawn as the GitHub mark.
+-Six sections follow, in this order; each id is written in the
++Seven sections follow, in this order; each id is written in the
+ Markdown:
+ 
+ | Menu label | Id | Says |
+ |---|---|---|
+ | The problem | `problem` | Code says what a repository does, not why; the why drifts |
+ | How it works | `how-it-works` | One breadcrumb, its claims, and the three verdicts |
++| The report | `report` | What `bcr report` shows, a picture of one of its diagrams, and a link to its documentation |
+ | Honest scope | `scope` | Drift is made visible after the fact, not prevented |
+ | Try it | `try-it` | The pipe on one file, with links into the documentation page |
+ | Who it's for | `audience` | People who build with agents writing most of the code |
+ | Status | `status` | The released version and what is deferred |
+ 
+-**The menu.** A menu lists the six sections, in page order, as entries
++**The menu.** A menu lists the seven sections, in page order, as entries
+ of `site/hugo.toml` whose `url` is `#` and the section's id. Above
+ them are links to other pages: Docs, Repository (the repository's
+ page on GitHub) and Releases. On a narrow screen the menu is collapsed
+@@ -121,6 +123,11 @@ the checksums published with it.
+   built site are not in the repository, so no claim is about them; the
+   Guardrails below check them. A `has-line` claim cannot say that an id
+   is unique or that the menu is in page order, so a Guardrail does.
++- **Pictures.** A picture illustrates; it does not have to show the
++  state of the repository or the example of "Try it". It is real
++  output of `bcr report`, never drawn by hand, and its caption says
++  where it comes from. It is in `site/static/`, with alt text that
++  says what it shows.
+ - **Text is not claimed.** The hero and the sections' text change
+   often and carry no claim.
+ 
+@@ -130,7 +137,7 @@ the checksums published with it.
+ 
+ - [ ] `site/` holds the files of the Architecture, and `hugo` builds it
+       with `--panicOnWarning` and exits 0.
+-- [ ] The landing page has the hero and the six sections, each with
++- [ ] The landing page has the hero and the seven sections, each with
+       the id of the table, and the menu lists them in the same order.
+ - [ ] The menu opens and closes on a narrow screen with no script.
+ - [ ] `/docs/` is `docs/bcr.md`, and the landing page's links into it
+@@ -185,6 +192,16 @@ hand, with `PUBLIC` the folder of a build.
+   done
+   ```
+ 
++- Each picture the landing page shows is in `site/static/`, and has
++  alt text. Checked by hand:
++
++  ```
++  grep -oE '!\[[^]]*\]\([^)]+\)' site/content/_index.md | sed 's/.*(//; s/)$//' | while read -r f; do
++    test -f "site/static/$f" || echo "$f"
++  done
++  grep -oE '!\[\]\(' site/content/_index.md
++  ```
++
+ - No link outside the repository and the site, no root-relative link,
+   and no script, import or `url(`. Checked by hand:
+ 
+@@ -257,4 +274,10 @@ Scenario: A link that points at the site's root
+   Given a layout writes href="/docs/"
+   When the checks run
+   Then the root-relative check prints that link and the workflow fails
++
++Scenario: A picture that is not in site/static
++  Given the landing page shows report-filter.png
++  And site/static has no such file
++  When the checks run
++  Then the picture check prints report-filter.png and the workflow fails
+ ```
+diff --git a/tasks/PBI-00039.md b/tasks/PBI-00039.md
+new file mode 100644
+index 0000000..9bee201
+--- /dev/null
++++ b/tasks/PBI-00039.md
+@@ -0,0 +1,66 @@
++---
++breadcrumb:
++  id: PBI-00039
++  type: PBI
++  title: Show a report's diagram on the landing page
++  links:
++    - changes site
++---
++# PBI-00039: Show a report's diagram on the landing page
++
++## Directive
++
++Add the section "The report" to the landing page: what `bcr report`
++shows, a static picture of one of its diagrams to illustrate it, and a
++link to its documentation. No link to a live report.
++
++**Scope:**
++- In `site/content/_index.md`, the section `## The report {#report}`
++  after "How it works", with its picture, caption, and a link to
++  `docs/#report`.
++- In `site/hugo.toml`, its menu entry, between "How it works" and
++  "Honest scope".
++- In `site/assets/style.css`, a light card for a picture, and the
++  style of its caption.
++- `site/static/report-filter.png`: a screenshot of a diagram from a
++  real report, as GitHub draws it in a Check run's summary. The draft
++  names the `filter` diagram of the run on de667d8, the morning its
++  claim was Refuted; another real diagram will do, if its alt text and
++  caption say what it shows and where it comes from.
++- In `.github/workflows/pages.yml`, the picture checks of the spec,
++  in the spec's order.
++- In `specs/site/spec.md`: the claim on the new heading, the seventh
++  section, pictures in the Architecture and under Constraints, the
++  picture guardrail, and its Scenario.
++- In `docs/bcr.md`, `### report`, and in `README.md`: GitHub does not
++  draw the diagrams "wherever it shows Markdown"; release notes show
++  them as code, as checked in a draft release on 2026-10-10. Say where
++  it draws them, and generate `docs/bcr.1` again
++  (`go test ./internal/manpage -update`).
++
++## Dependencies
++- Blocked by: None
++- Must merge before: None
++
++## Context
++Read: `specs/site/spec.md`.
++
++Read: `docs/bcr.md`, `### report`, which the section's text follows.
++
++## Verification
++- [ ] `set -o pipefail; go run ./cmd/bcr extract | go run ./cmd/bcr verify | go run ./cmd/bcr audit > /dev/null`
++      prints nothing and exits 0.
++- [ ] With the pinned Hugo, the build and each Regression Guardrail
++      of the spec pass on `PUBLIC`; the link to `docs/#report` reaches
++      its heading.
++- [ ] Without `site/static/report-filter.png`, the picture check
++      prints `report-filter.png`.
++- [ ] In both colour schemes, the picture sits on a light card and its
++      outlines are visible; at 375px it fits the width.
++- [ ] The alt text and the caption describe the picture used.
++- [ ] `grep -rn 'wherever it shows Markdown' docs README.md` prints
++      nothing, and `go test ./internal/manpage` passes.
++
++## Refinement Protocol
++If the picture cannot be made from real `bcr report` output, stop and
++ask: the spec does not allow a picture drawn by hand.
+-- 
+2.43.0
+
