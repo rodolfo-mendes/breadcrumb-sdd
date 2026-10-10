@@ -1,0 +1,84 @@
+/* The one stylesheet of the site, written into each page. It loads
+   nothing: no import and no address. */
+:root {
+  --text: #1f2328;
+  --soft: #59636e;
+  --back: #ffffff;
+  --panel: #f6f8fa;
+  --line: #d1d9e0;
+  --link: #0969da;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6edf3;
+    --soft: #9198a1;
+    --back: #0d1117;
+    --panel: #151b23;
+    --line: #3d444d;
+    --link: #4493f8;
+  }
+  img[src$="github-mark.svg"] { filter: invert(1); }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--back);
+  font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--link); }
+header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+header .name {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text);
+  text-decoration: none;
+}
+.menu ul { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+.menu li { margin: 0.25rem 0; }
+.menu a { text-decoration: none; }
+.menu a:hover { text-decoration: underline; }
+.menu .pages { padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
+.menu .pages a { font-weight: 600; }
+.menu.wide { display: none; }
+.menu.narrow { margin-top: 0.5rem; }
+.menu.narrow summary { cursor: pointer; font-weight: 600; }
+main, footer { padding: 1rem; max-width: 46rem; }
+footer { color: var(--soft); font-size: 0.875rem; }
+h1 { font-size: 2.25rem; line-height: 1.2; margin: 1rem 0 0.5rem; }
+h1 + p { font-size: 1.25rem; color: var(--soft); margin-top: 0; }
+h2 { margin-top: 2.5rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
+h3 { margin-top: 2rem; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.875rem; }
+code { background: var(--panel); padding: 0.1em 0.3em; border-radius: 4px; }
+pre {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--line); padding: 0.4rem 0.75rem; text-align: left; }
+img { vertical-align: middle; }
+@media (min-width: 56rem) {
+  header {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 15rem;
+    overflow-y: auto;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+  .menu.wide { display: block; }
+  .menu.narrow { display: none; }
+  main, footer { margin-left: 15rem; padding: 1rem 3rem; }
+}

@@ -1,0 +1,73 @@
+# The site of Breadcrumb (specs/site). Hugo is the release pages.yml
+# names; there is no theme and no module (ADR-0030).
+baseURL = "https://rodolfo-mendes.github.io/breadcrumb-sdd/"
+title = "Breadcrumb"
+locale = "en"
+defaultContentLanguage = "en"
+enableRobotsTXT = true
+disableKinds = ["taxonomy", "term", "rss", "404"]
+
+# docs/bcr.md is shown as written: no smart punctuation, and code
+# blocks without colors.
+[markup.goldmark.extensions.typographer]
+disable = true
+
+[markup.highlight]
+codeFences = false
+
+# docs/bcr.md has no front matter, so the documentation page takes its
+# title and description from here.
+[[cascade]]
+title = "bcr documentation"
+description = "The user documentation of bcr, the toolkit of Breadcrumb: its commands, flags, inputs, outputs and exit codes."
+
+[cascade.target]
+path = "/docs"
+
+# The links to other pages, above the sections.
+[[menus.pages]]
+name = "Docs"
+url = "docs/"
+weight = 1
+
+[[menus.pages]]
+name = "Repository"
+url = "https://github.com/rodolfo-mendes/breadcrumb-sdd"
+weight = 2
+
+[[menus.pages]]
+name = "Releases"
+url = "https://github.com/rodolfo-mendes/breadcrumb-sdd/releases"
+weight = 3
+
+# The sections of the landing page, in page order. Each url is # and
+# the id written in site/content/_index.md.
+[[menus.sections]]
+name = "The problem"
+url = "#problem"
+weight = 1
+
+[[menus.sections]]
+name = "How it works"
+url = "#how-it-works"
+weight = 2
+
+[[menus.sections]]
+name = "Honest scope"
+url = "#scope"
+weight = 3
+
+[[menus.sections]]
+name = "Try it"
+url = "#try-it"
+weight = 4
+
+[[menus.sections]]
+name = "Who it's for"
+url = "#audience"
+weight = 5
+
+[[menus.sections]]
+name = "Status"
+url = "#status"
+weight = 6
