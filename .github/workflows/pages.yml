@@ -62,7 +62,7 @@ jobs:
           prints() {
             if [ "$2" != "$3" ]; then echo "::error::$1"; echo "$2"; fail=1; fi
           }
-          site=https://rodolfo-mendes.github.io/breadcrumb-sdd/
+          site=https://breadcrumb-sdd.org/
 
           prints "site/content/ holds something else" \
             "$(find site/content -type f | sort)" \
@@ -98,7 +98,7 @@ jobs:
 
           silent "A link outside the repository and the site" \
             "$(grep -rhoE '(src|href)="(https?:)?//[^"]*"' "$PUBLIC" \
-                 | grep -vE '"https://(github\.com/rodolfo-mendes/breadcrumb-sdd|rodolfo-mendes\.github\.io/breadcrumb-sdd/)')"
+                 | grep -vE '"https://(github\.com/rodolfo-mendes/breadcrumb-sdd|breadcrumb-sdd\.org/)')"
 
           silent "A root-relative link" \
             "$(grep -rhoE '(src|href)="/[^/"][^"]*"' "$PUBLIC")"

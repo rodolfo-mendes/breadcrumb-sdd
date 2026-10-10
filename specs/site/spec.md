@@ -6,6 +6,7 @@ breadcrumb:
     - constrained_by ADR-0008
     - constrained_by ADR-0030
     - constrained_by ADR-0031
+    - constrained_by ADR-0033
   claims:
     - 'site/content/_index.md has-line # Breadcrumbs {#top}'
     - 'site/content/_index.md has-line ## The problem {#problem}'
@@ -15,7 +16,7 @@ breadcrumb:
     - 'site/content/_index.md has-line ## Try it {#try-it}'
     - 'site/content/_index.md has-line ## Who it''s for {#audience}'
     - 'site/content/_index.md has-line ## Status {#status}'
-    - 'site/hugo.toml has-line baseURL = "https://rodolfo-mendes.github.io/breadcrumb-sdd/"'
+    - 'site/hugo.toml has-line baseURL = "https://breadcrumb-sdd.org/"'
     - '.github/workflows/pages.yml has-line HUGO_VERSION: 0.167.0'
     - '.gitignore has-line /site/content/docs/_index.md'
 ---
@@ -40,7 +41,8 @@ claim on it can be checked against the repository, by hand, without
 `bcr`. It does not mention how the maintainer works, only Breadcrumbs.
 
 How the site is generated is ADR-0030; where and when it is published
-is ADR-0031. This spec says what the site is, and what must stay true
+is ADR-0031, and its address, `https://breadcrumb-sdd.org/`, is
+ADR-0033. This spec says what the site is, and what must stay true
 of it.
 
 ### Architecture
@@ -148,6 +150,9 @@ the checksums published with it.
 - [ ] The built pages show the tag or commit they were built from.
 - [ ] The repository's Pages source is GitHub Actions, and the
       `github-pages` environment allows only `main` and tags `v*`.
+- [ ] The site is served at `https://breadcrumb-sdd.org/` with HTTPS
+      enforced, the domain is verified in the account's settings, and
+      DNS has no wildcard record (ADR-0033).
 - [ ] `AGENTS.md` names `site/` in its Context Map, and its Toolchain
       says how to preview the site.
 - [ ] Each claim in the front matter holds.
@@ -207,7 +212,7 @@ hand, with `PUBLIC` the folder of a build.
 
   ```
   grep -rhoE '(src|href)="(https?:)?//[^"]*"' "$PUBLIC" \
-    | grep -vE '"https://(github\.com/rodolfo-mendes/breadcrumb-sdd|rodolfo-mendes\.github\.io/breadcrumb-sdd/)'
+    | grep -vE '"https://(github\.com/rodolfo-mendes/breadcrumb-sdd|breadcrumb-sdd\.org/)'
   grep -rhoE '(src|href)="/[^/"][^"]*"' "$PUBLIC"
   grep -rlE '<script|@import|url\(' "$PUBLIC"
   ```
@@ -222,7 +227,7 @@ hand, with `PUBLIC` the folder of a build.
   done
   grep -c '<h1' "$PUBLIC/index.html" "$PUBLIC/docs/index.html"
   grep -o '<loc>[^<]*' "$PUBLIC/sitemap.xml"
-  grep -x 'Sitemap: https://rodolfo-mendes.github.io/breadcrumb-sdd/sitemap.xml' "$PUBLIC/robots.txt"
+  grep -x 'Sitemap: https://breadcrumb-sdd.org/sitemap.xml' "$PUBLIC/robots.txt"
   ```
 
   The first loop prints nothing, the count is 1 for each page, the
@@ -242,6 +247,13 @@ hand, with `PUBLIC` the folder of a build.
   prints `workflow`, and
   `gh api repos/rodolfo-mendes/breadcrumb-sdd/environments/github-pages/deployment-branch-policies --jq '.branch_policies[].name'`
   prints `main` and `v*`.
+
+- The address is the one of ADR-0033. Checked by hand:
+  `gh api repos/rodolfo-mendes/breadcrumb-sdd/pages --jq '.cname, .https_enforced'`
+  prints `breadcrumb-sdd.org` and `true`;
+  `dig +short breadcrumb-sdd.org A` prints the four addresses GitHub
+  publishes for Pages, and `dig +short '*.breadcrumb-sdd.org'` prints
+  nothing.
 
 ### Scenarios
 

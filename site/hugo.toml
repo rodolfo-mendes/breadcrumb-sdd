@@ -1,6 +1,6 @@
 # The site of Breadcrumbs (specs/site). Hugo is the release pages.yml
 # names; there is no theme and no module (ADR-0030).
-baseURL = "https://rodolfo-mendes.github.io/breadcrumb-sdd/"
+baseURL = "https://breadcrumb-sdd.org/"
 title = "Breadcrumbs"
 locale = "en"
 defaultContentLanguage = "en"

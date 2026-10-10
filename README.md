@@ -14,9 +14,8 @@ One record is a breadcrumb; the product, the trail of them, is
 Breadcrumbs. The repository is `breadcrumb-sdd`, singular because
 there *breadcrumb* describes SDD, and the command is `bcr`.
 
-Its site is <https://rodolfo-mendes.github.io/breadcrumb-sdd/>, with
-the documentation of `bcr` at
-<https://rodolfo-mendes.github.io/breadcrumb-sdd/docs/>.
+Its site is <https://breadcrumb-sdd.org/>, with the documentation of
+`bcr` at <https://breadcrumb-sdd.org/docs/>.
 
 ## The problem
 
