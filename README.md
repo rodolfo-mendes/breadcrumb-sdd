@@ -3,6 +3,10 @@
 Breadcrumb makes drift between a repository's intent and its code
 visible.
 
+Its site is <https://rodolfo-mendes.github.io/breadcrumb-sdd/>, with
+the documentation of `bcr` at
+<https://rodolfo-mendes.github.io/breadcrumb-sdd/docs/>.
+
 ## The problem
 
 Code says what a repository does, not why. The why lives in tickets,
