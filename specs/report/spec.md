@@ -12,6 +12,7 @@ breadcrumb:
     - constrained_by ADR-0021
     - constrained_by ADR-0022
     - constrained_by ADR-0023
+    - constrained_by ADR-0032
   claims:
     - 'docs/bcr.md has-line ### report'
 ---
@@ -77,6 +78,7 @@ them (`specs/extract/spec.md`, `specs/verify/spec.md`,
 
 ```
 breadcrumb	ID	TYPE	PATH	LINE
+breadcrumb	ID	TYPE	PATH	LINE	TITLE
 link	ID	VERB	OBJECT	PATH	LINE
 claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 problem	PATH	LINE	MESSAGE
@@ -93,8 +95,10 @@ verdict	ID	VERDICT	PATH	LINE	REASON
 - A `breadcrumb`, a `claim-verdict` and a `verdict` record have at
   least five fields, a `link` record at least six, a `claim` record at
   least seven and a `problem` record at least four. None of the fields
-  above is empty, `REASON` apart, and `LINE` is a whole number from 1,
-  written in digits only.
+  above is empty, `TITLE` and `REASON` apart, and `LINE` is a whole
+  number from 1, written in digits only.
+- A `breadcrumb` record with five fields, or with an empty `TITLE`,
+  is of a breadcrumb with no title (ADR-0032).
 - A `claim` record's `TARGET`, `KIND` and `ARGUMENT` follow the rules
   `bcr audit` checks (`specs/audit/spec.md`).
 - `VERDICT` is `Confirmed`, `Refuted` or `Undecided`, byte for byte.
@@ -161,7 +165,7 @@ Breadcrumbs: 3. Refuted: 1. Undecided: 1. Confirmed: 1. Not audited: 0.
 
 ```mermaid
 flowchart LR
-  n1["ADR-0015<br/>ADR · Undecided, no claims"]
+  n1["ADR-0015<br/>bcr verify reads the records of bcr extract<br/>ADR · Undecided, no claims"]
   n2["verify<br/>spec · Refuted<br/>Refuted: docs/bcr.md has-line #35;#35;#35; verify"]
   n2 -- "follows" --> n1
   classDef refuted stroke:#cf222e,stroke-width:3px
@@ -206,9 +210,11 @@ A view is written as one Mermaid `flowchart LR`, in this order:
 
 1. One box for each breadcrumb, in the order by id. Its name is `n1`,
    `n2` and so on, counted again in each view. Its label has one line
-   for the `ID`, one for `TYPE · VERDICT`, and then one for each of
-   its claims, in the order read, as `VERDICT: TARGET KIND ARGUMENT`.
-   Lines are joined by `<br/>`.
+   for the `ID`, one for the `TITLE` when the breadcrumb has one, one
+   for `TYPE · VERDICT`, and then one for each of its claims, in the
+   order read, as `VERDICT: TARGET KIND ARGUMENT`. Lines are joined by
+   `<br/>`. A breadcrumb with no title has no line for it: its label
+   starts `ID<br/>TYPE · VERDICT`, and no empty line is written.
 2. One arrow for each link, from the breadcrumb it belongs to, to the
    one it points to, labelled with its `VERB`. Arrows are in the order
    of the box they leave, then of the box they reach, then of `VERB`
@@ -251,6 +257,11 @@ Exit status:
   no date, no time and nothing random. The order the records are read
   in changes only the order of two problems at the same `PATH` and
   `LINE`, and of the claims in a box.
+- A title is shown in the label of a box and nowhere else. It changes
+  no table, no heading, no order, no arrow and no class: with a title
+  added, changed or removed, only that line of the label differs. The
+  `ID` is in every label, so two boxes with the same title are still
+  told apart.
 - A Refuted claim or breadcrumb does not change the exit status. It
   fails the pipe through `bcr audit`, under `set -o pipefail`.
 - `bcr report` writes nothing to standard output until it has read its
@@ -435,7 +446,8 @@ Scenario: Records of a kind it does not read
   Then the page is the same as without it
 
 Scenario: Fields added at the end
-  Given records with one more field at the end of each
+  Given records with one more field at the end of each, after an empty
+    TITLE or REASON where the record has none
   When I pipe them to "bcr report"
   Then the page is the same as without the fields
 
@@ -471,4 +483,25 @@ Scenario: The whole pipe
   When I run "bcr extract | bcr verify | bcr audit | bcr report"
   Then the page shows the claim and the spec as Refuted
   And bcr audit exits 1 and bcr report exits 0
+
+Scenario: A box with a title
+  Given an ADR whose record has the TITLE "Adopt ASDLC to develop
+    Breadcrumb", and a spec with a TITLE that follows it
+  When I report them
+  Then the label of each box has its id, then its title, then its type
+    and verdict
+  And apart from those two lines, the page is the same as without
+    the titles
+
+Scenario: A box without a title
+  Given a spec with a TITLE that follows an ADR whose record has five
+    fields, or an empty sixth
+  When I report them
+  Then the label of the ADR's box is "ADR-1<br/>ADR · not audited"
+
+Scenario: A title that looks like syntax
+  Given a spec whose TITLE holds ", #, |, <, `, "]", "<br/>" and "%%"
+  When I report it
+  Then the view has one box, whose label holds each of them as a code
+  And the diagram has no other line but its class
 ```

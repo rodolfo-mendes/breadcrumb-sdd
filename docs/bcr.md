@@ -112,9 +112,13 @@ each in the order written. Fields are separated by a tab:
 
 ```
 breadcrumb	ID	TYPE	PATH	LINE
+breadcrumb	ID	TYPE	PATH	LINE	TITLE
 link	ID	VERB	OBJECT	PATH	LINE
 claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 ```
+
+A `breadcrumb` record has `TITLE`, the breadcrumb's title as written,
+only when the breadcrumb has one; otherwise it has five fields.
 
 `PATH` is the file as given, or, with no operand, its path from the
 current directory, with `/` between its parts. `LINE` is the line of the file where the
@@ -162,6 +166,24 @@ a space in place of any tab or line ending in `MESSAGE`. A file's
 `problem` records come after its other records, in order of line. A
 `problem` record has no id: it belongs to the breadcrumb whose record
 has the same `PATH`, when there is one.
+
+A breadcrumb may also have a `title`, one line of text that says what
+its artifact is about. `bcr report` shows it beside the id:
+
+```
+breadcrumb:
+  id: ADR-0019
+  type: ADR
+  title: A has-line claim matches a trimmed whole line
+  links: []
+```
+
+`title` may be left out. It is written plain, without quotes, like
+`id` and `type`, and may hold spaces. A `title` with no value, a
+`title` that is a list, and a title that holds a tab are problems like
+any other, and the file prints no records. `bcr` reads no heading of
+the file: a title comes only from this key. Two breadcrumbs may have
+the same title.
 
 A breadcrumb may also have `claims`, a list of statements about the
 repository's files. `claims` may be left out, and `claims: []` means
@@ -549,8 +571,10 @@ A section with nothing to show says so, as in `No problems.`.
 A view draws the spec, every breadcrumb with a link to it, every
 breadcrumb it has a link to, and the links among those. A breadcrumb
 two links away is not in it, and a breadcrumb in no view is still in
-the table. Each box shows a breadcrumb's id, its type and its verdict,
-and each of its claims after the claim's own verdict. Each arrow goes
+the table. Each box shows a breadcrumb's id, its title when it has
+one, its type and its verdict, and each of its claims after the
+claim's own verdict. A breadcrumb with no title is shown by its id
+alone. A title is shown in its box and nowhere else on the page. Each arrow goes
 from the breadcrumb a link is written in to the one it points to, and
 is labelled with the link's verb.
 
@@ -563,8 +587,8 @@ The same records give the same page, byte for byte: it holds no date,
 and its rows, boxes and arrows are in order of id, whatever the order
 of the records.
 
-An id, a path, a verb, a claim or a message is written so that it
-cannot change the page around it. In the tables and lists, a `\` comes
+An id, a title, a path, a verb, a claim or a message is written so
+that it cannot change the page around it. In the tables and lists, a `\` comes
 before each character Markdown reads as syntax, such as `|`, `` ` ``
 and `<`. In a diagram, a box is named `n1`, `n2` and so on, never by
 an id, and in its label every character Mermaid could read as syntax

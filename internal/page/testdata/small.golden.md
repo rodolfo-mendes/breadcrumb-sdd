@@ -43,9 +43,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  n1["ADR-0015<br/>ADR · Undecided, no claims"]
-  n2["PBI-00006<br/>PBI · Undecided, no claims"]
-  n3["verify<br/>spec · Refuted<br/>Confirmed: docs/bcr.md has-line #35;#35;#35; verify<br/>Refuted: docs/bcr.md has-line #35;#35;#35; check<br/>not audited: docs/bcr.md has-line #35;#35; NAME"]
+  n1["ADR-0015<br/>bcr verify reads the records of bcr extract<br/>ADR · Undecided, no claims"]
+  n2["PBI-00006<br/>Add bcr verify<br/>PBI · Undecided, no claims"]
+  n3["verify<br/>How bcr verify judges the set<br/>spec · Refuted<br/>Confirmed: docs/bcr.md has-line #35;#35;#35; verify<br/>Refuted: docs/bcr.md has-line #35;#35;#35; check<br/>not audited: docs/bcr.md has-line #35;#35; NAME"]
   n2 -- "implements" --> n1
   n2 -- "changes" --> n3
   n3 -- "follows" --> n1
