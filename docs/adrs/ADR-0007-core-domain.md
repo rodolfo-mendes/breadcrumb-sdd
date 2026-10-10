@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0007
   type: ADR
+  title: The core domain owns Breadcrumb's rules
   links: []
 ---
 # ADR-0007: The core domain owns Breadcrumb's rules

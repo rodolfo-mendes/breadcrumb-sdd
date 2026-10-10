@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0010
   type: ADR
+  title: Front matter is read with go.yaml.in/yaml/v3
   links: []
 ---
 # ADR-0010: Front matter is read with go.yaml.in/yaml/v3

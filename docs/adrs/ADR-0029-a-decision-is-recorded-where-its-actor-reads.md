@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0029
   type: ADR
+  title: A decision is recorded where whoever must obey it reads
   links:
     - constrained_by ADR-0001
 ---

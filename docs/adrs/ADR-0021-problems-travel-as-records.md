@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0021
   type: ADR
+  title: Problems travel down the pipe as records
   links:
     - amends ADR-0016
     - constrained_by ADR-0011

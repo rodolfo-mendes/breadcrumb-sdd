@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0009
   type: ADR
+  title: The man page is generated from the user documentation
   links: []
 ---
 # ADR-0009: The man page is generated from the user documentation

@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0004
   type: ADR
+  title: bcr is one Go binary
   links: []
 ---
 # ADR-0004: bcr is one Go binary

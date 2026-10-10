@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0003
   type: ADR
+  title: Breadcrumb ids are unique
   links: []
 ---
 # ADR-0003: Breadcrumb ids are unique

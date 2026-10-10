@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0019
   type: ADR
+  title: A has-line claim matches a trimmed whole line
   links:
     - constrained_by ADR-0017
 ---

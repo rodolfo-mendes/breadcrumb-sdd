@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0024
   type: ADR
+  title: The old model is removed
   links:
     - constrained_by ADR-0001
     - constrained_by ADR-0006

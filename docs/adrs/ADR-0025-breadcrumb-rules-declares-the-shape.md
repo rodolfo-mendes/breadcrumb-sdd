@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0025
   type: ADR
+  title: A repository declares its shape in breadcrumb.rules
   links:
     - constrained_by ADR-0013
     - constrained_by ADR-0014

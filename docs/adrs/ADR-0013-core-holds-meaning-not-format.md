@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0013
   type: ADR
+  title: The core holds the meaning of a breadcrumb, not its format
   links:
     - amends ADR-0007
     - amends ADR-0010

@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0002
   type: ADR
+  title: Record breadcrumbs in the artifacts' front matter
   links: []
 ---
 # ADR-0002: Record breadcrumbs in the artifacts' front matter

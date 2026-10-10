@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0020
   type: ADR
+  title: A released kind of claim keeps its meaning
   links:
     - constrained_by ADR-0017
 ---

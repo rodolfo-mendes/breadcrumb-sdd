@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0005
   type: ADR
+  title: Each dependency enters through an ADR
   links: []
 ---
 # ADR-0005: Each dependency enters through an ADR

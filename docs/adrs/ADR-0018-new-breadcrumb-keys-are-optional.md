@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0018
   type: ADR
+  title: A key added under breadcrumb is optional
   links:
     - amends ADR-0002
 ---
