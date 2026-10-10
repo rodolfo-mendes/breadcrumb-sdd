@@ -9,6 +9,14 @@
 <title>{{ if .IsHome }}{{ site.Title }}: traceability for spec-driven development{{ else }}{{ .Title }} | {{ site.Title }}{{ end }}</title>
 <meta name="description" content="{{ .Description }}">
 <link rel="canonical" href="{{ .Permalink }}">
+{{- /* The preview of a link shared in a chat or a feed. og:image must
+       be absolute, so it is the site's own address; the picture is
+       the one the landing page shows. */}}
+<meta property="og:title" content="{{ if .IsHome }}{{ site.Title }}: traceability for spec-driven development{{ else }}{{ .Title }}{{ end }}">
+<meta property="og:type" content="website">
+<meta property="og:image" content="{{ absURL "report-filter.png" }}">
+<meta property="og:url" content="{{ .Permalink }}">
+<meta property="og:description" content="{{ .Description }}">
 {{- /* Proves to Google Search Console who owns the site; it reads
        the tag on the landing page. */}}
 {{ if .IsHome }}<meta name="google-site-verification" content="ss53sQ6_W_-qJw3dNudhj07W2wiNlfXz9RZ95Clw3gE">{{ end }}
