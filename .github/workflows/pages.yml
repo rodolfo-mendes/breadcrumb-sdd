@@ -22,7 +22,6 @@ jobs:
       # A newer release is a deliberate change, with a PBI that changes
       # specs/site/spec.md, which claims this line.
       HUGO_VERSION: 0.167.0
-      PUBLIC: ${{ runner.temp }}/public
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -36,6 +35,8 @@ jobs:
           mkdir hugo
           tar -xzf "hugo_${HUGO_VERSION}_linux-amd64.tar.gz" -C hugo hugo
           echo "$RUNNER_TEMP/hugo" >> "$GITHUB_PATH"
+          # The folder the site is built into; the later steps read it.
+          echo "PUBLIC=$RUNNER_TEMP/public" >> "$GITHUB_ENV"
 
       - name: Copy the documentation
         run: |
