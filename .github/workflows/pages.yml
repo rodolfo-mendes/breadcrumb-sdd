@@ -1,0 +1,138 @@
+# Builds the site from site/ with the pinned Hugo, checks it, and
+# publishes it to GitHub Pages (specs/site, ADR-0030, ADR-0031). The
+# github-pages environment lets only main and tags v* deploy.
+name: Pages
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # A newer release is a deliberate change, with a PBI that changes
+      # specs/site/spec.md, which claims this line.
+      HUGO_VERSION: 0.167.0
+      PUBLIC: ${{ runner.temp }}/public
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Hugo
+        working-directory: ${{ runner.temp }}
+        run: |
+          releases=https://github.com/gohugoio/hugo/releases/download/v$HUGO_VERSION
+          curl -fsSLO "$releases/hugo_${HUGO_VERSION}_linux-amd64.tar.gz"
+          curl -fsSLO "$releases/hugo_${HUGO_VERSION}_checksums.txt"
+          sha256sum -c --ignore-missing "hugo_${HUGO_VERSION}_checksums.txt"
+          mkdir hugo
+          tar -xzf "hugo_${HUGO_VERSION}_linux-amd64.tar.gz" -C hugo hugo
+          echo "$RUNNER_TEMP/hugo" >> "$GITHUB_PATH"
+
+      - name: Copy the documentation
+        run: |
+          mkdir -p site/content/docs
+          cp docs/bcr.md site/content/docs/_index.md
+
+      - name: Build
+        run: |
+          # The tag or branch and the short commit; the Check step reads it too.
+          export HUGO_SITE_VERSION="$GITHUB_REF_NAME $(git rev-parse --short HEAD)"
+          echo "HUGO_SITE_VERSION=$HUGO_SITE_VERSION" >> "$GITHUB_ENV"
+          hugo --source site --destination "$PUBLIC" --panicOnWarning
+
+      # The Regression Guardrails of specs/site/spec.md, in its order.
+      - name: Check
+        run: |
+          fail=0
+          # Fails when a check that must print nothing prints something.
+          silent() {
+            if [ -n "$2" ]; then echo "::error::$1"; echo "$2"; fail=1; fi
+          }
+          # Fails when a check does not print what the spec says it prints.
+          prints() {
+            if [ "$2" != "$3" ]; then echo "::error::$1"; echo "$2"; fail=1; fi
+          }
+          site=https://rodolfo-mendes.github.io/breadcrumb-sdd/
+
+          prints "site/content/ holds something else" \
+            "$(find site/content -type f | sort)" \
+            "$(printf 'site/content/_index.md\nsite/content/docs/_index.md')"
+
+          silent "The copy is not docs/bcr.md" \
+            "$(cmp docs/bcr.md site/content/docs/_index.md 2>&1)"
+
+          silent "The menu does not list the sections' ids in page order" \
+            "$(diff <(grep -o '{#[a-z-]*}' site/content/_index.md | grep -v '{#top}' | tr -d '{}#') \
+                    <(grep -o 'url = "#[a-z-]*"' site/hugo.toml | sed 's/^url = "#//; s/"$//'))"
+
+          silent "An id is written twice" \
+            "$(grep -o '{#[a-z-]*}' site/content/_index.md | sort | uniq -d)"
+
+          silent "An id is not on the built page once" \
+            "$(for id in $(grep -o '{#[a-z-]*}' site/content/_index.md | tr -d '{}#'); do
+                 test "$(grep -o "id=\"$id\"" "$PUBLIC/index.html" | wc -l)" -eq 1 || echo "$id"
+               done)"
+
+          silent "A link into the documentation reaches no heading" \
+            "$(for a in $(grep -oE 'href="docs/#[a-z0-9-]+"' "$PUBLIC/index.html" | sed 's/.*#//; s/"$//'); do
+                 grep -q "id=\"$a\"" "$PUBLIC/docs/index.html" || echo "$a"
+               done)"
+
+          silent "A link outside the repository and the site" \
+            "$(grep -rhoE '(src|href)="(https?:)?//[^"]*"' "$PUBLIC" \
+                 | grep -vE '"https://(github\.com/rodolfo-mendes/breadcrumb-sdd|rodolfo-mendes\.github\.io/breadcrumb-sdd/)')"
+
+          silent "A root-relative link" \
+            "$(grep -rhoE '(src|href)="/[^/"][^"]*"' "$PUBLIC")"
+
+          silent "A script, an import or a url(" \
+            "$(grep -rlE '<script|@import|url\(' "$PUBLIC")"
+
+          silent "A page has no title, description or canonical address" \
+            "$(for p in '<title>' '<meta name="description"' 'rel="canonical"'; do
+                 grep -L "$p" "$PUBLIC/index.html" "$PUBLIC/docs/index.html"
+               done)"
+
+          prints "A page does not have one <h1>" \
+            "$(grep -c '<h1' "$PUBLIC/index.html" "$PUBLIC/docs/index.html")" \
+            "$(printf '%s\n' "$PUBLIC/index.html:1" "$PUBLIC/docs/index.html:1")"
+
+          prints "The sitemap does not list the two pages" \
+            "$(grep -o '<loc>[^<]*' "$PUBLIC/sitemap.xml" | sort)" \
+            "$(printf '%s\n' "<loc>$site" "<loc>${site}docs/")"
+
+          prints "robots.txt does not name the sitemap" \
+            "$(grep -x "Sitemap: ${site}sitemap.xml" "$PUBLIC/robots.txt")" \
+            "Sitemap: ${site}sitemap.xml"
+
+          if ! grep -qF "$HUGO_SITE_VERSION" "$PUBLIC/index.html"; then
+            echo "::error::The landing page does not show its version"; fail=1
+          fi
+
+          exit "$fail"
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

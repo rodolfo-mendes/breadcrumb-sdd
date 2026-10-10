@@ -1,0 +1,32 @@
+{{- /* Every link the site writes to itself is relative (ADR-0031):
+       $root leads from this page to the landing page. */ -}}
+{{- $root := cond .IsHome "" "../" -}}
+<!DOCTYPE html>
+<html lang="{{ site.Language.Locale }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ if .IsHome }}{{ site.Title }}: drift between intent and code, made visible{{ else }}{{ .Title }} | {{ site.Title }}{{ end }}</title>
+<meta name="description" content="{{ .Description }}">
+<link rel="canonical" href="{{ .Permalink }}">
+{{ with resources.Get "style.css" }}<style>{{ .Content | safeCSS }}</style>{{ end }}
+</head>
+<body>
+<header>
+<a class="name" href="{{ $root }}#top">{{ site.Title }}</a>
+<details class="menu narrow">
+<summary>Menu</summary>
+{{ partial "menu.html" (dict "root" $root) }}
+</details>
+<div class="menu wide">
+{{ partial "menu.html" (dict "root" $root) }}
+</div>
+</header>
+<main>
+{{ block "main" . }}{{ end }}
+</main>
+<footer>
+{{ with getenv "HUGO_SITE_VERSION" }}<p>Built from {{ . }}.</p>{{ end }}
+</footer>
+</body>
+</html>

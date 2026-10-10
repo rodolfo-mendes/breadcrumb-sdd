@@ -15,7 +15,7 @@ breadcrumb:
     - 'site/content/_index.md has-line ## Who it''s for {#audience}'
     - 'site/content/_index.md has-line ## Status {#status}'
     - 'site/hugo.toml has-line baseURL = "https://rodolfo-mendes.github.io/breadcrumb-sdd/"'
-    - '.github/workflows/pages.yml has-line HUGO_VERSION: X.Y.Z'
+    - '.github/workflows/pages.yml has-line HUGO_VERSION: 0.167.0'
     - '.gitignore has-line /site/content/docs/_index.md'
 ---
 # Feature: site

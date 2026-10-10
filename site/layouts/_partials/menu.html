@@ -1,0 +1,14 @@
+{{- /* The menu is written twice in baseof.html, once inside <details>
+       for a narrow screen, so it carries no id. */ -}}
+<nav aria-label="Menu">
+<ul class="pages">
+{{- range site.Menus.pages }}
+<li><a href="{{ if hasPrefix .URL "https://" }}{{ .URL }}{{ else }}{{ $.root }}{{ .URL }}{{ end }}">{{ .Name }}</a></li>
+{{- end }}
+</ul>
+<ul class="sections">
+{{- range site.Menus.sections }}
+<li><a href="{{ $.root }}{{ .URL }}">{{ .Name }}</a></li>
+{{- end }}
+</ul>
+</nav>

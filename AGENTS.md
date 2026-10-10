@@ -20,6 +20,7 @@ This repository is developed with ASDLC
 | Look up a breadcrumb | `go run ./cmd/bcr extract \| go run ./cmd/bcr filter --id ADR-0019` | `specs/filter/spec.md` |
 | Find what links to a breadcrumb | `go run ./cmd/bcr extract \| go run ./cmd/bcr filter --object ADR-0019` | `specs/filter/spec.md` |
 | Man page | `go test ./internal/manpage -update` | Run after any change to `docs/bcr.md` |
+| Preview the site | `cp docs/bcr.md site/content/docs/_index.md && hugo server --source site` | `specs/site/spec.md`; Hugo is the release `HUGO_VERSION` names in `.github/workflows/pages.yml` |
 
 ## Judgment Boundaries
 
@@ -65,6 +66,7 @@ internal/target: reads the file a claim is about from the working tree; infrastr
 internal/page: writes the page bcr report prints; the only package that knows its Markdown and Mermaid; infrastructure
 .breadcrumbs: names by pattern the files bcr extract reads when given none
 breadcrumb.rules: declares the types, links and claims a breadcrumb here may have; bcr verify checks it (ADR-0026)
+site/: the landing page, its layouts and its menu; Hugo builds it and .github/workflows/pages.yml publishes it with docs/bcr.md (ADR-0030, ADR-0031)
 specs/: feature specs, one directory per feature; each command of bcr is a feature
 tasks/: PBIs, closed after merge and kept
 docs/adrs/: decisions, from ADR-0001 on
