@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0011
   type: ADR
+  title: Breadcrumbs read from files are printed as tagged records
   links: []
 ---
 # ADR-0011: Breadcrumbs read from files are printed as tagged records

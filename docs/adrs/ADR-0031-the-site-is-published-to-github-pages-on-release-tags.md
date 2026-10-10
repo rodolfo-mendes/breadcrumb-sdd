@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0031
   type: ADR
+  title: The site is published to GitHub Pages by a workflow on release tags
   links:
     - constrained_by ADR-0030
 ---

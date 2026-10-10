@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0023
   type: ADR
+  title: bcr audit checks claims against the working tree
   links:
     - constrained_by ADR-0016
     - constrained_by ADR-0019

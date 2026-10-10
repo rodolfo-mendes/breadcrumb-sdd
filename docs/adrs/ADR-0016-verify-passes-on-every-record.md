@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0016
   type: ADR
+  title: bcr verify passes on every record it reads
   links:
     - amends ADR-0015
     - constrained_by ADR-0011

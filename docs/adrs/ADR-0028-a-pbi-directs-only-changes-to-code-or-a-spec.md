@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0028
   type: ADR
+  title: A PBI directs only changes to code or a spec
   links:
     - constrained_by ADR-0001
     - constrained_by ADR-0026

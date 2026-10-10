@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0006
   type: ADR
+  title: bcr follows POSIX command-line conventions
   links: []
 ---
 # ADR-0006: bcr follows POSIX command-line conventions

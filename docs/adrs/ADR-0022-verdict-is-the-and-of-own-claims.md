@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0022
   type: ADR
+  title: A breadcrumb's verdict is the AND of its own claims
   links:
     - constrained_by ADR-0017
     - constrained_by ADR-0019

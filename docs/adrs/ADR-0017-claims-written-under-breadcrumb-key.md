@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0017
   type: ADR
+  title: Claims are written under the breadcrumb key
   links:
     - amends ADR-0002
     - amends ADR-0010

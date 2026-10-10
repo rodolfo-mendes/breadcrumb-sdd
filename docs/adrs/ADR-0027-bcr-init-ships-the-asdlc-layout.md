@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0027
   type: ADR
+  title: bcr init ships the ASDLC layout
   links:
     - constrained_by ADR-0002
     - constrained_by ADR-0014

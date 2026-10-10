@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0008
   type: ADR
+  title: docs/bcr.md is bcr's user documentation, laid out as a man page
   links: []
 ---
 # ADR-0008: docs/bcr.md is bcr's user documentation, laid out as a man page

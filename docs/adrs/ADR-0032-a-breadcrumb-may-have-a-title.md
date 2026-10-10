@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0032
   type: ADR
+  title: A breadcrumb may have a title
   links:
     - amends ADR-0002
     - constrained_by ADR-0018

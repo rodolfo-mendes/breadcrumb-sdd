@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0030
   type: ADR
+  title: The site is generated with Hugo, pinned to one release
   links:
     - constrained_by ADR-0008
 ---

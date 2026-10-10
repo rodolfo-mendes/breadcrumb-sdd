@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0014
   type: ADR
+  title: A repository names the files that carry its breadcrumbs in .breadcrumbs
   links: []
 ---
 # ADR-0014: A repository names the files that carry its breadcrumbs in .breadcrumbs

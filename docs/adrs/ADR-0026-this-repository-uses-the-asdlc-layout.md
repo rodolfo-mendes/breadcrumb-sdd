@@ -2,6 +2,7 @@
 breadcrumb:
   id: ADR-0026
   type: ADR
+  title: This repository uses the ASDLC layout
   links:
     - constrained_by ADR-0001
     - constrained_by ADR-0025
