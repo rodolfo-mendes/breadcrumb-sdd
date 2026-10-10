@@ -9,6 +9,9 @@
 <title>{{ if .IsHome }}{{ site.Title }}: drift between intent and code, made visible{{ else }}{{ .Title }} | {{ site.Title }}{{ end }}</title>
 <meta name="description" content="{{ .Description }}">
 <link rel="canonical" href="{{ .Permalink }}">
+{{- /* Proves to Google Search Console who owns the site; it reads
+       the tag on the landing page. */}}
+{{ if .IsHome }}<meta name="google-site-verification" content="ss53sQ6_W_-qJw3dNudhj07W2wiNlfXz9RZ95Clw3gE">{{ end }}
 {{ with resources.Get "style.css" }}<style>{{ .Content | safeCSS }}</style>{{ end }}
 </head>
 <body>
