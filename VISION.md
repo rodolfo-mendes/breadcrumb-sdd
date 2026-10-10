@@ -8,7 +8,10 @@ nothing itself: a rule in force lives in an ADR, a spec or
 ## Who it is for
 
 People who build software with AI agents writing most of the code,
-first a solo builder or a small team. Months later they need to know
+first a solo builder or a small team, most often in a repository that
+already exists and adopts spec-driven development a piece at a time.
+Many keep agents to small, local changes, and hold back from writing
+specs they expect to drift soon after. Months later they need to know
 whether the code still does what was asked, and which decision a piece
 of code was meant to carry out. They will not keep up a heavy process
 to find out.
