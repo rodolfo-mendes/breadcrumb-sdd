@@ -1,7 +1,18 @@
-# Breadcrumb
+# Breadcrumbs
 
-Breadcrumb makes drift between a repository's intent and its code
-visible.
+Breadcrumbs adds traceability to spec-driven development, whatever
+approach you use. Specs carry links and claims, and the claims are
+checked against the code with a plain line match, so a stale spec
+shows up after the fact, by hand or with `bcr`.
+
+Breadcrumbs is not a spec-driven development method. Teams already
+have several, and some build their own; Breadcrumbs adds what they
+lack, the links and claims that make drift between a repository's
+intent and its code visible, to whichever method a repository uses.
+
+One record is a breadcrumb; the product, the trail of them, is
+Breadcrumbs. The repository is `breadcrumb-sdd`, singular because
+there *breadcrumb* describes SDD, and the command is `bcr`.
 
 Its site is <https://rodolfo-mendes.github.io/breadcrumb-sdd/>, with
 the documentation of `bcr` at
@@ -68,10 +79,10 @@ kind of claim keep their meaning
 ([ADR-0018](docs/adrs/ADR-0018-new-breadcrumb-keys-are-optional.md),
 [ADR-0020](docs/adrs/ADR-0020-a-released-kind-of-claim-keeps-its-meaning.md)).
 
-[VISION.md](VISION.md) says who Breadcrumb is for, the principles
+[VISION.md](VISION.md) says who Breadcrumbs is for, the principles
 behind it, and which way it leans when no rule decides.
 
-This repository is developed with Breadcrumb itself: its
+This repository is developed with Breadcrumbs itself: its
 decisions in [`docs/adrs/`](docs/adrs/), its specs in
 [`specs/`](specs/) and its tasks in [`tasks/`](tasks/) each carry a
 breadcrumb, and every push audits them.
