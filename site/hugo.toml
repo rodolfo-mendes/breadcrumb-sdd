@@ -1,7 +1,7 @@
-# The site of Breadcrumb (specs/site). Hugo is the release pages.yml
+# The site of Breadcrumbs (specs/site). Hugo is the release pages.yml
 # names; there is no theme and no module (ADR-0030).
 baseURL = "https://rodolfo-mendes.github.io/breadcrumb-sdd/"
-title = "Breadcrumb"
+title = "Breadcrumbs"
 locale = "en"
 defaultContentLanguage = "en"
 enableRobotsTXT = true
@@ -19,7 +19,7 @@ codeFences = false
 # title and description from here.
 [[cascade]]
 title = "bcr documentation"
-description = "The user documentation of bcr, the toolkit of Breadcrumb: its commands, flags, inputs, outputs and exit codes."
+description = "The user documentation of bcr, the toolkit of Breadcrumbs: its commands, flags, inputs, outputs and exit codes."
 
 [cascade.target]
 path = "/docs"

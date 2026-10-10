@@ -1,13 +1,15 @@
 ---
-title: Breadcrumb
-description: Breadcrumb makes drift between a repository's intent and its code visible. Its toolkit, bcr, checks what a repository's documents claim about its files.
+title: Breadcrumbs
+description: Breadcrumbs adds traceability to spec-driven development, whatever approach you use. Specs carry claims, and its toolkit, bcr, checks them against the code.
 ---
-# Breadcrumb {#top}
+# Breadcrumbs {#top}
 
-Breadcrumb makes drift between a repository's intent and its code
-visible.
+Breadcrumbs adds traceability to spec-driven development, whatever
+approach you use. Specs carry links and claims, and the claims are
+checked against the code with a plain line match, so a stale spec
+shows up after the fact, by hand or with `bcr`.
 
-[![The Breadcrumb repository on GitHub](github-mark.svg)](https://github.com/rodolfo-mendes/breadcrumb-sdd)
+[![The Breadcrumbs repository on GitHub](github-mark.svg)](https://github.com/rodolfo-mendes/breadcrumb-sdd)
 
 ## The problem {#problem}
 
@@ -72,7 +74,7 @@ file.
 
 ![A diagram from bcr report: the filter spec, outlined in red because its claim is Refuted, with an arrow to each of the four ADRs it follows, outlined in amber because they have no claims](report-filter.png)
 
-*The `filter` spec in Breadcrumb's own report, the morning it was
+*The `filter` spec in Breadcrumbs' own report, the morning it was
 specified: its claim on the documentation was Refuted until the
 documentation landed, 17 minutes later.*
 
@@ -81,7 +83,7 @@ How to make one, and what each part of it means:
 
 ## Honest scope {#scope}
 
-Breadcrumb makes drift visible after the fact; it does not prevent
+Breadcrumbs makes drift visible after the fact; it does not prevent
 it. It lets drift happen, and shows where a document and a file
 disagree.
 
@@ -138,12 +140,20 @@ root. Every command, record, output and exit code is in the
 ## Who it's for {#audience}
 
 People who build software with AI agents writing most of the code,
-first a solo builder or a small team. Months later they need to know
+first a solo builder or a small team, most often in a repository that
+already exists and adopts spec-driven development a piece at a time.
+Many keep agents to small, local changes, and hold back from writing
+specs they expect to drift soon after. Months later they need to know
 whether the code still does what was asked, and which decision a piece
 of code was meant to carry out. They will not keep up a heavy process
 to find out.
 
-Adopting Breadcrumb should cost as little as possible: one binary and
+Breadcrumbs is not a spec-driven development method. Teams already
+have several, and some build their own; Breadcrumbs adds what they
+lack, the links and claims that make drift between a repository's
+intent and its code visible, to whichever method a repository uses.
+
+Adopting Breadcrumbs should cost as little as possible: one binary and
 a few lines of front matter, with no service to run.
 
 ## Status {#status}
@@ -156,6 +166,6 @@ releases; a breadcrumb's keys and a kind of claim keep their meaning.
 
 Deferred: `has-line` is the only kind of claim there is.
 
-The repository of Breadcrumb is developed with Breadcrumb itself: its
+The repository of Breadcrumbs is developed with Breadcrumbs itself: its
 decisions, specs and tasks each carry a breadcrumb, and every push
 audits them.

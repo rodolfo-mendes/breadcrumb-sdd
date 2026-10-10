@@ -7,7 +7,7 @@ breadcrumb:
     - constrained_by ADR-0030
     - constrained_by ADR-0031
   claims:
-    - 'site/content/_index.md has-line # Breadcrumb {#top}'
+    - 'site/content/_index.md has-line # Breadcrumbs {#top}'
     - 'site/content/_index.md has-line ## The problem {#problem}'
     - 'site/content/_index.md has-line ## How it works {#how-it-works}'
     - 'site/content/_index.md has-line ## The report {#report}'
@@ -21,7 +21,7 @@ breadcrumb:
 ---
 # Feature: site
 
-The site is Breadcrumb's entry point on the web: a landing page that
+The site is Breadcrumbs' entry point on the web: a landing page that
 pitches the method and `bcr` to possible adopters, and a documentation
 page that hosts `docs/bcr.md`.
 
@@ -30,14 +30,14 @@ page that hosts `docs/bcr.md`.
 ### Context
 
 Someone who has not cloned the repository has nowhere to learn what
-Breadcrumb is, or to read how `bcr` is called. The site gives them
+Breadcrumbs is, or to read how `bcr` is called. The site gives them
 both, and it must be found by a search. Its primary goal is to pitch
 the method and the tools; its secondary goal is to host the
 documentation.
 
 The site says what `README.md` and `docs/bcr.md` say, and no more. A
 claim on it can be checked against the repository, by hand, without
-`bcr`. It does not mention how the maintainer works, only Breadcrumb.
+`bcr`. It does not mention how the maintainer works, only Breadcrumbs.
 
 How the site is generated is ADR-0030; where and when it is published
 is ADR-0031. This spec says what the site is, and what must stay true
@@ -64,9 +64,9 @@ enters `site/content/`.
 `/docs/`, `docs/bcr.md` as written: its headings keep the ids Hugo
 derives from their text, such as `#extract` for `### extract`.
 
-**The landing page.** The hero is the first heading, `# Breadcrumb
-{#top}`, with the name and one sentence that says what Breadcrumb
-does. Under it, a link to the repository, drawn as the GitHub mark.
+**The landing page.** The hero is the first heading, `# Breadcrumbs
+{#top}`, with the name and the description `README.md` opens with.
+The page's `<title>` and description say the same. Under it, a link to the repository, drawn as the GitHub mark.
 Seven sections follow, in this order; each id is written in the
 Markdown:
 
@@ -77,7 +77,7 @@ Markdown:
 | The report | `report` | What `bcr report` shows, a picture of one of its diagrams, and a link to its documentation |
 | Honest scope | `scope` | Drift is made visible after the fact, not prevented |
 | Try it | `try-it` | The pipe on one file, with links into the documentation page |
-| Who it's for | `audience` | People who build with agents writing most of the code |
+| Who it's for | `audience` | People who build with agents writing most of the code, adopting spec-driven development in a repository that exists; what Breadcrumbs adds to their method |
 | Status | `status` | The released version and what is deferred |
 
 **The menu.** A menu lists the seven sections, in page order, as entries
@@ -104,7 +104,7 @@ the checksums published with it.
 
 ### Constraints
 
-- **Copy.** The landing page never says Breadcrumb prevents drift, or
+- **Copy.** The landing page never says Breadcrumbs prevents drift, or
   keeps documents in sync with code. A `has-line` claim is a text
   match: the page says that Confirmed means a line is there, not that
   the document is right. Its text comes from `README.md`, `VISION.md`
@@ -231,7 +231,7 @@ hand, with `PUBLIC` the folder of a build.
 - The built landing page shows its version. Checked by hand:
   `grep -F "$HUGO_SITE_VERSION" "$PUBLIC/index.html"` matches.
 
-- The landing page never says Breadcrumb prevents drift. This is a
+- The landing page never says Breadcrumbs prevents drift. This is a
   practice, not a rule: `grep -n -i -E 'prevent|in sync'
   site/content/_index.md` lists the lines to read, and a person judges
   each.
