@@ -20,11 +20,13 @@ func (p Place) String() string { return fmt.Sprintf("%s:%d", p.Text, p.Line) }
 
 // SetBreadcrumb is a breadcrumb of a set: its id, and where it was
 // written. Type is its type, when the set was read for CheckShape or
-// for Views.
+// for Views. Title is its title, "" when it has none, when the set
+// was read for Views; no rule reads it (ADR-0032).
 type SetBreadcrumb struct {
-	ID   string
-	Type string
-	At   Place
+	ID    string
+	Type  string
+	Title string
+	At    Place
 }
 
 // SetLink is a link of a set: the id it points to, and where it was

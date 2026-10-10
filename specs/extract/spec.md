@@ -17,6 +17,7 @@ breadcrumb:
     - constrained_by ADR-0018
     - constrained_by ADR-0019
     - constrained_by ADR-0021
+    - constrained_by ADR-0032
   claims:
     - 'docs/bcr.md has-line ### extract'
 ---
@@ -61,7 +62,7 @@ command finds is printed as a record too, for the stages after it
 | Command | Reads the operands, opens the files, prints records and problems, each problem also as a record (ADR-0021), sets the exit status | Infrastructure |
 | File set reader | With no operand: reads `.breadcrumbs`, checks its patterns, and finds the files they name from the root of the repository (ADR-0014) | Infrastructure |
 | Front matter reader, `internal/frontmatter` | Splits a file's front matter from the rest; parses it with `go.yaml.in/yaml/v3` into a node tree; checks ADR-0002's part of YAML (ADR-0010); allows single quotes only in the entries of `claims`, and reports an entry of `claims` that is not single-quoted or has a comment after it (ADR-0017); hands the core the properties under the `breadcrumb` key, each value as the text written or a list of such texts, with its line (ADR-0013) | Infrastructure |
-| Core, `internal/crumb` | Holds the breadcrumb, the link, the claim and the problem; checks the breadcrumb's properties (ADR-0002, ADR-0018), its link entries (ADR-0012) and its claim entries, with the kinds it knows (ADR-0017, ADR-0019); builds the breadcrumb or reports what is wrong | Core domain |
+| Core, `internal/crumb` | Holds the breadcrumb, the link, the claim and the problem; checks the breadcrumb's properties (ADR-0002, ADR-0018), its title (ADR-0032), its link entries (ADR-0012) and its claim entries, with the kinds it knows (ADR-0017, ADR-0019); builds the breadcrumb or reports what is wrong | Core domain |
 
 - The core imports only the standard library, and knows no file format
   (ADR-0007, ADR-0013).
@@ -110,10 +111,14 @@ each in the order they are written. Fields are separated by a tab
 
 ```
 breadcrumb	ID	TYPE	PATH	LINE
+breadcrumb	ID	TYPE	PATH	LINE	TITLE
 link	ID	VERB	OBJECT	PATH	LINE
 claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 ```
 
+- `TITLE` is the breadcrumb's `title`, as written (ADR-0032). A
+  breadcrumb with no `title` prints the record of five fields: no
+  empty field is written for it.
 - `PATH` is the operand as given, or, with no operand, the file's path
   from the root of the repository, with `/` between its parts.
 - `LINE` is the line where the record was written: for a `breadcrumb`
@@ -142,8 +147,8 @@ key, prints nothing.
 
 A problem is printed to standard error as `PATH:LINE: MESSAGE`
 (ADR-0006). A file's problems are printed in order of line. A file
-with a problem in its id, type or links prints no `breadcrumb`, `link`
-or `claim` record; the other files are still read.
+with a problem in its id, type, title or links prints no `breadcrumb`,
+`link` or `claim` record; the other files are still read.
 
 Each problem is also printed to standard output, as a record
 (ADR-0021):
@@ -188,6 +193,19 @@ order above.
 written as text, is a problem at its line, and the breadcrumb prints
 no records, as with `links`. `claims: []` is the same as no `claims`.
 
+`title` is optional too (ADR-0018, ADR-0032). It is one line of text,
+written plain like `id` and `type`, and may hold spaces. A `title` has
+a problem, at its line, when:
+
+- it has no value, as in a bare `title:`;
+- it is a list, `[]` included;
+- it holds a tab, which would break its record;
+- it is outside ADR-0002's part of YAML: it is quoted, or written over
+  several lines.
+
+The breadcrumb then prints no records, as with `id`. A title is not
+compared with any other: two breadcrumbs may have the same one.
+
 A pattern may not use `**`, start or end with `/`, be empty after
 `!`, or be malformed, such as with a `[` that does not close.
 A pattern `.breadcrumbs` does not allow is a problem at its line in
@@ -206,8 +224,10 @@ Exit status:
 
 ### Constraints
 
-- Keys under `breadcrumb` other than `id`, `type`, `links` and
-  `claims` are not read.
+- Keys under `breadcrumb` other than `id`, `type`, `title`, `links`
+  and `claims` are not read.
+- The body of a file is not read: a title comes from the `title` key,
+  never from a heading.
 - A dropped claim prints no `claim` record. Its `problem` record says
   a problem was found at its line, not what the claim was (ADR-0017,
   ADR-0021).
@@ -242,6 +262,8 @@ Exit status:
 - [x] `docs/bcr.md` describes the `problem` record; `docs/bcr.1` is
       generated again.
 - [x] In this repository, `bcr extract` prints no `problem` record.
+- [x] `docs/bcr.md` describes the `title` key and the `TITLE` field;
+      `docs/bcr.1` is generated again.
 
 ### Regression Guardrails
 
@@ -575,4 +597,34 @@ Scenario: A problem's message on one line
   When its record is printed
   Then the record is one line of four fields, with a space in place of
     each
+
+Scenario: A breadcrumb with a title
+  Given a.md whose front matter is
+    """
+    breadcrumb:
+      id: A
+      type: ADR
+      title: Adopt ASDLC to develop Breadcrumb
+      links: []
+    """
+  When I run "bcr extract a.md"
+  Then standard output is
+    """
+    breadcrumb	A	ADR	a.md	3	Adopt ASDLC to develop Breadcrumb
+    """
+  And the exit status is 0
+
+Scenario: No title
+  Given a breadcrumb with no title key
+  When I extract it
+  Then its breadcrumb record has five fields
+  And the exit status is 0
+
+Scenario: A title that is not one line of text
+  Given a breadcrumb with a bare "title:", a title that is a list, a
+    title that holds a tab, a quoted title, or a title over two lines
+  When I extract it
+  Then a problem is printed at the line of "title:"
+  And the file prints no breadcrumb, link or claim record
+  And the exit status is 1
 ```

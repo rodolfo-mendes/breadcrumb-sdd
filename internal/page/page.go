@@ -153,7 +153,11 @@ func writeViews(b *strings.Builder, s crumb.Set, claims, breadcrumbs []crumb.Giv
 		for n, i := range v.Breadcrumbs {
 			name[i] = fmt.Sprintf("n%d", n+1)
 			c := s.Breadcrumbs[i]
-			fmt.Fprintf(b, "  %s[\"%s<br/>%s · %s", name[i], label(c.ID), label(c.Type), label(written(breadcrumbs[i])))
+			fmt.Fprintf(b, "  %s[\"%s", name[i], label(c.ID))
+			if c.Title != "" {
+				fmt.Fprintf(b, "<br/>%s", label(c.Title))
+			}
+			fmt.Fprintf(b, "<br/>%s · %s", label(c.Type), label(written(breadcrumbs[i])))
 			for _, j := range claimsOf[i] {
 				fmt.Fprintf(b, "<br/>%s: %s", label(written(claims[j])), label(entry(s.Claims[j].Claim)))
 			}

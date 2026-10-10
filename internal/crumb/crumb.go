@@ -44,6 +44,7 @@ type Entry struct {
 type Breadcrumb struct {
 	ID    string
 	Type  string
+	Title string // "" when it has none (ADR-0032)
 	Line  int    // the line of its id, counted from 1
 	Links []Link // in the order written
 	// Claims holds the claims that broke no rule, in the order written.
@@ -76,15 +77,16 @@ type Problem struct {
 }
 
 // Read builds the breadcrumb whose properties are props, written at
-// line. ok is false when id, type, links or the claims key breaks a
-// rule: there is then no breadcrumb. A claim that breaks a rule is
+// line. ok is false when id, type, title, links or the claims key
+// breaks a rule: there is then no breadcrumb. A claim that breaks a rule is
 // dropped, and the breadcrumb is built without it (ADR-0017). problems
 // holds every problem of both kinds, in order of line. Properties
-// other than id, type, links and claims are not read.
+// other than id, type, title, links and claims are not read.
 func Read(line int, props map[string]Property) (b Breadcrumb, ok bool, problems []Problem) {
 	var r reader
 	id, idOK := r.word(line, props, "id")
 	typ, _ := r.word(line, props, "type")
+	title := r.title(props)
 	links := r.links(line, props, id, idOK)
 	claims := r.claims(props)
 	ok = len(r.problems) == 0
@@ -93,7 +95,7 @@ func Read(line int, props map[string]Property) (b Breadcrumb, ok bool, problems 
 	if !ok {
 		return Breadcrumb{}, false, problems
 	}
-	return Breadcrumb{ID: id, Type: typ, Line: props["id"].Line, Links: links, Claims: claims}, true, problems
+	return Breadcrumb{ID: id, Type: typ, Title: title, Line: props["id"].Line, Links: links, Claims: claims}, true, problems
 }
 
 // reader gathers the problems of one breadcrumb.
@@ -128,6 +130,25 @@ func (r *reader) word(line int, props map[string]Property, name string) (string,
 		return p.Text, true
 	}
 	return "", false
+}
+
+// title reads the title of the breadcrumb: one line of text, with no
+// tab, which would break the record it is printed in. title is
+// optional (ADR-0018, ADR-0032).
+func (r *reader) title(props map[string]Property) string {
+	p, ok := props["title"]
+	switch {
+	case !ok:
+	case p.Kind == ListValue:
+		r.report(p.Line, "title is a list; it must be one line of text")
+	case p.Kind == NoValue || p.Text == "":
+		r.report(p.Line, "title has no value; leave it out, or write a text")
+	case strings.ContainsRune(p.Text, '\t'):
+		r.report(p.Line, "title %q has a tab; no title may hold one", p.Text)
+	default:
+		return p.Text
+	}
+	return ""
 }
 
 // links reads the links of the breadcrumb whose id is id; idOK says

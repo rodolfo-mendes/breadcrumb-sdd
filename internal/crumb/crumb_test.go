@@ -78,6 +78,36 @@ func TestABreadcrumbWithNoLinks(t *testing.T) {
 	}
 }
 
+func TestABreadcrumbWithATitle(t *testing.T) {
+	props := valid()
+	props["title"] = text("Adopt ASDLC to develop Breadcrumb", 5)
+	b, ok, ps := Read(2, props)
+	if !ok || ps != nil || b.Title != "Adopt ASDLC to develop Breadcrumb" {
+		t.Errorf("got %+v, %v and problems %v, want the title as written", b, ok, ps)
+	}
+}
+
+func TestATitleIsOptional(t *testing.T) {
+	b, ok, ps := Read(2, valid())
+	if !ok || ps != nil || b.Title != "" {
+		t.Errorf("got %+v, %v and problems %v, want a breadcrumb with no title", b, ok, ps)
+	}
+}
+
+func TestATitleThatIsNotOneLineOfText(t *testing.T) {
+	for _, p := range []Property{
+		{Kind: NoValue, Line: 5},
+		text("", 5),
+		list(5),
+		list(5, Entry{Text: "Adopt ASDLC", Line: 6}),
+		text("Adopt\tASDLC", 5),
+	} {
+		props := valid()
+		props["title"] = p
+		broken(t, props, 5)
+	}
+}
+
 func TestOtherPropertiesAreNotRead(t *testing.T) {
 	props := valid()
 	props["status"] = Property{Kind: NoValue, Line: 9}

@@ -80,6 +80,33 @@ func TestWriteABreadcrumbWithNoLinks(t *testing.T) {
 	}
 }
 
+func TestWriteABreadcrumbWithATitle(t *testing.T) {
+	var out bytes.Buffer
+	Write(&out, "a.md", crumb.Breadcrumb{ID: "A", Type: "ADR", Title: "Adopt ASDLC: now", Line: 3})
+	const want = "breadcrumb\tA\tADR\ta.md\t3\tAdopt ASDLC: now\n"
+	if out.String() != want {
+		t.Errorf("got %q, want %q", out.String(), want)
+	}
+	// Only bcr report reads a title: no rule is about it (ADR-0032).
+	at := crumb.Place{Text: "a.md", Line: 3}
+	if got := read(t, want); !reflect.DeepEqual(got.Breadcrumbs, []crumb.SetBreadcrumb{{ID: "A", Type: "ADR", At: at}}) {
+		t.Errorf("Read got %+v, want no title", got.Breadcrumbs)
+	}
+	got, err := ReadReport(strings.NewReader(want))
+	if err != nil || !reflect.DeepEqual(got.Breadcrumbs, []crumb.SetBreadcrumb{{ID: "A", Type: "ADR", Title: "Adopt ASDLC: now", At: at}}) {
+		t.Errorf("ReadReport got %+v, %v; want the title", got.Breadcrumbs, err)
+	}
+}
+
+func TestReadReportABreadcrumbWithNoTitle(t *testing.T) {
+	for _, input := range []string{"breadcrumb\tA\tspec\ta.md\t3\n", "breadcrumb\tA\tspec\ta.md\t3\t\n", "breadcrumb\tA\tspec\ta.md\t3\t\tmore\n"} {
+		got, err := ReadReport(strings.NewReader(input))
+		if err != nil || len(got.Breadcrumbs) != 1 || got.Breadcrumbs[0].Title != "" {
+			t.Errorf("%q: got %+v, %v; want one breadcrumb with no title", input, got.Breadcrumbs, err)
+		}
+	}
+}
+
 // spec is pbi with two claims, as a spec writes them.
 func spec() crumb.Breadcrumb {
 	b := pbi

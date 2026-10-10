@@ -25,8 +25,9 @@ func page(t *testing.T, s crumb.Set) string {
 func at(text string, line int) crumb.Place { return crumb.Place{Text: text, Line: line} }
 
 // small is a spec that follows one ADR, a PBI that implements it and
-// changes the spec, an ADR and a spec no link touches, a claim of each
-// verdict and one that was not audited, and two problems.
+// changes the spec, each of the three with a title, an ADR and a spec
+// no link touches and with no title, a claim of each verdict and one
+// that was not audited, and two problems.
 func small() crumb.Set {
 	claim := func(text string, line int) crumb.SetClaim {
 		return crumb.SetClaim{
@@ -37,9 +38,9 @@ func small() crumb.Set {
 	}
 	return crumb.Set{
 		Breadcrumbs: []crumb.SetBreadcrumb{
-			{ID: "verify", Type: "spec", At: at("specs/verify/spec.md", 3)},
-			{ID: "PBI-00006", Type: "PBI", At: at("tasks/PBI-00006.md", 3)},
-			{ID: "ADR-0015", Type: "ADR", At: at("docs/adrs/ADR-0015.md", 3)},
+			{ID: "verify", Type: "spec", Title: "How bcr verify judges the set", At: at("specs/verify/spec.md", 3)},
+			{ID: "PBI-00006", Type: "PBI", Title: "Add bcr verify", At: at("tasks/PBI-00006.md", 3)},
+			{ID: "ADR-0015", Type: "ADR", Title: "bcr verify reads the records of bcr extract", At: at("docs/adrs/ADR-0015.md", 3)},
 			{ID: "ADR-0004", Type: "ADR", At: at("docs/adrs/ADR-0004.md", 3)},
 			{ID: "audit", Type: "spec", At: at("specs/audit/spec.md", 3)},
 		},

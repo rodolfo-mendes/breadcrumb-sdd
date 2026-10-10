@@ -433,8 +433,8 @@ func TestReportRecordsOfAKindItDoesNotRead(t *testing.T) {
 func TestReportFieldsAddedAtTheEnd(t *testing.T) {
 	var more []string
 	for _, r := range auditedRecords {
-		if strings.HasPrefix(r, "verdict\t") && strings.Count(r, "\t") == 4 {
-			r += "\t" // a verdict with no reason has an empty one before a new field
+		if (strings.HasPrefix(r, "verdict\t") || strings.HasPrefix(r, "breadcrumb\t")) && strings.Count(r, "\t") == 4 {
+			r += "\t" // with no reason or no title, an empty one comes before a new field
 		}
 		more = append(more, r+"\tmore")
 	}
@@ -504,4 +504,43 @@ func TestReportTheWholePipe(t *testing.T) {
 	boxes, _, classes := diagram(t, page, "A")
 	same(t, "boxes", boxes, `n1["A<br/>spec · Refuted<br/>Refuted: docs/bcr.md has-line #35;#35;#35; verify"]`)
 	same(t, "classes", classes, "n1 refuted")
+}
+
+func TestReportABoxWithATitle(t *testing.T) {
+	page := reported(t,
+		crumbRec("ADR-1", "ADR", "1.md")+"\tAdopt ASDLC to develop Breadcrumb",
+		crumbRec("verify", "spec", "v.md")+"\tHow bcr verify judges the set",
+		linkRec("follows", "ADR-1", "v.md", "6"),
+		claimAt("verify", "docs/bcr.md", "### verify", "v.md", "8"))
+	boxes, _, _ := diagram(t, page, "verify")
+	same(t, "boxes", boxes,
+		`n1["ADR-1<br/>Adopt ASDLC to develop Breadcrumb<br/>ADR · not audited"]`,
+		`n2["verify<br/>How bcr verify judges the set<br/>spec · not audited<br/>not audited: docs/bcr.md has-line #35;#35;#35; verify"]`)
+	// A title is in the label only: the tables and the heading of the
+	// view are those of the same records without it.
+	without := reported(t, crumbRec("ADR-1", "ADR", "1.md"), crumbRec("verify", "spec", "v.md"),
+		linkRec("follows", "ADR-1", "v.md", "6"), claimAt("verify", "docs/bcr.md", "### verify", "v.md", "8"))
+	if got, want := strings.ReplaceAll(strings.ReplaceAll(page, "<br/>Adopt ASDLC to develop Breadcrumb", ""), "<br/>How bcr verify judges the set", ""), without; got != want {
+		t.Errorf("got\n%s\nwant, but for the two titles,\n%s", page, want)
+	}
+}
+
+func TestReportABoxWithoutATitle(t *testing.T) {
+	for _, title := range []string{"", "\t"} {
+		page := reported(t, crumbRec("ADR-1", "ADR", "1.md")+title, crumbRec("verify", "spec", "v.md")+"\tHow bcr verify judges the set",
+			linkRec("follows", "ADR-1", "v.md", "6"))
+		boxes, _, _ := diagram(t, page, "verify")
+		same(t, "boxes", boxes,
+			`n1["ADR-1<br/>ADR · not audited"]`,
+			`n2["verify<br/>How bcr verify judges the set<br/>spec · not audited"]`)
+	}
+}
+
+func TestReportATitleThatLooksLikeSyntax(t *testing.T) {
+	page := reported(t, crumbRec("verify", "spec", "v.md")+"\t"+hostile+`"] click n1 <br/> %%`)
+	boxes, arrows, classes := diagram(t, page, "verify")
+	same(t, "boxes", boxes, `n1["verify<br/>a#34;b#35;c#124;d#60;e#96;f#34;#93; click n1 #60;br/#62; #37;#37;<br/>spec · not audited"]`)
+	if len(arrows) != 0 || len(classes) != 1 {
+		t.Errorf("arrows %q and classes %q, want none and one", arrows, classes)
+	}
 }

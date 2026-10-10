@@ -77,10 +77,13 @@ Output: for a file with a valid breadcrumb, one \fBbreadcrumb\fR record on stand
 .RS 4
 .nf
 breadcrumb	ID	TYPE	PATH	LINE
+breadcrumb	ID	TYPE	PATH	LINE	TITLE
 link	ID	VERB	OBJECT	PATH	LINE
 claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 .fi
 .RE
+.PP
+A \fBbreadcrumb\fR record has \fBTITLE\fR, the breadcrumb's title as written, only when the breadcrumb has one; otherwise it has five fields.
 .PP
 \fBPATH\fR is the file as given, or, with no operand, its path from the current directory, with \fB/\fR between its parts. \fBLINE\fR is the line of the file where the record was written, counted from 1: for a \fBbreadcrumb\fR record, the line of its \fBid\fR; for a \fBlink\fR record, the line of its entry. In a \fBlink\fR record, \fBID\fR is the id of the breadcrumb the link belongs to, and \fBVERB\fR and \fBOBJECT\fR are the two words of its entry.
 .PP
@@ -107,6 +110,20 @@ problem	PATH	LINE	MESSAGE
 .RE
 .PP
 \fBPATH\fR, \fBLINE\fR and \fBMESSAGE\fR are those written to standard error, with a space in place of any tab or line ending in \fBMESSAGE\fR. A file's \fBproblem\fR records come after its other records, in order of line. A \fBproblem\fR record has no id: it belongs to the breadcrumb whose record has the same \fBPATH\fR, when there is one.
+.PP
+A breadcrumb may also have a \fBtitle\fR, one line of text that says what its artifact is about. \fBbcr report\fR shows it beside the id:
+.PP
+.RS 4
+.nf
+breadcrumb:
+  id: ADR\-0019
+  type: ADR
+  title: A has\-line claim matches a trimmed whole line
+  links: []
+.fi
+.RE
+.PP
+\fBtitle\fR may be left out. It is written plain, without quotes, like \fBid\fR and \fBtype\fR, and may hold spaces. A \fBtitle\fR with no value, a \fBtitle\fR that is a list, and a title that holds a tab are problems like any other, and the file prints no records. \fBbcr\fR reads no heading of the file: a title comes only from this key. Two breadcrumbs may have the same title.
 .PP
 A breadcrumb may also have \fBclaims\fR, a list of statements about the repository's files. \fBclaims\fR may be left out, and \fBclaims: []\fR means the same; a \fBclaims\fR with no list is a problem like any other, and the file prints no records. Each entry is written on one line, in single quotes, as \fBTARGET KIND ARGUMENT\fR, with a \fB'\fR inside it written \fB''\fR:
 .PP
@@ -399,13 +416,13 @@ Output: one page, in Markdown, on standard output. Its diagrams are Mermaid, in 
 .PP
 A section with nothing to show says so, as in \fBNo problems.\fR.
 .PP
-A view draws the spec, every breadcrumb with a link to it, every breadcrumb it has a link to, and the links among those. A breadcrumb two links away is not in it, and a breadcrumb in no view is still in the table. Each box shows a breadcrumb's id, its type and its verdict, and each of its claims after the claim's own verdict. Each arrow goes from the breadcrumb a link is written in to the one it points to, and is labelled with the link's verb.
+A view draws the spec, every breadcrumb with a link to it, every breadcrumb it has a link to, and the links among those. A breadcrumb two links away is not in it, and a breadcrumb in no view is still in the table. Each box shows a breadcrumb's id, its title when it has one, its type and its verdict, and each of its claims after the claim's own verdict. A breadcrumb with no title is shown by its id alone. A title is shown in its box and nowhere else on the page. Each arrow goes from the breadcrumb a link is written in to the one it points to, and is labelled with the link's verb.
 .PP
 A verdict is shown as \fBbcr audit\fR printed it: \fBConfirmed\fR, \fBRefuted\fR, \fBUndecided\fR, or \fBUndecided, no claims\fR. \fBbcr report\fR judges nothing. A breadcrumb or a claim with no verdict in the input is shown as \fBnot audited\fR, so the page can be made without \fBbcr audit\fR.
 .PP
 The same records give the same page, byte for byte: it holds no date, and its rows, boxes and arrows are in order of id, whatever the order of the records.
 .PP
-An id, a path, a verb, a claim or a message is written so that it cannot change the page around it. In the tables and lists, a \fB\e\fR comes before each character Markdown reads as syntax, such as \fB|\fR, `\fB \fR `\fB and \fR<\fB. In a diagram, a box is named \fRn1\fB, \fRn2\fB and so on, never by an id, and in its label every character Mermaid could read as syntax is written as a code, such as \fR#35;\fB for \fR#\fB. \fRbcr report\fB writes no \fRclick`, no link and no directive into a diagram.
+An id, a title, a path, a verb, a claim or a message is written so that it cannot change the page around it. In the tables and lists, a \fB\e\fR comes before each character Markdown reads as syntax, such as \fB|\fR, `\fB \fR `\fB and \fR<\fB. In a diagram, a box is named \fRn1\fB, \fRn2\fB and so on, never by an id, and in its label every character Mermaid could read as syntax is written as a code, such as \fR#35;\fB for \fR#\fB. \fRbcr report\fB writes no \fRclick`, no link and no directive into a diagram.
 .PP
 A line of input that is not a record the pipe could print stops \fBbcr report\fR: it writes a message starting \fBbcr: \fR, which gives the line's number in the input, and prints no page. So does a \fBverdict\fR or \fBclaim\-verdict\fR record whose verdict is not \fBConfirmed\fR, \fBRefuted\fR or \fBUndecided\fR.
 .PP

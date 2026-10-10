@@ -5,6 +5,7 @@
 // this format; the core does not use it (ADR-0013).
 //
 //	breadcrumb	ID	TYPE	PATH	LINE
+//	breadcrumb	ID	TYPE	PATH	LINE	TITLE
 //	link	ID	VERB	OBJECT	PATH	LINE
 //	claim	ID	KIND	TARGET	ARGUMENT	PATH	LINE
 //	problem	PATH	LINE	MESSAGE
@@ -28,7 +29,7 @@ import (
 // the end of a record.
 const (
 	breadcrumbKind   = "breadcrumb"
-	breadcrumbFields = 5
+	breadcrumbFields = 5 // a breadcrumb record may have a title after them
 	linkKind         = "link"
 	linkFields       = 6
 	claimKind        = "claim"
@@ -43,8 +44,14 @@ const (
 // Write writes the records of b, the breadcrumb of the file at path:
 // its breadcrumb record, then a link record for each of its links and
 // a claim record for each of its claims, each in the order written.
+// Its title, when it has one, is one more field at the end of its
+// breadcrumb record (ADR-0032).
 func Write(w io.Writer, path string, b crumb.Breadcrumb) error {
-	if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\n", breadcrumbKind, b.ID, b.Type, path, b.Line); err != nil {
+	title := ""
+	if b.Title != "" {
+		title = "\t" + b.Title
+	}
+	if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d%s\n", breadcrumbKind, b.ID, b.Type, path, b.Line, title); err != nil {
 		return err
 	}
 	for _, l := range b.Links {
@@ -113,8 +120,9 @@ func ReadAudit(r io.Reader) (crumb.Set, error) {
 }
 
 // ReadReport reads records as Read does, for bcr report: it returns
-// the breadcrumbs with their types, the links with their verbs, the
-// claims, the problems, and the verdicts bcr audit gave, when it ran.
+// the breadcrumbs with their types and titles, the links with their
+// verbs, the claims, the problems, and the verdicts bcr audit gave,
+// when it ran.
 // A claim record is checked as ReadAudit checks it, and the VERDICT of
 // a verdict record is one of the three the core knows.
 func ReadReport(r io.Reader) (crumb.Set, error) {
@@ -281,7 +289,13 @@ func addReport(set *crumb.Set, line string) string {
 	}
 	switch fields[0] {
 	case breadcrumbKind:
-		set.Breadcrumbs = append(set.Breadcrumbs, crumb.SetBreadcrumb{ID: fields[1], Type: fields[2], At: at})
+		// The title of a breadcrumb is the one field read after those
+		// every breadcrumb record has.
+		title := ""
+		if all := strings.Split(line, "\t"); len(all) > breadcrumbFields {
+			title = all[breadcrumbFields]
+		}
+		set.Breadcrumbs = append(set.Breadcrumbs, crumb.SetBreadcrumb{ID: fields[1], Type: fields[2], Title: title, At: at})
 		return ""
 	case linkKind:
 		set.Links = append(set.Links, crumb.SetLink{ID: fields[1], Verb: fields[2], Object: fields[3], At: at})

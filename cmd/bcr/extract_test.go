@@ -593,3 +593,39 @@ func TestExtractAMessageThatIsNotAProblem(t *testing.T) {
 		t.Errorf("got %q, %q, exit %d; want a message, no problem record, exit 2", stdout, stderr, code)
 	}
 }
+
+// titled returns a file with a valid breadcrumb whose id is A, with
+// title, the whole line of its title key, after its type.
+func titled(title ...string) string {
+	return fm(append(append([]string{"breadcrumb:", "  id: A", "  type: ADR"}, title...), "  links: []")...)
+}
+
+func TestExtractABreadcrumbWithATitle(t *testing.T) {
+	files(t, map[string]string{"a.md": titled("  title: Adopt ASDLC to develop Breadcrumb")})
+	stdout, stderr, code := extractRun("a.md")
+	if want := "breadcrumb\tA\tADR\ta.md\t3\tAdopt ASDLC to develop Breadcrumb\n"; stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractNoTitle(t *testing.T) {
+	files(t, map[string]string{"a.md": titled()})
+	stdout, stderr, code := extractRun("a.md")
+	if want := "breadcrumb\tA\tADR\ta.md\t3\n"; stdout != want || stderr != "" || code != 0 {
+		t.Errorf("got %q, %q, exit %d; want %q, nothing, exit 0", stdout, stderr, code, want)
+	}
+}
+
+func TestExtractATitleThatIsNotOneLineOfText(t *testing.T) {
+	for _, title := range [][]string{
+		{"  title:"},
+		{"  title: []"},
+		{"  title:", "    - Adopt ASDLC"},
+		{"  title: Adopt\tASDLC"},
+		{"  title: 'Adopt ASDLC'"},
+		{"  title: Adopt", "    ASDLC"},
+	} {
+		files(t, map[string]string{"a.md": titled(title...)})
+		problems(t, "a.md", "5")
+	}
+}
